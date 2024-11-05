@@ -1665,7 +1665,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 30aa0c24a409fe047b860172aeb63f34, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  sendEvery: 0.5
+  sendEvery: 0.4
 --- !u!4 &1005201766
 Transform:
   m_ObjectHideFlags: 0
@@ -1675,7 +1675,7 @@ Transform:
   m_GameObject: {fileID: 1005201764}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 3.8206713, y: -1.7990112, z: 2.5222316}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -3778,6 +3778,7 @@ GameObject:
   - component: {fileID: 1962068098}
   - component: {fileID: 1962068097}
   - component: {fileID: 1962068099}
+  - component: {fileID: 1962068100}
   m_Layer: 0
   m_Name: Gamemanager
   m_TagString: GameManager
@@ -3820,6 +3821,9 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 128
   spawnHeight: 5
+  migrationPoint: {x: 0, y: 0}
+  normalMaterial: {fileID: 2100000, guid: 3d0ff9fe2342035478da2ac0c2bafcf1, type: 2}
+  selectedMaterial: {fileID: 2100000, guid: ea2740c202d629d46883c000bb8326dc, type: 2}
 --- !u!114 &1962068096
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3875,7 +3879,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1962068090}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3a9ebc41bcd1e384d887b81491908935, type: 3}
   m_Name: 
@@ -3886,6 +3890,18 @@ MonoBehaviour:
   obstacleLayer:
     serializedVersion: 2
     m_Bits: 64
+--- !u!114 &1962068100
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1962068090}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fcc9572d8fdd4e64d97058190dfe3cca, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &1986899884 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: -3063230940043556518, guid: aa7d595ff94dc494a9c65722522a115f, type: 3}
