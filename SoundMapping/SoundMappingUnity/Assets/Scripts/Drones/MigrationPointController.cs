@@ -1,5 +1,3 @@
-using System.Text;
-using Unity.VisualScripting;
 using UnityEngine;
 
 public class MigrationPointController : MonoBehaviour
@@ -8,6 +6,7 @@ public class MigrationPointController : MonoBehaviour
     public LayerMask groundLayer; // Layer mask for the ground
     public LayerMask droneLayer; // Layer mask for the drones
     public float spawnHeight = 10f; // Height at which drones operate
+    public float radius = 0.5f; // Radius of the migration point
 
     public Vector2 migrationPoint = new Vector2(0, 0);
 
@@ -55,21 +54,21 @@ public class MigrationPointController : MonoBehaviour
         // bvutton 0
          if(Input.GetKeyDown("joystick button " + 0)) // Assuming up to 20 buttons (adjust if needed)
         {
-            if(this.GetComponent<CameraMovement>().embodiedDrone != null)
+            if(CameraMovement.embodiedDrone != null)
             {
-                if(selectedDrone != this.GetComponent<CameraMovement>().embodiedDrone)
+                if(selectedDrone != CameraMovement.embodiedDrone)
                 {
-                    this.GetComponent<CameraMovement>().nextEmbodiedDrone = selectedDrone;
+                    CameraMovement.nextEmbodiedDrone = selectedDrone;
                 }
                 else
                 {
-                    this.GetComponent<CameraMovement>().embodiedDrone.GetComponent<Camera>().enabled = false;                
-                    this.GetComponent<CameraMovement>().embodiedDrone = null;  
+                    CameraMovement.embodiedDrone.GetComponent<Camera>().enabled = false;                
+                    CameraMovement.embodiedDrone = null;  
                 }
             }
             else if(selectedDrone != null)
             {
-                this.GetComponent<CameraMovement>().embodiedDrone = selectedDrone;
+                CameraMovement.embodiedDrone = selectedDrone;
             }
         }
     }
@@ -78,33 +77,40 @@ public class MigrationPointController : MonoBehaviour
     {
         float horizontal = Input.GetAxis("Horizontal");
         float vertical = Input.GetAxis("Vertical");
-        if(this.GetComponent<CameraMovement>().embodiedDrone == null)
+
+
+
+        Transform body = null;
+        Vector3 right = new Vector3(0, 0, 0);
+        Vector3 forward = new Vector3(0, 0, 0);
+
+        if(CameraMovement.embodiedDrone == null)
         {
-            horizontal = horizontal * Time.deltaTime * 5;
-            vertical = vertical * Time.deltaTime * 5;
-
-            migrationPoint = new Vector2(migrationPoint.x + horizontal, migrationPoint.y + vertical);
-
-            DroneController.migrationPoint = new Vector3(migrationPoint.x, spawnHeight, migrationPoint.y);
-
-            Debug.DrawRay(new Vector3(migrationPoint.x, 0, migrationPoint.y), Vector3.up*10, Color.green, 0.01f);
+            body = CameraMovement.cam.transform;
+            right = body.right;
+            forward = body.up;
         }else{
-            //move toward the forward direction of the drone
-            Vector3 forward = this.GetComponent<CameraMovement>().embodiedDrone.transform.forward;
-            Vector3 right = this.GetComponent<CameraMovement>().embodiedDrone.transform.right;
-
-            Vector3 verti = vertical * forward/8;
-            Vector3 hori = horizontal * right/8;
-
-            Vector3 final = verti + hori;
-            migrationPoint = new Vector2(migrationPoint.x + final.x, migrationPoint.y + final.z);
-
-            DroneController.migrationPoint = new Vector3(migrationPoint.x, spawnHeight, migrationPoint.y);
-
-            Debug.DrawRay(DroneController.migrationPoint, Vector3.up*10, Color.green, 0.01f);
-
-
+            body = CameraMovement.embodiedDrone.transform;
+            right = body.right;
+            forward = body.forward;
         }
+
+        horizontal = horizontal * Time.deltaTime * 5;
+        vertical = vertical * Time.deltaTime * 5;  
+
+        if(horizontal == 0 && vertical == 0)
+        {
+            migrationPoint = new Vector2(body.position.x, body.position.z);
+        }else{
+            Vector3 centerOfSwarm = body.position;
+            Vector3 final = vertical * forward + horizontal * right;
+            final.Normalize();
+            final = final * radius;
+            migrationPoint = new Vector2(centerOfSwarm.x + final.x, centerOfSwarm.z + final.z);
+        }
+        
+        DroneController.migrationPoint = new Vector3(migrationPoint.x, spawnHeight, migrationPoint.y);
+        Debug.DrawRay(DroneController.migrationPoint, Vector3.up*10, Color.green, 0.01f);
     }
     void UpdateMigrationEmbodiementMouse()
     {
@@ -112,10 +118,10 @@ public class MigrationPointController : MonoBehaviour
 
         if (Input.GetMouseButtonDown(2))
         {
-            if(this.GetComponent<CameraMovement>().embodiedDrone != null)
+            if(CameraMovement.embodiedDrone != null)
             {
-                this.GetComponent<CameraMovement>().embodiedDrone.GetComponent<Camera>().enabled = false;
-                this.GetComponent<CameraMovement>().embodiedDrone = null;
+                CameraMovement.embodiedDrone.GetComponent<Camera>().enabled = false;
+                CameraMovement.embodiedDrone = null;
             }
              // Get the mouse position in screen coordinates
             Vector3 mousePosition = Input.mousePosition;
@@ -130,7 +136,7 @@ public class MigrationPointController : MonoBehaviour
             {
               //  point.y = spawnHeight; // Ensure the height matches the drones' height
                 print("embodied to : " + hit.collider.gameObject.name);
-                this.GetComponent<CameraMovement>().embodiedDrone = hit.collider.gameObject;
+                CameraMovement.embodiedDrone = hit.collider.gameObject;
             }
         }
 

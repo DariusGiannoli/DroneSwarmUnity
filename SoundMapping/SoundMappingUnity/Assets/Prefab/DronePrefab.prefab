@@ -123,14 +123,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   maxSpeed: 5
   maxForce: 10
-  neighborRadius: 200
-  desiredSeparation: 200
-  alpha: 20
+  neighborRadius: 8
+  desiredSeparation: 5
+  alpha: 40
   beta: 10
-  gamma: 2
-  delta: 10
+  gamma: 20
+  delta: 5
   avoidanceRadius: 1
-  avoidanceForce: 1000
+  avoidanceForce: 40
   obstacleLayer:
     serializedVersion: 2
     m_Bits: 64

@@ -16,6 +16,7 @@ public class ControllerTest : MonoBehaviour
         // Check for joystick axis movements
         float horizontal = Input.GetAxis("Horizontal");
         float vertical = Input.GetAxis("Vertical");
+        
         float rightStickHorizontal = Input.GetAxis("JoystickRightHorizontal");
         float rightStickVertical = Input.GetAxis("JoystickRightVertical");
 

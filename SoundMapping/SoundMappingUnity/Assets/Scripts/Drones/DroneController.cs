@@ -26,6 +26,14 @@ public class DroneController : MonoBehaviour
     private Vector3 acceleration;
     private swarmModel swarm;
 
+    Vector3 separationForce = Vector3.zero;
+    Vector3 alignmentForce = Vector3.zero;
+    Vector3 cohesionForce = Vector3.zero;
+    Vector3 migrationForce = Vector3.zero;
+    Vector3 obstacleAvoidanceForce = Vector3.zero;
+    
+    const int PRIORITYWHENEMBODIED = 2;
+
     void Start()
     {
         GameObject gm = GameObject.FindGameObjectWithTag("GameManager");
@@ -58,16 +66,18 @@ public class DroneController : MonoBehaviour
     {
         List<Transform> neighbors = GetNeighbors();
 
-        Vector3 separationForce = Vector3.zero;
-        Vector3 alignmentForce = Vector3.zero;
-        Vector3 cohesionForce = Vector3.zero;
-        Vector3 migrationForce = Vector3.zero;
-        Vector3 obstacleAvoidanceForce = Vector3.zero;
-
         int neighborCount = 0;
+        int realNeighborCount = 0;
+
+        separationForce = Vector3.zero;
+        alignmentForce = Vector3.zero;
+        cohesionForce = Vector3.zero;
 
         foreach (Transform neighbor in neighbors)
         {
+            int neighborPriority = CameraMovement.embodiedDrone == neighbor.gameObject ? PRIORITYWHENEMBODIED : 1;
+            print(neighborPriority);
+
             Vector3 toNeighbor = neighbor.position - transform.position;
             float distance = toNeighbor.magnitude;
 
@@ -75,23 +85,24 @@ public class DroneController : MonoBehaviour
             if (distance > 0 && distance < desiredSeparation)
             {
                 Vector3 repulsion = -alpha * (toNeighbor.normalized / distance);
-                separationForce += repulsion;
+                separationForce += repulsion * neighborPriority;
             }
 
             // Alignment (velocity matching)
             DroneController neighborController = neighbor.GetComponent<DroneController>();
             if (neighborController != null)
             {
-                alignmentForce += neighborController.velocity;
+                alignmentForce += neighborController.velocity * neighborPriority;
             }
 
-            // Cohesion (attraction)
-            cohesionForce += neighbor.position;
+            // Cohesion (attraction) neighborrd priority applied here ???
+            cohesionForce += neighbor.position * neighborPriority;
 
-            neighborCount++;
+            neighborCount += neighborPriority;
+            realNeighborCount++;
         }
 
-        if (neighborCount > 0)
+        if (neighborCount > 0 && realNeighborCount > 0)
         {
             // Alignment
             alignmentForce /= neighborCount;
@@ -110,14 +121,46 @@ public class DroneController : MonoBehaviour
         obstacleAvoidanceForce = ComputeObstacleAvoidanceForce();
 
         // Sum up all forces
-        acceleration = separationForce + alignmentForce + cohesionForce + migrationForce + obstacleAvoidanceForce;
+        
+
+        acceleration = computeAllForcesAccordingToControlRules();
         acceleration = Vector3.ClampMagnitude(acceleration, maxForce);
+
+
+    }
+
+    Vector3 computeAllForcesAccordingToControlRules()
+    {
+                // Debug logging for forces
+        Debug.Log("drone: " + this.gameObject.name + 
+                  " separation: " + separationForce + 
+                  " alignment: " + alignmentForce + 
+                  " cohesion: " + cohesionForce + 
+                  " migration: " + migrationForce + 
+                  " obstacle: " + obstacleAvoidanceForce);
+
+
+        if (CameraMovement.embodiedDrone == this.gameObject)
+        {
+            return migrationForce;
+        }
+
+        if (CameraMovement.embodiedDrone != null)
+        {
+            return separationForce + alignmentForce + cohesionForce + migrationForce + obstacleAvoidanceForce;
+        }
+
+        return separationForce + alignmentForce + cohesionForce + migrationForce + obstacleAvoidanceForce;
     }
 
     void UpdatePosition()
     {
         velocity += acceleration * Time.deltaTime;
         velocity = Vector3.ClampMagnitude(velocity, maxSpeed);
+
+        // Apply damping to reduce the velocity over time
+        float dampingFactor = 0.95f; // Adjust this value between 0 and 1
+        velocity *= dampingFactor;
 
         Vector3 newPosition = transform.position + velocity * Time.deltaTime;
 

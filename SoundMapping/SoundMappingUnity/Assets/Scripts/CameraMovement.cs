@@ -6,7 +6,7 @@ using UnityEngine;
 
 public class CameraMovement : MonoBehaviour
 {
-    public Camera cam;
+    public static Camera cam;
     public Transform swarmHolder;
     private int FOVDrones = 5;
 
@@ -19,8 +19,8 @@ public class CameraMovement : MonoBehaviour
 
     public const float animationTime = 2f;
 
-    public GameObject embodiedDrone = null;
-    public GameObject nextEmbodiedDrone = null;
+    public static GameObject embodiedDrone = null;
+    public static GameObject nextEmbodiedDrone = null;
     public Quaternion intialCamRotation;
 
     void Start()
@@ -52,6 +52,11 @@ public class CameraMovement : MonoBehaviour
         float rightStickVertical = Input.GetAxis("JoystickRightVertical");
 
         heightCamera += rightStickVertical * Time.deltaTime * 10;
+
+        float rightStickHorizontal = Input.GetAxis("JoystickRightHorizontal");
+
+        // applz rotation to the camera with lerp
+        cam.transform.Rotate(-Vector3.forward, rightStickHorizontal * Time.deltaTime * 40);
     }
 
     void updateDroneView()
