@@ -5,7 +5,6 @@ using UnityEngine;
 public class MovingBall : MonoBehaviour
 {
     public float speed = 2f; // Speed of the sphere
-    public VibraForge sender;
     private float startZ = 5f;
     private float endZ = -5f;
     private bool movingForward = true;
@@ -46,12 +45,12 @@ public class MovingBall : MonoBehaviour
     void OnTriggerEnter(Collider other)
     {
         Debug.Log("Trigger detected with " + other.gameObject.name);
-        sender.SendCommand(0, 1, 7, 2);
+        VibraForge.SendCommand(0, 1, 7, 2);
     }
 
     void OnTriggerExit(Collider other)
     {
         Debug.Log("Trigger exited with " + other.gameObject.name);
-        sender.SendCommand(0, 0, 7, 2);
+        VibraForge.SendCommand(0, 0, 7, 2);
     }
 }

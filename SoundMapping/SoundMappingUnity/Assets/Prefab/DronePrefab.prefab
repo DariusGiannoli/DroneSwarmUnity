@@ -129,7 +129,7 @@ MonoBehaviour:
   beta: 10
   gamma: 20
   delta: 5
-  avoidanceRadius: 1
+  avoidanceRadius: 3
   avoidanceForce: 40
   obstacleLayer:
     serializedVersion: 2

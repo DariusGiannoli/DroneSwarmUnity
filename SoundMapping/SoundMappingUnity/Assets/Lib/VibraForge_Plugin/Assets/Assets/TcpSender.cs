@@ -11,7 +11,7 @@ public class TcpSender : MonoBehaviour
     public String Host = "localhost";
     public Int32 Port = 9051;
 
-    TcpClient client = null;
+    public TcpClient client = null;
     NetworkStream stream = null;
     public bool isConnected = false;
 
@@ -68,12 +68,6 @@ public class TcpSender : MonoBehaviour
             Debug.Log("Socket error: " + e);
             return false;
         }
-    }
-
-    private void OnApplicationQuit()
-    {
-        if (client != null && client.Connected)
-            client.Close();
     }
 
 }

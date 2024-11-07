@@ -30,10 +30,13 @@ async def setMotor(client, socket_conn):
         for data_chunk in data_chunks:
             command = bytearray([])
             for data_segment in data_chunk:
+                print('data_segment = ', data_segment)
                 data_parsed = json.loads(data_segment)
                 command = command + create_command(data_parsed['addr'], data_parsed['mode'], data_parsed['duty'], data_parsed['freq'])
             command = command + bytearray([0xFF, 0xFF, 0xFF]) * (20-len(data_chunk))
             await client.write_gatt_char(CHARACTERISTIC_UUID, command)
+            print('Motor write = ', command)
+            
 
 async def main(socket_conn):
     devices = await BleakScanner.discover()

@@ -26,11 +26,15 @@ public class DroneController : MonoBehaviour
     private Vector3 acceleration;
     private swarmModel swarm;
 
+    private float droneRadius = 1.0f;
+
     Vector3 separationForce = Vector3.zero;
     Vector3 alignmentForce = Vector3.zero;
     Vector3 cohesionForce = Vector3.zero;
     Vector3 migrationForce = Vector3.zero;
     Vector3 obstacleAvoidanceForce = Vector3.zero;
+
+    public List<ObstacleInRange> obstaclesInRange = new List<ObstacleInRange>();
     
     const int PRIORITYWHENEMBODIED = 2;
 
@@ -53,6 +57,8 @@ public class DroneController : MonoBehaviour
         
         velocity = new Vector3(Random.Range(-maxSpeed, maxSpeed), 0, Random.Range(-maxSpeed, maxSpeed));
         acceleration = Vector3.zero;
+
+        droneRadius = this.transform.localScale.x / 2;
     }
 
 
@@ -76,7 +82,6 @@ public class DroneController : MonoBehaviour
         foreach (Transform neighbor in neighbors)
         {
             int neighborPriority = CameraMovement.embodiedDrone == neighbor.gameObject ? PRIORITYWHENEMBODIED : 1;
-            print(neighborPriority);
 
             Vector3 toNeighbor = neighbor.position - transform.position;
             float distance = toNeighbor.magnitude;
@@ -131,13 +136,6 @@ public class DroneController : MonoBehaviour
 
     Vector3 computeAllForcesAccordingToControlRules()
     {
-                // Debug logging for forces
-        Debug.Log("drone: " + this.gameObject.name + 
-                  " separation: " + separationForce + 
-                  " alignment: " + alignmentForce + 
-                  " cohesion: " + cohesionForce + 
-                  " migration: " + migrationForce + 
-                  " obstacle: " + obstacleAvoidanceForce);
 
 
         if (CameraMovement.embodiedDrone == this.gameObject)
@@ -192,13 +190,14 @@ public class DroneController : MonoBehaviour
         Vector3 avoidanceForceVector = Vector3.zero;
 
         // Find all colliders within the avoidance radius on the obstacle layer
-        Collider[] obstacles = Physics.OverlapSphere(transform.position, avoidanceRadius, obstacleLayer);
+        Collider[] obstacles = Physics.OverlapSphere(transform.position, avoidanceRadius+droneRadius, obstacleLayer);
+        obstaclesInRange.Clear();
 
         foreach (Collider obstacle in obstacles)
         {
             // Calculate a force away from the obstacle
             Vector3 awayFromObstacle = transform.position - obstacle.ClosestPoint(transform.position);
-            float distance = awayFromObstacle.magnitude - this.transform.localScale.x/3;
+            float distance = awayFromObstacle.magnitude - droneRadius;
 
             if (distance > 0)
             {
@@ -206,10 +205,13 @@ public class DroneController : MonoBehaviour
                 Vector3 repulsion = awayFromObstacle.normalized * (avoidanceForce / (distance*distance));
                 repulsion.y = 0; // Keep movement in the XZ plane
                 avoidanceForceVector += repulsion;
+
+                obstaclesInRange.Add(new ObstacleInRange(obstacle.ClosestPoint(transform.position), obstacle.gameObject, distance));
             }
             else
             {
                 Debug.LogWarning("Obstacle avoidance: Drone is inside the obstacle!");
+                obstaclesInRange.Add(new ObstacleInRange(obstacle.ClosestPoint(transform.position), obstacle.gameObject, distance, true));                
             }
                 
         }
@@ -220,5 +222,24 @@ public class DroneController : MonoBehaviour
         //avoidanceForceVector = Vector3.ClampMagnitude(avoidanceForceVector, maxForce);
 
         return avoidanceForceVector;
+    }
+}
+
+
+public class ObstacleInRange
+{
+    public Vector3 position;
+    public GameObject obstacle;
+    public float distance;
+
+    public bool insideObstacle;
+
+    public ObstacleInRange(Vector3 position, GameObject obstacle, float distance, bool insideObstacle = false)
+    {
+        this.position = position;
+        this.obstacle = obstacle;
+        this.distance = distance;
+        this.insideObstacle = insideObstacle;
+
     }
 }

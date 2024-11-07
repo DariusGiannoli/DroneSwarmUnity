@@ -2,8 +2,12 @@ using UnityEngine;
 
 public class ControllerTest : MonoBehaviour
 {
+    public bool printDebug = false;
     void Update()
     {
+        if (!printDebug)
+            return;
+            
         // Check for button presses
         for (int i = 0; i < 20; i++) // Assuming up to 20 buttons (adjust if needed)
         {

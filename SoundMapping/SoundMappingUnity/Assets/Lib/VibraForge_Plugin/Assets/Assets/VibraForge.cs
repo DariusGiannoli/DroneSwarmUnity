@@ -3,12 +3,13 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.VFX;
 using System;
+using UnityEditor.PackageManager;
 
 [Serializable]
 public class VibraForge : MonoBehaviour
 {
-    private TcpSender sender;
-    private Dictionary<string, int> command;
+    private static TcpSender sender;
+    private static Dictionary<string, int> command;
 
     void Start()
     {
@@ -22,7 +23,7 @@ public class VibraForge : MonoBehaviour
         };
     }
 
-    public string DictionaryToString(Dictionary<string, int> dictionary)
+    public static string DictionaryToString(Dictionary<string, int> dictionary)
     {
         string dictionaryString = "{";
         foreach (KeyValuePair<string, int> keyValues in dictionary)
@@ -32,7 +33,7 @@ public class VibraForge : MonoBehaviour
         return dictionaryString.TrimEnd(',', ' ') + "}";
     }
 
-    public void SendCommand(int addr, int mode, int duty, int freq)
+    public static void SendCommand(int addr, int mode, int duty, int freq)
     {
         command["addr"] = addr;
         command["mode"] = mode;
@@ -40,5 +41,21 @@ public class VibraForge : MonoBehaviour
         command["freq"] = freq;
         sender.SendData(DictionaryToString(command));
         print("Command sent: " + DictionaryToString(command));
+    }
+
+
+    //on quit
+    void OnApplicationQuit()
+    {
+        for(int i = 0; i < 10; i++)
+        {
+            SendCommand(i, 0, 0, 0);
+        }
+        
+        //wait for 1 second
+        System.Threading.Thread.Sleep(1000);
+
+        //close the socket
+        sender.client.Close();
     }
 }

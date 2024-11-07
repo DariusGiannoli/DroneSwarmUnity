@@ -67,7 +67,8 @@ public class SendInfo : MonoBehaviour
             }
             else
             {
-                Debug.LogError("Error: " + request.error);
+
+                Debug.LogWarning("Error: " + request.error);
             }
         }
     }
