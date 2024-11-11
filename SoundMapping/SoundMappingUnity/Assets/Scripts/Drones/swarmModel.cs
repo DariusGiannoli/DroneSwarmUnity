@@ -19,38 +19,110 @@ public class swarmModel : MonoBehaviour
             drone.transform.parent = swarmHolder.transform;
             drone.name = "Drone"+i.ToString();
         }
-
     }
 
-    private string getDroneInfo(GameObject drone)
+    void Start()
     {
-        Vector3 position = drone.transform.position;
-        //Vector3 velocity = drone.GetComponent<Rigidbody>().velocity;
-        Vector3 velocity = new Vector3(0, 0, 0); //velocity is not used in the server
-
-
-        //make like JSON for position and velocity
-        string droneInfo = "{Position: " + position.ToString() + ",";
-        droneInfo += "Velocity: " + velocity.ToString() + "}";
-
-        return droneInfo;
+        this.GetComponent<sendInfoGameObject>().setupCallback(getAverageCohesion);
+        this.GetComponent<sendInfoGameObject>().setupCallback(getAverageAlignment);
+        this.GetComponent<sendInfoGameObject>().setupCallback(getAverageSeparation);
+        this.GetComponent<sendInfoGameObject>().setupCallback(getAverageMigration);
+        this.GetComponent<sendInfoGameObject>().setupCallback(getAverageObstacleAvoidance);
     }
 
-    public DataEntry getSwarmInfo()
+    DataEntry getAverageCohesion()
     {
-        string swarmInfo = "[";
-        for (int i = 0; i < numDrones; i++)
+        Vector3 averageCohesion = Vector3.zero;
+        int numDrones = 0;
+
+        foreach (Transform drone in swarmHolder.transform)
         {
-            GameObject drone = swarmHolder.transform.GetChild(i).gameObject;
-            string droneInfo = "{\"Drone"+i.ToString()+"\": " + getDroneInfo(drone) + "}";
-            swarmInfo += droneInfo;
-            if (i < numDrones - 1)
-            {
-                swarmInfo += ",";
-            }
+            averageCohesion += drone.GetComponent<DroneController>().cohesionForce;
+            numDrones++;
         }
-        swarmInfo += "]";
 
-        return new DataEntry("swarm", swarmInfo);
+        if (numDrones > 0)
+        {
+            averageCohesion /= numDrones;
+        }
+
+        return new DataEntry("averageCohesion", averageCohesion.magnitude.ToString(), fullHistory: true);
     }
+
+    DataEntry getAverageAlignment()
+    {
+        Vector3 averageAlignment = Vector3.zero;
+        int numDrones = 0;
+
+        foreach (Transform drone in swarmHolder.transform)
+        {
+            averageAlignment += drone.GetComponent<DroneController>().alignmentForce;
+            numDrones++;
+        }
+
+        if (numDrones > 0)
+        {
+            averageAlignment /= numDrones;
+        }
+
+        return new DataEntry("averageAlignment", averageAlignment.magnitude.ToString(), fullHistory: true);
+    }
+
+    DataEntry getAverageSeparation()
+    {
+        Vector3 averageSeparation = Vector3.zero;
+        int numDrones = 0;
+
+        foreach (Transform drone in swarmHolder.transform)
+        {
+            averageSeparation += drone.GetComponent<DroneController>().separationForce;
+            numDrones++;
+        }
+
+        if (numDrones > 0)
+        {
+            averageSeparation /= numDrones;
+        }
+
+        return new DataEntry("averageSeparation", averageSeparation.magnitude.ToString(), fullHistory: true);
+    }
+
+    DataEntry getAverageMigration()
+    {
+        Vector3 averageMigration = Vector3.zero;
+        int numDrones = 0;
+
+        foreach (Transform drone in swarmHolder.transform)
+        {
+            averageMigration += drone.GetComponent<DroneController>().migrationForce;
+            numDrones++;
+        }
+
+        if (numDrones > 0)
+        {
+            averageMigration /= numDrones;
+        }
+
+        return new DataEntry("averageMigration", averageMigration.magnitude.ToString(), fullHistory: true);
+    }
+
+    DataEntry getAverageObstacleAvoidance()
+    {
+        Vector3 averageObstacleAvoidance = Vector3.zero;
+        int numDrones = 0;
+
+        foreach (Transform drone in swarmHolder.transform)
+        {
+            averageObstacleAvoidance += drone.GetComponent<DroneController>().obstacleAvoidanceForce;
+            numDrones++;
+        }
+
+        if (numDrones > 0)
+        {
+            averageObstacleAvoidance /= numDrones;
+        }
+
+        return new DataEntry("averageObstacleAvoidance", averageObstacleAvoidance.magnitude.ToString(), fullHistory: true);
+    }
+
 }

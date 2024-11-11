@@ -28,11 +28,11 @@ public class DroneController : MonoBehaviour
 
     private float droneRadius = 1.0f;
 
-    Vector3 separationForce = Vector3.zero;
-    Vector3 alignmentForce = Vector3.zero;
-    Vector3 cohesionForce = Vector3.zero;
-    Vector3 migrationForce = Vector3.zero;
-    Vector3 obstacleAvoidanceForce = Vector3.zero;
+    public Vector3 separationForce = Vector3.zero;
+    public Vector3 alignmentForce = Vector3.zero;
+    public Vector3 cohesionForce = Vector3.zero;
+    public Vector3 migrationForce = Vector3.zero;
+    public Vector3 obstacleAvoidanceForce = Vector3.zero;
 
     public List<ObstacleInRange> obstaclesInRange = new List<ObstacleInRange>();
     

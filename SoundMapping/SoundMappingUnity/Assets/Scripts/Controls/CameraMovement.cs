@@ -164,7 +164,7 @@ public class CameraMovement : MonoBehaviour
 
     DataEntry getCameraPositionDE()
     {
-        return new DataEntry("camera", cam.transform.position.ToString());
+        return new DataEntry("camera", cam.transform.position.x.ToString());
     }
 
     DataEntry getEmbodiedDrone()

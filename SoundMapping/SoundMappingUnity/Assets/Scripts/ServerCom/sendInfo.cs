@@ -80,9 +80,23 @@ public class DataEntry
     public string name;
     public string value;  // Converted to a string for serialization
 
+
     //public string type; // Optional field for data type and conversion if needed
 
-    public DataEntry(string name, string value) => (this.name, this.value) = (name, value);
+    public DataEntry(string name, string value, bool fullHistory=false)
+    {
+        if (fullHistory)
+        {
+            this.name = "FH-"+name;
+            this.value = value;
+        }
+        else
+        {
+            this.name = name;
+            this.value = value;
+        }
+    }
+    
     public DataEntry(string name, int value) => (this.name, this.value) = (name, value.ToString());
     public DataEntry(string name, float value) => (this.name, this.value) = (name, value.ToString());
 
