@@ -43,7 +43,14 @@ public class CameraMovement : MonoBehaviour
 
     public Vector3 getCameraPosition()
     {
-        return cam.transform.position;
+        if (cam.enabled)
+        {
+            return cam.transform.position;
+        }
+        else
+        {
+            return embodiedDrone.transform.position;
+        }
     }
     // Update is called once per frame
     void updateTDView()

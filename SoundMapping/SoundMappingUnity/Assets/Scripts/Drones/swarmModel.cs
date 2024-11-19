@@ -10,6 +10,8 @@ public class swarmModel : MonoBehaviour
     public float spawnRadius = 10f;
     public float spawnHeight = 10f;
 
+    public float lastObstacleAvoidance = -1f;
+
     void Awake()
     {
         for (int i = 0; i < numDrones; i++)
@@ -28,6 +30,10 @@ public class swarmModel : MonoBehaviour
         this.GetComponent<sendInfoGameObject>().setupCallback(getAverageSeparation);
         this.GetComponent<sendInfoGameObject>().setupCallback(getAverageMigration);
         this.GetComponent<sendInfoGameObject>().setupCallback(getAverageObstacleAvoidance);
+        this.GetComponent<sendInfoGameObject>().setupCallback(getDeltaAverageObstacle);
+    
+    
+    
     }
 
     DataEntry getAverageCohesion()
@@ -47,6 +53,38 @@ public class swarmModel : MonoBehaviour
         }
 
         return new DataEntry("averageCohesion", averageCohesion.magnitude.ToString(), fullHistory: true);
+    }
+
+    DataEntry getDeltaAverageObstacle()
+    {
+        Vector3 averageObstacle = Vector3.zero;
+        int numDrones = 0;
+
+        foreach (Transform drone in swarmHolder.transform)
+        {
+            averageObstacle += drone.GetComponent<DroneController>().obstacleAvoidanceForce;
+            numDrones++;
+        }
+
+        if (numDrones > 0)
+        {
+            averageObstacle /= numDrones;
+        }
+
+
+
+
+        if(lastObstacleAvoidance < 0)
+        {
+            lastObstacleAvoidance = averageObstacle.magnitude;
+            return new DataEntry("deltaObstacle", "0", fullHistory: true);
+        }
+
+        float delta = (averageObstacle.magnitude - lastObstacleAvoidance)*Time.deltaTime;
+        lastObstacleAvoidance = averageObstacle.magnitude;
+
+
+        return new DataEntry("deltaObstacle", delta.ToString(), fullHistory: true);
     }
 
     DataEntry getAverageAlignment()

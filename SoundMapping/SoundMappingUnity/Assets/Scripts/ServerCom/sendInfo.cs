@@ -62,8 +62,6 @@ public class SendInfo : MonoBehaviour
 
             if (request.result == UnityWebRequest.Result.Success)
             {
-
-                Debug.Log("Server response: " + request.downloadHandler.text);
             }
             else
             {

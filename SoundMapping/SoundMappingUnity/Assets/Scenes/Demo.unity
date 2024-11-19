@@ -2069,8 +2069,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6a9c525c087a44a45bae69dd5425e3df, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Host: localhost
-  Port: 9051
   isConnected: 0
 --- !u!114 &807694081
 MonoBehaviour:
@@ -3502,6 +3500,7 @@ MonoBehaviour:
   numDrones: 10
   spawnRadius: 10
   spawnHeight: 5
+  lastObstacleAvoidance: -1
 --- !u!114 &1573697195
 MonoBehaviour:
   m_ObjectHideFlags: 0

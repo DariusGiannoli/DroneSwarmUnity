@@ -1,73 +1,80 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.IO;
-using System.Net.Sockets;
 using UnityEngine;
+using WebSocketSharp;
 
 public class TcpSender : MonoBehaviour
 {
-
-    public String Host = "localhost";
-    public Int32 Port = 9051;
-
-    public TcpClient client = null;
-    NetworkStream stream = null;
+    private WebSocket ws;
     public bool isConnected = false;
 
-    // Start is called before the first frame update
     void Start()
     {
-        client = new TcpClient();
-        if (SetupSocket())
+        ws = new WebSocket("ws://localhost:9052");
+
+        // Enable detailed logging
+        ws.Log.Level = LogLevel.Trace;
+        ws.Log.Output = (logData, s) => Debug.Log($"{logData.Level}: {logData.Message}");
+
+        ws.OnOpen += (sender, e) =>
         {
+            Debug.Log("WebSocket connected.");
             isConnected = true;
-            Debug.Log("socket is set up");
-            Debug.Log("buffer size length = "+client.SendBufferSize);
-        }
-        else
+        };
+
+        ws.OnMessage += (sender, e) =>
         {
+            Debug.Log("Message received from server: " + e.Data);
+        };
+
+        ws.OnError += (sender, e) =>
+        {
+            Debug.LogError("WebSocket error: " + e.Message);
+            if (e.Exception != null)
+            {
+                Debug.LogError("Exception: " + e.Exception);
+            }
+        };
+
+        ws.OnClose += (sender, e) =>
+        {
+            Debug.Log("WebSocket closed.");
             isConnected = false;
-            Debug.Log("socket setup failed");
+        };
+
+        try
+        {
+            ws.Connect();
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError("Exception during WebSocket connection: " + ex.Message);
         }
     }
 
-    // Update is called once per frame
     void Update()
     {
-
+        // Example input for testing
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            SendData("{\"addr\":1,\"mode\":1,\"duty\":10,\"freq\":5}");
+        }
     }
-    
-    public void SendData(String data)
+
+    public void SendData(string data)
     {
         if (isConnected)
         {
-            Byte[] sendBytes = System.Text.Encoding.UTF8.GetBytes(data);
-            stream.Write(sendBytes, 0, sendBytes.Length);
-            stream.Flush();
-            Debug.Log("socket is sent");
-        }
-        else
-        {
-            Debug.Log("no socket is sent");
+            ws.Send(data);
         }
     }
 
-    public bool SetupSocket()
+    private void OnApplicationQuit()
     {
-        try
+        if (ws != null)
         {
-            client.Connect(Host, Port);
-            client.SendBufferSize = 512;
-            client.ReceiveBufferSize = 512;
-            stream = client.GetStream();
-            return true;
-        }
-        catch (Exception e)
-        {
-            Debug.Log("Socket error: " + e);
-            return false;
+            ws.Close();
+            Debug.Log("WebSocket closed.");
         }
     }
-
 }

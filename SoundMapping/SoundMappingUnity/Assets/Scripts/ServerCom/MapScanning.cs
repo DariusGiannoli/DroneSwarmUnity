@@ -45,6 +45,7 @@ public class MapScanning : MonoBehaviour
         grid = new int[gridWidth, gridHeight];
 
         // Populate the grid with obstacle data
+        update_center_position();
         PopulateGridWithObstacles(gridWidth, gridHeight, center_position);
 
         // Convert the grid data to a string

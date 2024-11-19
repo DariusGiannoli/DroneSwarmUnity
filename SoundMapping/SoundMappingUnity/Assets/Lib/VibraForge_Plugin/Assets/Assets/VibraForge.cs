@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.VFX;
 using System;
 using UnityEditor.PackageManager;
+using System.Net.WebSockets;
 
 [Serializable]
 public class VibraForge : MonoBehaviour
@@ -40,7 +41,6 @@ public class VibraForge : MonoBehaviour
         command["duty"] = duty;
         command["freq"] = freq;
         sender.SendData(DictionaryToString(command));
-        print("Command sent: " + DictionaryToString(command));
     }
 
 
@@ -55,7 +55,5 @@ public class VibraForge : MonoBehaviour
         //wait for 1 second
         System.Threading.Thread.Sleep(1000);
 
-        //close the socket
-        sender.client.Close();
-    }
+        }
 }
