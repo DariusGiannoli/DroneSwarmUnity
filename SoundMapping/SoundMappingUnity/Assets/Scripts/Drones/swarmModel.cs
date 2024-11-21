@@ -9,7 +9,7 @@ public class swarmModel : MonoBehaviour
     public GameObject dronePrefab;
     public int numDrones = 10;
     public float spawnRadius = 10f;
-    public float spawnHeight = 10f;
+    public static float spawnHeight = 10f;
 
     public float lastObstacleAvoidance = -1f;
 
@@ -33,9 +33,6 @@ public class swarmModel : MonoBehaviour
         this.GetComponent<sendInfoGameObject>().setupCallback(getAverageMigration);
         this.GetComponent<sendInfoGameObject>().setupCallback(getAverageObstacleAvoidance);
         this.GetComponent<sendInfoGameObject>().setupCallback(getDeltaAverageObstacle);
-    
-    
-    
     }
 
     public void RemoveDrone(GameObject drone)

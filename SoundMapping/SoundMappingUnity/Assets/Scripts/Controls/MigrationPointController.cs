@@ -18,6 +18,8 @@ public class MigrationPointController : MonoBehaviour
     public Material normalMaterial;
     public Material selectedMaterial;
 
+    public static Vector3 deltaMigration = new Vector3(0, 0, 0); 
+
     bool firstTime = true;
 
     void Update()
@@ -133,6 +135,7 @@ public class MigrationPointController : MonoBehaviour
                 firstTime = false;
             }
             //migrationPoint = new Vector2(body.position.x, body.position.z);
+            deltaMigration = new Vector3(0, 0, 0);
         }else{
             firstTime = true;
             Vector3 centerOfSwarm = body.position;
@@ -140,6 +143,8 @@ public class MigrationPointController : MonoBehaviour
             final.Normalize();
             final = final * radius;
             migrationPoint = new Vector2(centerOfSwarm.x + final.x, centerOfSwarm.z + final.z);
+
+            deltaMigration = new Vector3(final.x, 0, final.z);
         }
         
         DroneController.migrationPoint = new Vector3(migrationPoint.x, spawnHeight, migrationPoint.y);

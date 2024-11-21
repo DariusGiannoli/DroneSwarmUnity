@@ -24,17 +24,18 @@ public class DroneController : MonoBehaviour
     // Migration parameters
     public float delta = 1.0f; // Migration weight
     public static Vector3 migrationPoint = Vector3.zero;
+    public Vector3 migrationPointPredict = Vector3.zero;
 
     // Obstacle avoidance parameters
     public float avoidanceRadius = 2f;     // Radius for obstacle detection
     public float avoidanceForce = 10f;     // Strength of the avoidance force
     public LayerMask obstacleLayer;        // Layer mask for obstacles
 
-    private Vector3 velocity;
+    public Vector3 velocity;
     private Vector3 acceleration;
     private swarmModel swarm;
 
-    private float droneRadius = 1.0f;
+    public float droneRadius = 1.0f;
 
     public Vector3 separationForce = Vector3.zero;
     public Vector3 alignmentForce = Vector3.zero;
@@ -52,14 +53,16 @@ public class DroneController : MonoBehaviour
     public Material embodiedColor;
 
     public bool showGuizmos = false;
-    
-
-    
+    public bool prediction = false;
+        
     const int PRIORITYWHENEMBODIED = 2;
+    private float dampingFactor = 0.97f; // Adjust this value between 0 and 1
 
     private GameObject gm;
     private float timeSeparated = 0;
+    public bool crashedPrediction = false;
 
+    public float lastDT = 1;
 
     float realScore 
     {
@@ -69,7 +72,80 @@ public class DroneController : MonoBehaviour
         }
     }
 
+
+    Transform swarmHolder
+    {
+        get
+        {
+            if(!prediction)
+                return swarmModel.swarmHolder.transform;
+            else
+                return this.transform.parent.transform;
+        }
+    }
     void Start()
+    {
+        if (!prediction)
+        {
+            StartNormal();
+        }
+    }
+
+    void Update()
+    {
+        if(!prediction)
+        {
+            UpdateNormal();
+            lastDT = Time.deltaTime;
+        }
+    }
+
+
+#region PredictionMode
+
+    public void PredictForce()
+    {
+        Vector3 centerOfSwarm = Vector3.zero;
+        foreach (Transform drone in transform.parent.transform)
+        {
+            centerOfSwarm += drone.position;
+        }
+        centerOfSwarm /= transform.parent.transform.childCount;
+        //take into accouht network ?
+
+        migrationPointPredict = centerOfSwarm + MigrationPointController.deltaMigration; // the preiciton is going to move the swarm and therefore the migration point should updfate also
+        ComputeForces();
+    }
+
+    public void PredictMovement(int numberOfTimeApplied)
+    {
+        UpdatePositionPrediction(numberOfTimeApplied);
+    }
+
+    public void UpdatePositionPrediction(int numberOfTimeApplied)
+    {
+        for (int i = 0; i < numberOfTimeApplied; i++)
+        {
+            velocity += acceleration * lastDT;
+            velocity = Vector3.ClampMagnitude(velocity, maxSpeed);
+
+            // Apply damping to reduce the velocity over time
+            velocity *= dampingFactor;
+        }
+
+        Vector3 newPosition = transform.position + velocity * lastDT * numberOfTimeApplied;
+        newPosition.y = swarmModel.spawnHeight;
+        transform.position = newPosition;
+
+        acceleration = Vector3.zero;
+}
+
+
+#endregion
+
+#region NormalMode
+
+    void StartNormal()
     {
         gm = GameObject.FindGameObjectWithTag("GameManager");
 
@@ -92,14 +168,36 @@ public class DroneController : MonoBehaviour
         droneRadius = this.transform.localScale.x / 2;
     }
 
-
-    void Update()
+    void UpdateNormal()
     {
-        ComputeForces();
-        UpdatePosition();
-        updateColor();
-        updateSound();
+            ComputeForces();
+            UpdatePositionNormal();
+            updateColor();
+            updateSound();
     }
+    
+    void UpdatePositionNormal()
+    {
+
+        velocity += acceleration * Time.deltaTime;
+        velocity = Vector3.ClampMagnitude(velocity, maxSpeed);
+
+        // Apply damping to reduce the velocity over time
+        velocity *= dampingFactor;
+
+        Vector3 newPosition = transform.position + velocity * Time.deltaTime;
+
+        // Keep the drone at the same height
+        newPosition.y = swarmModel.spawnHeight;
+
+        transform.position = newPosition;
+
+        acceleration = Vector3.zero;
+    }
+
+#endregion
+
+#region ControlRules
 
     void ComputeForces()
     {
@@ -124,11 +222,13 @@ public class DroneController : MonoBehaviour
             {
                 if(distance < desiredSeparation)
                 {
+
                     Vector3 repulsion = - alpha * (distance - desiredSeparation*0.9f) * (distance - desiredSeparation*0.9f) * toNeighbor.normalized;
                     separationForce += repulsion * neighborPriority;
                 }
 
             }else{
+                print(this.name + " is inside " + neighbor.name);
                 float realDistance = distance + 2*droneRadius;
                 Vector3 repulsion = -alpha * (toNeighbor.normalized / (realDistance*realDistance));
                 separationForce += repulsion * neighborPriority;
@@ -161,7 +261,13 @@ public class DroneController : MonoBehaviour
         }
 
         // Migration Force towards the migrationPoint
-        migrationForce = delta * (migrationPoint - transform.position).normalized;
+        if(prediction)
+        {
+            migrationForce = delta * (migrationPointPredict - transform.position).normalized;
+        }else
+        {
+            migrationForce = delta * (migrationPoint - transform.position).normalized;
+        }
         migrationForce.y = 0; // Keep the migration force in XZ plane
 
         // Obstacle Avoidance Force
@@ -184,31 +290,12 @@ public class DroneController : MonoBehaviour
 
     }
 
-    void UpdatePosition()
-    {
-        velocity += acceleration * Time.deltaTime;
-        velocity = Vector3.ClampMagnitude(velocity, maxSpeed);
-
-        // Apply damping to reduce the velocity over time
-        float dampingFactor = 0.96f; // Adjust this value between 0 and 1
-        velocity *= dampingFactor;
-
-        Vector3 newPosition = transform.position + velocity * Time.deltaTime;
-
-        // Keep the drone at the same height
-        newPosition.y = swarm.spawnHeight;
-
-        transform.position = newPosition;
-
-        acceleration = Vector3.zero;
-    }
-
     List<Transform> GetNeighbors()
     {
         List<Transform> neighbors = new List<Transform>();
-        foreach (Transform drone in swarmModel.swarmHolder.transform)
+        foreach (Transform drone in transform.parent.transform)
         {
-            if (drone == transform) continue;
+            if (drone == this.gameObject.transform) continue;
 
             if (Vector3.Distance(transform.position, drone.position) < neighborRadius)
             {
@@ -247,12 +334,18 @@ public class DroneController : MonoBehaviour
             }
             else
             {
-                if(CameraMovement.embodiedDrone == this.gameObject)
+                if(!prediction)
                 {
-                    CameraMovement.embodiedDrone = null;
-                    CameraMovement.nextEmbodiedDrone = null;
-                }
-                gm.GetComponent<swarmModel>().RemoveDrone(this.gameObject);                     
+                    if(CameraMovement.embodiedDrone == this.gameObject)
+                    {
+                        CameraMovement.embodiedDrone = null;
+                        CameraMovement.nextEmbodiedDrone = null;
+                    }
+                    gm.GetComponent<swarmModel>().RemoveDrone(this.gameObject);    
+
+                }else{
+                    crashedPrediction = true;
+                }             
             }
                 
         }
@@ -265,6 +358,9 @@ public class DroneController : MonoBehaviour
         return avoidanceForceVector;
     }
 
+#endregion
+
+#region Gizmos
     void OnDrawGizmos()
     {
 
@@ -291,6 +387,9 @@ public class DroneController : MonoBehaviour
         }
     }
 
+#endregion
+
+#region HapticAudio
     void updateColor()
     {
         if (CameraMovement.embodiedDrone == this.gameObject || CameraMovement.nextEmbodiedDrone == this.gameObject || MigrationPointController.selectedDrone == this.gameObject)
@@ -327,6 +426,9 @@ public class DroneController : MonoBehaviour
         }
 
     }
+
+#endregion
+
 }
 
 
