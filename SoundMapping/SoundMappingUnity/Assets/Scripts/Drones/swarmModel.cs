@@ -1,10 +1,11 @@
 using System.Collections;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
 
 public class swarmModel : MonoBehaviour
 {
-    public GameObject swarmHolder;
+    public static GameObject swarmHolder;
     public GameObject dronePrefab;
     public int numDrones = 10;
     public float spawnRadius = 10f;
@@ -14,6 +15,7 @@ public class swarmModel : MonoBehaviour
 
     void Awake()
     {
+        swarmHolder = GameObject.FindGameObjectWithTag("Swarm");
         for (int i = 0; i < numDrones; i++)
         {
             Vector3 spawnPosition = new Vector3(Random.Range(-spawnRadius, spawnRadius), spawnHeight, Random.Range(-spawnRadius, spawnRadius));
@@ -34,6 +36,16 @@ public class swarmModel : MonoBehaviour
     
     
     
+    }
+
+    public void RemoveDrone(GameObject drone)
+    {
+        if (drone.transform.parent == swarmHolder.transform)
+        {
+            drone.gameObject.SetActive(false);
+            drone.transform.parent = null;
+            //this.GetComponent<CameraMovement>().resetFogExplorers();
+        }
     }
 
     DataEntry getAverageCohesion()

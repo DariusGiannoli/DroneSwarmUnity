@@ -32,13 +32,22 @@ public class CameraMovement : MonoBehaviour
             fogWarManager.GetComponent<csFogWar>().AddFogRevealer(swarmHolder.GetChild(i).gameObject.transform, FOVDrones, true);
         }
 
-        print(fogWarManager.GetComponent<csFogWar>().fogRevealers.Count);
-
         this.GetComponent<sendInfoGameObject>().setupCallback(getCameraPositionDE);
         this.GetComponent<sendInfoGameObject>().setupCallback(getEmbodiedDrone);
 
         StartCoroutine(TDView());
         
+    }
+
+    public void resetFogExplorers()
+    {
+        fogWarManager.GetComponent<csFogWar>().fogRevealers.Clear();
+        
+        for (int i = 0; i < swarmHolder.childCount; i++)
+        {
+            fogWarManager.GetComponent<csFogWar>().AddFogRevealer(swarmHolder.GetChild(i).gameObject.transform, FOVDrones, true);
+        }
+
     }
 
     public Vector3 getCameraPosition()
@@ -79,19 +88,22 @@ public class CameraMovement : MonoBehaviour
     public IEnumerator TDView()
     {
         state = "TDView";
-        if (swarmHolder.childCount > 0)
+        yield return new WaitForSeconds(0.01f);
+
+        List<GameObject> drones = DroneNetworkManager.dronesInMainNetwork;
+        if (drones.Count > 0)
         {
             Vector3 center = Vector3.zero;
-            for(int i = 0; i < swarmHolder.childCount; i++)
+            foreach (GameObject drone in drones)
             {
-                center += swarmHolder.GetChild(i).position;
+                center += drone.transform.position;
             }
-            center /= swarmHolder.childCount;
+            center /= drones.Count;
 
             center.y = heightCamera;
-            cam.transform.position = Vector3.Lerp(cam.transform.position, center, Time.deltaTime * 2);
+            cam.transform.position = Vector3.Lerp(cam.transform.position, center, 2*Time.deltaTime);         
 
-            yield return new WaitForSeconds(0.01f);
+
         }
     
         updateTDView();
@@ -144,15 +156,9 @@ public class CameraMovement : MonoBehaviour
             {
                 embodiedDrone.GetComponent<Camera>().enabled = false;
                 cam.enabled = true;
+
                 cam.transform.position = embodiedDrone.transform.position;
-
-                
-                
                 cam.transform.LookAt(nextEmbodiedDrone.transform.position);
-                
-                
-
-
                 embodiedDrone = nextEmbodiedDrone;
                 nextEmbodiedDrone = null;
 

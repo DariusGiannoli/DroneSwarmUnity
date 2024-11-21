@@ -1,3 +1,5 @@
+using Unity.VisualScripting;
+using Unity.VisualScripting.Dependencies.Sqlite;
 using UnityEngine;
 
 public class MigrationPointController : MonoBehaviour
@@ -11,15 +13,18 @@ public class MigrationPointController : MonoBehaviour
     public Vector2 migrationPoint = new Vector2(0, 0);
 
     private int lastSelectedChild = 0;
-    private GameObject selectedDrone = null;
+    public static GameObject selectedDrone = null;
 
     public Material normalMaterial;
     public Material selectedMaterial;
+
+    bool firstTime = true;
 
     void Update()
     {
         UpdateMigrationPoint();
         SelectionUpdate();  
+        SpreadnessUpdate();
     }
 
     void SelectionUpdate()
@@ -29,9 +34,9 @@ public class MigrationPointController : MonoBehaviour
             if(selectedDrone == null)
             {
                 //select the first child
-                if(this.GetComponent<swarmModel>().swarmHolder.transform.childCount > 0)
+                if(swarmModel.swarmHolder.transform.childCount > 0)
                 {
-                    selectedDrone = this.GetComponent<swarmModel>().swarmHolder.transform.GetChild(0).gameObject;
+                    selectedDrone = swarmModel.swarmHolder.transform.GetChild(0).gameObject;
                     selectedDrone.GetComponent<Renderer>().material = selectedMaterial;
                 }
             }
@@ -40,19 +45,19 @@ public class MigrationPointController : MonoBehaviour
                 int increment = Input.GetKeyDown("joystick button " + 5) ? 1 : -1;
                 //change material
                 selectedDrone.GetComponent<Renderer>().material = normalMaterial;
-                lastSelectedChild = (lastSelectedChild + increment) % this.GetComponent<swarmModel>().swarmHolder.transform.childCount;
+                lastSelectedChild = (lastSelectedChild + increment) % swarmModel.swarmHolder.transform.childCount;
                 if(lastSelectedChild < 0)
                 {
-                    lastSelectedChild = this.GetComponent<swarmModel>().swarmHolder.transform.childCount - 1;
+                    lastSelectedChild = swarmModel.swarmHolder.transform.childCount - 1;
                 }
 
-                selectedDrone = this.GetComponent<swarmModel>().swarmHolder.transform.GetChild(lastSelectedChild).gameObject;
+                selectedDrone = swarmModel.swarmHolder.transform.GetChild(lastSelectedChild).gameObject;
                 selectedDrone.GetComponent<Renderer>().material = selectedMaterial;
             }
         }
 
         // bvutton 0
-         if(Input.GetKeyDown("joystick button " + 0)) // Assuming up to 20 buttons (adjust if needed)
+         if(Input.GetKeyDown("joystick button " + 0))
         {
             if(CameraMovement.embodiedDrone != null)
             {
@@ -70,6 +75,28 @@ public class MigrationPointController : MonoBehaviour
             {
                 CameraMovement.embodiedDrone = selectedDrone;
             }
+        }
+    }
+
+    void SpreadnessUpdate()
+    {
+        if(Input.GetKeyDown("joystick button " + 6))
+        {
+            if(DroneController.desiredSeparation <= 2f)
+            {
+                return;
+            }
+
+            DroneController.desiredSeparation -= 0.5f;
+        }
+        if(Input.GetKeyDown("joystick button " + 7))
+        {
+            if(DroneController.desiredSeparation >= 10f)
+            {
+                return;
+            }
+
+            DroneController.desiredSeparation += 0.5f;
         }
     }
 
@@ -100,8 +127,14 @@ public class MigrationPointController : MonoBehaviour
 
         if(horizontal == 0 && vertical == 0)
         {
-            migrationPoint = new Vector2(body.position.x, body.position.z);
+            if(firstTime)
+            {
+                migrationPoint = new Vector2(body.position.x, body.position.z);
+                firstTime = false;
+            }
+            //migrationPoint = new Vector2(body.position.x, body.position.z);
         }else{
+            firstTime = true;
             Vector3 centerOfSwarm = body.position;
             Vector3 final = vertical * forward + horizontal * right;
             final.Normalize();

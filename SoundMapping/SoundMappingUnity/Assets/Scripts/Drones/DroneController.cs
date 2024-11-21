@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Unity.VisualScripting;
 using UnityEngine;
@@ -7,8 +8,15 @@ public class DroneController : MonoBehaviour
     // Existing parameters
     public float maxSpeed = 5f;
     public float maxForce = 10f;
-    public float neighborRadius = 5f;
-    public float desiredSeparation = 2f;
+    public static float neighborRadius
+    {
+        get
+        {
+            return desiredSeparation + 1;
+        }
+    }
+
+    public static float desiredSeparation = 2f;
     public float alpha = 1.5f; // Separation weight
     public float beta = 1.0f;  // Alignment weight
     public float gamma = 1.0f; // Cohesion weight
@@ -34,13 +42,36 @@ public class DroneController : MonoBehaviour
     public Vector3 migrationForce = Vector3.zero;
     public Vector3 obstacleAvoidanceForce = Vector3.zero;
 
+    public float distanceToSwarmCenter = 0;
+
     public List<ObstacleInRange> obstaclesInRange = new List<ObstacleInRange>();
+
+    public Material connectedColor;
+    public Material farColor;
+    public Material notConnectedColor;
+    public Material embodiedColor;
+
+    public bool showGuizmos = false;
+    
+
     
     const int PRIORITYWHENEMBODIED = 2;
 
+    private GameObject gm;
+    private float timeSeparated = 0;
+
+
+    float realScore 
+    {
+        get
+        {
+            return HapticAudioManager.GetDroneNetworkScore(this.gameObject);
+        }
+    }
+
     void Start()
     {
-        GameObject gm = GameObject.FindGameObjectWithTag("GameManager");
+        gm = GameObject.FindGameObjectWithTag("GameManager");
 
         swarm = gm.GetComponent<swarmModel>();
 
@@ -55,7 +86,7 @@ public class DroneController : MonoBehaviour
         });
 
         
-        velocity = new Vector3(Random.Range(-maxSpeed, maxSpeed), 0, Random.Range(-maxSpeed, maxSpeed));
+        velocity = new Vector3(0, 0, 0);
         acceleration = Vector3.zero;
 
         droneRadius = this.transform.localScale.x / 2;
@@ -66,6 +97,8 @@ public class DroneController : MonoBehaviour
     {
         ComputeForces();
         UpdatePosition();
+        updateColor();
+        updateSound();
     }
 
     void ComputeForces()
@@ -84,12 +117,20 @@ public class DroneController : MonoBehaviour
             int neighborPriority = CameraMovement.embodiedDrone == neighbor.gameObject ? PRIORITYWHENEMBODIED : 1;
 
             Vector3 toNeighbor = neighbor.position - transform.position;
-            float distance = toNeighbor.magnitude;
+            float distance = toNeighbor.magnitude - 2*droneRadius;
 
             // Separation (repulsion)
-            if (distance > 0 && distance < desiredSeparation)
+            if (distance > 0)
             {
-                Vector3 repulsion = -alpha * (toNeighbor.normalized / distance);
+                if(distance < desiredSeparation)
+                {
+                    Vector3 repulsion = - alpha * (distance - desiredSeparation*0.9f) * (distance - desiredSeparation*0.9f) * toNeighbor.normalized;
+                    separationForce += repulsion * neighborPriority;
+                }
+
+            }else{
+                float realDistance = distance + 2*droneRadius;
+                Vector3 repulsion = -alpha * (toNeighbor.normalized / (realDistance*realDistance));
                 separationForce += repulsion * neighborPriority;
             }
 
@@ -100,7 +141,6 @@ public class DroneController : MonoBehaviour
                 alignmentForce += neighborController.velocity * neighborPriority;
             }
 
-            // Cohesion (attraction) neighborrd priority applied here ???
             cohesionForce += neighbor.position * neighborPriority;
 
             neighborCount += neighborPriority;
@@ -116,39 +156,32 @@ public class DroneController : MonoBehaviour
             // Cohesion
             cohesionForce /= neighborCount;
             cohesionForce = (cohesionForce - transform.position) * gamma;
+
+            distanceToSwarmCenter = Vector3.Distance(transform.position, cohesionForce);
         }
 
         // Migration Force towards the migrationPoint
-        migrationForce = delta * (migrationPoint - transform.position);
+        migrationForce = delta * (migrationPoint - transform.position).normalized;
         migrationForce.y = 0; // Keep the migration force in XZ plane
 
         // Obstacle Avoidance Force
         obstacleAvoidanceForce = ComputeObstacleAvoidanceForce();
 
-        // Sum up all forces
-        
-
         acceleration = computeAllForcesAccordingToControlRules();
-        acceleration = Vector3.ClampMagnitude(acceleration, maxForce);
-
 
     }
 
     Vector3 computeAllForcesAccordingToControlRules()
     {
-
-
         if (CameraMovement.embodiedDrone == this.gameObject)
         {
-            return migrationForce;
+            Vector3 force = migrationForce;
+            return Vector3.ClampMagnitude(force, maxForce);
         }
+        Vector3 fo = separationForce + alignmentForce + cohesionForce + migrationForce;
+        fo = Vector3.ClampMagnitude(fo + obstacleAvoidanceForce, maxForce);
+        return fo;
 
-        if (CameraMovement.embodiedDrone != null)
-        {
-            return separationForce + alignmentForce + cohesionForce + migrationForce + obstacleAvoidanceForce;
-        }
-
-        return separationForce + alignmentForce + cohesionForce + migrationForce + obstacleAvoidanceForce;
     }
 
     void UpdatePosition()
@@ -157,7 +190,7 @@ public class DroneController : MonoBehaviour
         velocity = Vector3.ClampMagnitude(velocity, maxSpeed);
 
         // Apply damping to reduce the velocity over time
-        float dampingFactor = 0.95f; // Adjust this value between 0 and 1
+        float dampingFactor = 0.96f; // Adjust this value between 0 and 1
         velocity *= dampingFactor;
 
         Vector3 newPosition = transform.position + velocity * Time.deltaTime;
@@ -173,7 +206,7 @@ public class DroneController : MonoBehaviour
     List<Transform> GetNeighbors()
     {
         List<Transform> neighbors = new List<Transform>();
-        foreach (Transform drone in swarm.swarmHolder.transform)
+        foreach (Transform drone in swarmModel.swarmHolder.transform)
         {
             if (drone == transform) continue;
 
@@ -203,15 +236,23 @@ public class DroneController : MonoBehaviour
             {
                 // The force magnitude decreases with distance
                 Vector3 repulsion = awayFromObstacle.normalized * (avoidanceForce / (distance*distance));
+                //apply friction with speed
+                Vector3 friction = -velocity * 0.3f;
+
+
                 repulsion.y = 0; // Keep movement in the XZ plane
-                avoidanceForceVector += repulsion;
+                avoidanceForceVector += repulsion + friction;
 
                 obstaclesInRange.Add(new ObstacleInRange(obstacle.ClosestPoint(transform.position), obstacle.gameObject, distance));
             }
             else
             {
-                Debug.LogWarning("Obstacle avoidance: Drone is inside the obstacle!");
-                obstaclesInRange.Add(new ObstacleInRange(obstacle.ClosestPoint(transform.position), obstacle.gameObject, distance, true));                
+                if(CameraMovement.embodiedDrone == this.gameObject)
+                {
+                    CameraMovement.embodiedDrone = null;
+                    CameraMovement.nextEmbodiedDrone = null;
+                }
+                gm.GetComponent<swarmModel>().RemoveDrone(this.gameObject);                     
             }
                 
         }
@@ -222,6 +263,69 @@ public class DroneController : MonoBehaviour
         //avoidanceForceVector = Vector3.ClampMagnitude(avoidanceForceVector, maxForce);
 
         return avoidanceForceVector;
+    }
+
+    void OnDrawGizmos()
+    {
+
+    }
+
+    void OnDrawGizmosSelected()
+    {
+        if(showGuizmos)
+        {
+            Gizmos.color = Color.red;
+            Gizmos.DrawLine(transform.position, transform.position + obstacleAvoidanceForce);
+
+            Gizmos.color = Color.blue;
+            Gizmos.DrawLine(transform.position, transform.position + separationForce);
+
+            Gizmos.color = Color.cyan;
+            Gizmos.DrawLine(transform.position, transform.position + alignmentForce);
+
+            Gizmos.color = Color.magenta;
+            Gizmos.DrawLine(transform.position, transform.position + cohesionForce);
+
+            Gizmos.color = Color.yellow;
+            Gizmos.DrawLine(transform.position, transform.position);
+        }
+    }
+
+    void updateColor()
+    {
+        if (CameraMovement.embodiedDrone == this.gameObject || CameraMovement.nextEmbodiedDrone == this.gameObject || MigrationPointController.selectedDrone == this.gameObject)
+        {
+            this.GetComponent<Renderer>().material = embodiedColor;
+            return;
+        }
+
+        float score = realScore;
+
+        if(score < -0.9f)
+        {
+            this.GetComponent<Renderer>().material = notConnectedColor;
+        }else if(score < 1)
+        {
+            this.GetComponent<Renderer>().material.Lerp(farColor, connectedColor, score);
+        }else // == 1
+        {
+            this.GetComponent<Renderer>().material = connectedColor;
+        }
+    }
+
+    void updateSound()
+    {
+        float score = realScore;
+
+        if(score < -0.9f)
+        {
+            timeSeparated += Time.deltaTime;
+            this.GetComponent<AudioSource>().enabled = HapticAudioManager.GetAudioSourceCharacteristics(timeSeparated);
+        }else{
+            timeSeparated = 0;
+            this.GetComponent<AudioSource>().enabled = false;
+        }
+
     }
 }
 
