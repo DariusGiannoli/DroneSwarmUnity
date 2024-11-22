@@ -24,6 +24,8 @@ public class ControllerTest : MonoBehaviour
         float rightStickHorizontal = Input.GetAxis("JoystickRightHorizontal");
         float rightStickVertical = Input.GetAxis("JoystickRightVertical");
 
+        float leftrightTrigger = Input.GetAxis("LR");
+
         if (horizontal != 0)
             Debug.Log("Left Stick Horizontal: " + horizontal);
         if (vertical != 0)
@@ -32,6 +34,8 @@ public class ControllerTest : MonoBehaviour
             Debug.Log("Right Stick Horizontal: " + rightStickHorizontal);
         if (rightStickVertical != 0)
             Debug.Log("Right Stick Vertical: " + rightStickVertical);
+        if (leftrightTrigger != 0)
+            Debug.Log("Left/Right Trigger: " + leftrightTrigger);
 
     }
 }

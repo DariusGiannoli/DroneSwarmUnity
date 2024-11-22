@@ -3447,7 +3447,7 @@ Transform:
   m_GameObject: {fileID: 762879029}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 155.4, y: 16.1, z: 859.6}
+  m_LocalPosition: {x: 155.4, y: 44, z: 859.6}
   m_LocalScale: {x: 101.5, y: 59.5, z: 8.3}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -5789,7 +5789,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   dronePrefab: {fileID: 2904365767565868958, guid: 8665b86975cd58e49a996d130ca17994, type: 3}
-  numDrones: 11
+  numDrones: 7
   spawnRadius: 10
   lastObstacleAvoidance: -1
 --- !u!114 &1573697195

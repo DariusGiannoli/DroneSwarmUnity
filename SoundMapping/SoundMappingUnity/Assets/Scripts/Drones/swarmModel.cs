@@ -18,7 +18,7 @@ public class swarmModel : MonoBehaviour
         swarmHolder = GameObject.FindGameObjectWithTag("Swarm");
         for (int i = 0; i < numDrones; i++)
         {
-            Vector3 spawnPosition = new Vector3(Random.Range(-spawnRadius, spawnRadius), spawnHeight, Random.Range(-spawnRadius, spawnRadius));
+            Vector3 spawnPosition = new Vector3(Random.Range(-spawnRadius, spawnRadius), spawnHeight, Random.Range(-1, 1));
             GameObject drone = Instantiate(dronePrefab, spawnPosition, Quaternion.identity);
             drone.transform.parent = swarmHolder.transform;
             drone.name = "Drone"+i.ToString();

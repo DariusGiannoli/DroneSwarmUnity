@@ -80,23 +80,18 @@ public class MigrationPointController : MonoBehaviour
 
     void SpreadnessUpdate()
     {
-        if(Input.GetKeyDown("joystick button " + 6))
+        float spreadness = Input.GetAxis("LR");
+        if(spreadness != 0)
         {
-            if(DroneController.desiredSeparation <= 2f)
+            DroneController.desiredSeparation+= spreadness * Time.deltaTime * 1.3f;
+            if(DroneController.desiredSeparation < 1.5)
             {
-                return;
-            }
-
-            DroneController.desiredSeparation -= 0.5f;
-        }
-        if(Input.GetKeyDown("joystick button " + 7))
-        {
-            if(DroneController.desiredSeparation >= 10f)
+                DroneController.desiredSeparation = 1.5f;
+            } 
+            if(DroneController.desiredSeparation > 10)
             {
-                return;
+                DroneController.desiredSeparation = 10;
             }
-
-            DroneController.desiredSeparation += 0.5f;
         }
     }
 

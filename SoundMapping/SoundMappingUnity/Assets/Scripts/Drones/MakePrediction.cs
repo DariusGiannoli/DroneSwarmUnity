@@ -25,9 +25,9 @@ public class MakePrediction : MonoBehaviour
 
 
         shortPred = new Prediction(true, 10, 0, shortPredictionLineHolder);
-        longPred = new Prediction(false, 20, 1, longPredictionLineHolder);
+        longPred = new Prediction(false, 15, 1, longPredictionLineHolder);
 
-        //StartCoroutine(makePrediction(longPred));
+        StartCoroutine(makePrediction(longPred));
         StartCoroutine(makePrediction(shortPred));
     }
 
@@ -73,6 +73,7 @@ public class MakePrediction : MonoBehaviour
             newChild.layer = 0;
             newChild.name = "Prediction" + child.name;
             newChild.transform.localScale = new Vector3(0.0f, 0.0f, 0.0f);
+            newChild.tag = "Untagged";
 
             allPredictions.Add(newChild);
 
@@ -92,10 +93,6 @@ public class MakePrediction : MonoBehaviour
                 child.GetComponent<DroneController>().PredictMovement(pred.shortPrediction ? 2 : 4);
                 pred.allData[allPredictions.IndexOf(child)].positions.Add(child.transform.position);
                 pred.allData[allPredictions.IndexOf(child)].crashed.Add(child.GetComponent<DroneController>().crashedPrediction);
-                if (child.GetComponent<DroneController>().crashedPrediction)
-                {
-                    gamepad.SetMotorSpeeds(0.5f, 0.5f);
-                }
             }
 
             yield return new WaitForSeconds(0.01f);
@@ -118,7 +115,7 @@ public class MakePrediction : MonoBehaviour
         UpdateLines(pred);
 
         if (!pred.shortPrediction)
-            yield return new WaitForSeconds(0.3f);
+            yield return new WaitForSeconds(0.2f);
         
         
         StartCoroutine(makePrediction(pred));
@@ -147,47 +144,70 @@ public class MakePrediction : MonoBehaviour
     }*` */
 
     void UpdateLines(Prediction pred)
+{
+    if (pred.allData == null || pred.allData.Count == 0)
+        return; // Exit if no data to draw
+
+    // Destroy all existing line renderers
+    foreach (LineRenderer line in pred.LineRenderers)
     {
-        if (pred.allData == null || pred.allData.Count == 0)
-            return; // Exit if no data to draw
-        
-        //drestroy all the line renderers
-        foreach (LineRenderer line in pred.LineRenderers)
-        {
-            Destroy(line.gameObject);
-        }
+        Destroy(line.gameObject);
+    }
+    pred.LineRenderers.Clear();
 
-        pred.LineRenderers.Clear();
+    int downsampleRate = 5; // Select 1 point every 5 data points
 
-        foreach (DroneDataPrediction data in pred.allData)
+    foreach (DroneDataPrediction data in pred.allData)
+    {
+        float fractionOfPath = (float)data.idFirstCrash / data.positions.Count;
+        Color purpleColor = new Color(0.5f, 0f, 0.5f, 1f); // Purple
+        Color greyColor = new Color(0.5f, 0.5f, 0.5f, 0.2f); // Grey
+        Color colorPath = Color.Lerp(greyColor, purpleColor, fractionOfPath);
+
+        int startIndex = 0;
+        while (startIndex < data.positions.Count - 1)
         {
-            float fractionOfPath = (float)data.idFirstCrash / data.positions.Count;
-            //make a color gradient of the path going from gray to purple
-            Color purpleColor = new Color(0.5f, 0f, 0.5f, 1f); // RGB for purple
-            Color greyColor = new Color(0.5f, 0.5f, 0.5f, 0.2f); // RGB for grey
-            Color colorPath = Color.Lerp(greyColor, purpleColor, fractionOfPath);
-            for (int i = 0; i < data.positions.Count - 1; i++)
+            bool isCrashed = data.crashed[startIndex];
+            Color segmentColor = isCrashed ? Color.red : colorPath;
+
+            // Find the end of the segment with the same color
+            int endIndex = startIndex + 1;
+            while (endIndex < data.positions.Count && data.crashed[endIndex - 1] == isCrashed)
+            {
+                endIndex++;
+            }
+
+            // Downsample the positions
+            List<Vector3> downsampledPositions = new List<Vector3>();
+            for (int i = startIndex; i < endIndex; i += downsampleRate)
+            {
+                downsampledPositions.Add(data.positions[i]);
+            }
+            // Ensure the last point is included
+            downsampledPositions.Add(data.positions[endIndex - 1]);
+
+            // Only create a line if we have at least two points
+            if (downsampledPositions.Count >= 2)
             {
                 GameObject lineObject = new GameObject("LineRenderer");
                 lineObject.transform.parent = pred.lineHolder;
 
                 LineRenderer lineRenderer = lineObject.AddComponent<LineRenderer>();
                 lineRenderer.material = new Material(Shader.Find("Sprites/Default"));
-                lineRenderer.startColor = lineRenderer.endColor = data.crashed[i] ? Color.red : colorPath;
+                lineRenderer.startColor = lineRenderer.endColor = segmentColor;
                 lineRenderer.startWidth = 0.1f;
                 lineRenderer.endWidth = 0.1f;
 
-                lineRenderer.transform.parent = pred.lineHolder;
-
-                lineRenderer.positionCount = 2;
-                lineRenderer.SetPosition(0, data.positions[i]);
-                lineRenderer.SetPosition(1, data.positions[i + 1]);
+                lineRenderer.positionCount = downsampledPositions.Count;
+                lineRenderer.SetPositions(downsampledPositions.ToArray());
 
                 pred.LineRenderers.Add(lineRenderer);
             }
+
+            startIndex = endIndex - 1;
         }
     }
-
+}
     void vibrateForShortPrediction(Prediction pred)
     {
         //if any drone is predicted to crash, vibrate the controller

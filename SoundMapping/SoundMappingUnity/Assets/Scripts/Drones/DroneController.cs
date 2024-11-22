@@ -16,7 +16,7 @@ public class DroneController : MonoBehaviour
         }
     }
 
-    public static float desiredSeparation = 2f;
+    public static float desiredSeparation = 3f;
     public float alpha = 1.5f; // Separation weight
     public float beta = 1.0f;  // Alignment weight
     public float gamma = 1.0f; // Cohesion weight
@@ -56,7 +56,7 @@ public class DroneController : MonoBehaviour
     public bool prediction = false;
         
     const int PRIORITYWHENEMBODIED = 2;
-    private float dampingFactor = 0.97f; // Adjust this value between 0 and 1
+    private float dampingFactor = 0.98f; 
 
     private GameObject gm;
     private float timeSeparated = 0;

@@ -121,15 +121,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 46e6a424b4eb989429a5f69b336de643, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  maxSpeed: 40
-  maxForce: 50
+  maxSpeed: 30
+  maxForce: 20
   alpha: 25
   beta: 0
   gamma: 3
   delta: 10
   migrationPointPredict: {x: 0, y: 0, z: 0}
   avoidanceRadius: 2
-  avoidanceForce: 1
+  avoidanceForce: 2
   obstacleLayer:
     serializedVersion: 2
     m_Bits: 64

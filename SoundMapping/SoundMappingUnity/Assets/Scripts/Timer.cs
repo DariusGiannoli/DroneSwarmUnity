@@ -10,7 +10,6 @@ public class Timer : MonoBehaviour
     private float elapsedTime = 0f; // To store the elapsed time
     private float elapsedTimeNetwork = 0f; // To store the elapsed time
     private Coroutine timerCoroutine; // Reference to the running coroutine
-
     private Coroutine timerCoroutineNetwork; // Reference to the running coroutine
 
     // Start is called before the first frame update
