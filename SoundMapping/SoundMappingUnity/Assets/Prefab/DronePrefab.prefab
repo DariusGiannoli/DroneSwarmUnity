@@ -128,8 +128,8 @@ MonoBehaviour:
   gamma: 3
   delta: 10
   migrationPointPredict: {x: 0, y: 0, z: 0}
-  avoidanceRadius: 1
-  avoidanceForce: 2
+  avoidanceRadius: 2
+  avoidanceForce: 1
   obstacleLayer:
     serializedVersion: 2
     m_Bits: 64

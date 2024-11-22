@@ -228,7 +228,6 @@ public class DroneController : MonoBehaviour
                 }
 
             }else{
-                print(this.name + " is inside " + neighbor.name);
                 float realDistance = distance + 2*droneRadius;
                 Vector3 repulsion = -alpha * (toNeighbor.normalized / (realDistance*realDistance));
                 separationForce += repulsion * neighborPriority;

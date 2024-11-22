@@ -2,68 +2,67 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class MakePrediction : MonoBehaviour
 {
-    int current = 0;
     public Transform allPredictionsHolder;
-    public List<DroneDataPrediction> allDataRecap = new List<DroneDataPrediction>();
-    private List<float> deltaTimes = new List<float>();
-    private const int maxDeltaTimes = 100;
 
-    private List<LineRenderer> activeLineRenderers = new List<LineRenderer>();
-    private List<LineRenderer> availableLineRenderers = new List<LineRenderer>();
+    public Prediction longPred, shortPred;
 
-    int maxPredictions = 25;
+    public Transform longPredictionLineHolder, shortPredictionLineHolder;
+
+
+    private Gamepad gamepad;
+
+    void Start()
+    {
+        gamepad = Gamepad.current;
+        if (gamepad == null)
+        {
+            Debug.LogWarning("No gamepad connected.");
+        }
+
+
+        shortPred = new Prediction(true, 10, 0, shortPredictionLineHolder);
+        longPred = new Prediction(false, 20, 1, longPredictionLineHolder);
+
+        //StartCoroutine(makePrediction(longPred));
+        StartCoroutine(makePrediction(shortPred));
+    }
+
+    //on exit
+    void OnDisable()
+    {
+        StopAllCoroutines();
+        gamepad.SetMotorSpeeds(0.0f, 0.0f);
+    }
 
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Space))
-        {
-            StartCoroutine(makePrediction(swarmModel.swarmHolder.transform, current));
-        }
-        UpdateDeltaTimes();
     }
 
-    void UpdateDeltaTimes()
-    {
-        if (deltaTimes.Count >= maxDeltaTimes)
-        {
-            deltaTimes.RemoveAt(0);
-        }
-        deltaTimes.Add(Time.deltaTime);
-    }
 
-    float GetAverageDeltaTime()
+    IEnumerator makePrediction(Prediction pred)
     {
-        float sum = 0f;
-        foreach (float deltaTime in deltaTimes)
+        try
         {
-            sum += deltaTime;
+            //find all the GameObject("Prediction" + pred.current.ToString()); and destroy them
+            GameObject predOBJ = GameObject.Find("Prediction" + pred.current.ToString());
+            Destroy(predOBJ);
         }
-        return deltaTimes.Count > 0 ? sum / deltaTimes.Count : Time.deltaTime;
-    }
-
-    IEnumerator makePrediction(Transform predictionHolder, int current)
-    {
-        // Clear all the children of the prediction holder
-        foreach (Transform child in allPredictionsHolder)
+        catch (Exception e)
         {
-            Destroy(child.gameObject);
+            Debug.Log("Predictions not found");
         }
-
-        GameObject prediction = new GameObject("Prediction" + current.ToString());
+        
+        GameObject prediction = new GameObject("Prediction" + pred.current.ToString());
         prediction.transform.parent = allPredictionsHolder.transform;
 
-        //remov ethe sphere collider
-        if (prediction.GetComponent<SphereCollider>() != null)
-        {
-            Destroy(prediction.GetComponent<SphereCollider>());
-        }
+        pred.allData = new List<DroneDataPrediction>();
 
-        List<DroneDataPrediction> allData = new List<DroneDataPrediction>();
         List<GameObject> allPredictions = new List<GameObject>();
-        foreach (Transform child in predictionHolder)
+        foreach (Transform child in swarmModel.swarmHolder.transform)
         {
             GameObject newChild = Instantiate(child.gameObject, child.position, child.rotation);
             newChild.transform.parent = prediction.transform;
@@ -73,15 +72,15 @@ public class MakePrediction : MonoBehaviour
 
             newChild.layer = 0;
             newChild.name = "Prediction" + child.name;
-            newChild.transform.localScale = new Vector3(0.4f, 0.4f, 0.4f);
+            newChild.transform.localScale = new Vector3(0.0f, 0.0f, 0.0f);
 
             allPredictions.Add(newChild);
 
             DroneDataPrediction data = new DroneDataPrediction(newChild.gameObject);
-            allData.Add(data);
+            pred.allData.Add(data);
         }
 
-        for (int i = 0; i < maxPredictions; i++)
+        for (int i = 0; i < pred.deep; i++)
         {
             foreach (GameObject child in allPredictions)
             {
@@ -90,22 +89,42 @@ public class MakePrediction : MonoBehaviour
 
             foreach (GameObject child in allPredictions)
             {
-                float averageDeltaTime = GetAverageDeltaTime();
-                child.GetComponent<DroneController>().PredictMovement(4);
-                allData[allPredictions.IndexOf(child)].positions.Add(child.transform.position);
-                allData[allPredictions.IndexOf(child)].crashed.Add(child.GetComponent<DroneController>().crashedPrediction);
-                //allData[allPredictions.IndexOf(child)].timestamps.Add(Time.time); 
+                child.GetComponent<DroneController>().PredictMovement(pred.shortPrediction ? 2 : 4);
+                pred.allData[allPredictions.IndexOf(child)].positions.Add(child.transform.position);
+                pred.allData[allPredictions.IndexOf(child)].crashed.Add(child.GetComponent<DroneController>().crashedPrediction);
+                if (child.GetComponent<DroneController>().crashedPrediction)
+                {
+                    gamepad.SetMotorSpeeds(0.5f, 0.5f);
+                }
+            }
 
+            yield return new WaitForSeconds(0.01f);
+        }
+
+        //crash prediction
+        foreach (DroneDataPrediction data in pred.allData)
+        {
+            if (data.crashed.Contains(true))
+            {
+                data.crashedPrediction = true;
+                data.idFirstCrash = data.crashed.IndexOf(true);
             }
         }
 
-        allDataRecap = allData;
-        UpdateLines();
-        yield return new WaitForSeconds(0.5f);
-        StartCoroutine(makePrediction(predictionHolder, 0));
+        if (pred.shortPrediction)
+        {
+            vibrateForShortPrediction(pred);
+        }
+        UpdateLines(pred);
+
+        if (!pred.shortPrediction)
+            yield return new WaitForSeconds(0.3f);
+        
+        
+        StartCoroutine(makePrediction(pred));
     }
 
-    void OnDrawGizmos()
+   /* void OnDrawGizmos()
     {
         if (allDataRecap == null || allDataRecap.Count == 0)
             return; // Exit if no data to draw
@@ -125,53 +144,85 @@ public class MakePrediction : MonoBehaviour
                 }
             }
         }
-    }
+    }*` */
 
-    void UpdateLines()
+    void UpdateLines(Prediction pred)
     {
-        if (allDataRecap == null || allDataRecap.Count == 0)
+        if (pred.allData == null || pred.allData.Count == 0)
             return; // Exit if no data to draw
-
-        // Move all active LineRenderers to available for reuse
-        availableLineRenderers.AddRange(activeLineRenderers);
-        activeLineRenderers.Clear();
-
-        foreach (DroneDataPrediction data in allDataRecap)
+        
+        //drestroy all the line renderers
+        foreach (LineRenderer line in pred.LineRenderers)
         {
+            Destroy(line.gameObject);
+        }
+
+        pred.LineRenderers.Clear();
+
+        foreach (DroneDataPrediction data in pred.allData)
+        {
+            float fractionOfPath = (float)data.idFirstCrash / data.positions.Count;
+            //make a color gradient of the path going from gray to purple
+            Color purpleColor = new Color(0.5f, 0f, 0.5f, 1f); // RGB for purple
+            Color greyColor = new Color(0.5f, 0.5f, 0.5f, 0.2f); // RGB for grey
+            Color colorPath = Color.Lerp(greyColor, purpleColor, fractionOfPath);
             for (int i = 0; i < data.positions.Count - 1; i++)
             {
-                // Only draw if the timestamp is within the last 1 second
-                LineRenderer lr;
+                GameObject lineObject = new GameObject("LineRenderer");
+                lineObject.transform.parent = pred.lineHolder;
 
-                // Reuse a LineRenderer if available, else create a new one
-                if (availableLineRenderers.Count > 0)
-                {
-                    lr = availableLineRenderers[0];
-                    availableLineRenderers.RemoveAt(0);
-                    lr.gameObject.SetActive(true);
-                }
-                else
-                {
-                    GameObject lineObj = new GameObject("LineRenderer");
-                    lineObj.transform.SetParent(this.transform);
-                    lr = lineObj.AddComponent<LineRenderer>();
-                    lr.material = new Material(Shader.Find("Sprites/Default"));
-                    lr.startWidth = lr.endWidth = 0.05f;
-                }
+                LineRenderer lineRenderer = lineObject.AddComponent<LineRenderer>();
+                lineRenderer.material = new Material(Shader.Find("Sprites/Default"));
+                lineRenderer.startColor = lineRenderer.endColor = data.crashed[i] ? Color.red : colorPath;
+                lineRenderer.startWidth = 0.1f;
+                lineRenderer.endWidth = 0.1f;
 
-                // Set positions
-                lr.positionCount = 2;
-                lr.SetPosition(0, data.positions[i]);
-                lr.SetPosition(1, data.positions[i + 1]);
+                lineRenderer.transform.parent = pred.lineHolder;
 
-                // Set color based on crashed status
-                Color lineColor = data.crashed[i] ? Color.red : Color.blue;
-                lr.startColor = lr.endColor = lineColor;
+                lineRenderer.positionCount = 2;
+                lineRenderer.SetPosition(0, data.positions[i]);
+                lineRenderer.SetPosition(1, data.positions[i + 1]);
 
-                activeLineRenderers.Add(lr);
+                pred.LineRenderers.Add(lineRenderer);
             }
         }
     }
+
+    void vibrateForShortPrediction(Prediction pred)
+    {
+        //if any drone is predicted to crash, vibrate the controller
+        if (pred.allData.Exists(data => data.crashedPrediction))
+        {
+            gamepad.SetMotorSpeeds(0.5f, 0.5f);
+        }
+        else
+        {
+            gamepad.SetMotorSpeeds(0.0f, 0.0f);
+        }
+    }
+}
+
+public class Prediction
+{
+    public bool shortPrediction;
+    public int deep;
+    public int current;
+
+    public Transform lineHolder;    
+
+    public List<DroneDataPrediction> allData;
+    public List<LineRenderer> LineRenderers;
+
+    public Prediction(bool prediction, int deep, int current, Transform lineHolder)
+    {
+        this.shortPrediction = prediction;
+        this.deep = deep;
+        this.current = current;
+        this.lineHolder = lineHolder;
+        this.allData = new List<DroneDataPrediction>();
+        this.LineRenderers = new List<LineRenderer>();
+    }
+
 }
 
 public class DroneDataPrediction
@@ -180,6 +231,8 @@ public class DroneDataPrediction
     public List<bool> crashed;
     public List<float> timestamps; 
     public GameObject drone;
+    public bool crashedPrediction = false;
+    public int idFirstCrash = 0;
 
     public DroneDataPrediction(GameObject drone)
     {
