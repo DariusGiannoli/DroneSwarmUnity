@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using FischlWorks_FogWar;
 using Unity.VisualScripting;
 using UnityEngine;
 
@@ -13,16 +14,45 @@ public class swarmModel : MonoBehaviour
 
     public float lastObstacleAvoidance = -1f;
 
+    public csFogWar fogWar;
+
     void Awake()
     {
+        spawn();
+    }
+
+    void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.R))
+        {
+            spawn();
+            this.GetComponent<Timer>().Restart();
+        }
+    }
+
+    void spawn()
+    {
+        fogWar.ResetMapAndFogRevealers();
+
         swarmHolder = GameObject.FindGameObjectWithTag("Swarm");
+        //kill all drones
+        foreach (Transform child in swarmHolder.transform)
+        {
+            GameObject.Destroy(child.gameObject);
+        }
+
         for (int i = 0; i < numDrones; i++)
         {
             Vector3 spawnPosition = new Vector3(Random.Range(-spawnRadius, spawnRadius), spawnHeight, Random.Range(-1, 1));
             GameObject drone = Instantiate(dronePrefab, spawnPosition, Quaternion.identity);
             drone.transform.parent = swarmHolder.transform;
             drone.name = "Drone"+i.ToString();
+
+            fogWar.AddFogRevealer(drone.transform, 5, true);
         }
+
+        this.GetComponent<HapticAudioManager>().Reset();
+        this.GetComponent<DroneNetworkManager>().Reset();
     }
 
     void Start()
@@ -42,6 +72,14 @@ public class swarmModel : MonoBehaviour
             drone.gameObject.SetActive(false);
             drone.transform.parent = null;
             //this.GetComponent<CameraMovement>().resetFogExplorers();
+        }
+
+        this.GetComponent<Timer>().DroneDiedCallback();
+
+        if (swarmHolder.transform.childCount == 0)
+        {
+            this.GetComponent<Timer>().Restart();
+            spawn();
         }
     }
 

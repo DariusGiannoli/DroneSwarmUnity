@@ -272,6 +272,72 @@ namespace FischlWorks_FogWar
 
 
         // --- --- ---
+        public void ResetMapAndFogRevealers()
+        {
+            // Reset the level data
+            ResetLevelData();
+
+            // Clear and reset fog revealers
+            ResetFogRevealers();
+
+            // Reinitialize the fog field
+            InitializeFogReset();
+
+            // Update the fog immediately
+            ForceUpdateFog();
+        }
+
+        private void InitializeFogReset()
+        {
+            if (fogPlane != null)
+            {
+                Destroy(fogPlane); // Destroy existing fog plane
+            }
+
+            fogPlane = GameObject.CreatePrimitive(PrimitiveType.Plane);
+
+            fogPlane.name = "[RUNTIME] Fog_Plane";
+
+            fogPlane.transform.position = new Vector3(
+                levelMidPoint.position.x,
+                levelMidPoint.position.y + fogPlaneHeight,
+                levelMidPoint.position.z);
+
+            fogPlane.transform.localScale = new Vector3(
+                (levelDimensionX * unitScale) / 10.0f,
+                1,
+                (levelDimensionY * unitScale) / 10.0f);
+
+            fogPlaneTextureLerpTarget = new Texture2D(levelDimensionX, levelDimensionY);
+            fogPlaneTextureLerpBuffer = new Texture2D(levelDimensionX, levelDimensionY);
+
+            fogPlaneTextureLerpBuffer.wrapMode = TextureWrapMode.Clamp;
+
+            fogPlaneTextureLerpBuffer.filterMode = FilterMode.Bilinear;
+
+            fogPlane.GetComponent<MeshRenderer>().material = new Material(fogPlaneMaterial);
+
+            fogPlane.GetComponent<MeshRenderer>().material.SetTexture("_MainTex", fogPlaneTextureLerpBuffer);
+
+            fogPlane.GetComponent<MeshCollider>().enabled = false;
+        }
+
+        private void ResetFogRevealers()
+        {
+            // Clear all current fog revealers
+            fogRevealers.Clear();
+        }
+
+
+        private void ResetLevelData()
+        {
+            // Clear the existing level data
+            levelData = new LevelData();
+
+            // Re-scan the level to generate fresh data
+            ScanLevel();
+        }
+
 
         public void AddFogRevealer(Transform revealerTransform, int sightRange, bool updateOnlyOnMove)
         {

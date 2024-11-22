@@ -29,8 +29,28 @@ public class DroneNetworkManager : MonoBehaviour
 
     public List<float> droneScores = new List<float>();
 
+
+    Coroutine networkUpdateCoroutine;
+
     void Start()
     {
+        StartCoroutine(LateStart());
+    }
+
+    public void Reset()
+    {
+        if(networkUpdateCoroutine != null)
+        {
+            adjacencyList.Clear();
+            largestComponent.Clear();
+            dronesInMainNetwork.Clear();
+            droneScores.Clear();
+
+
+            StopCoroutine(networkUpdateCoroutine);
+            networkUpdateCoroutine = null;
+        }
+
         StartCoroutine(LateStart());
     }
 
@@ -44,7 +64,7 @@ public class DroneNetworkManager : MonoBehaviour
             adjacencyList[drone] = new List<GameObject>();
         }
 
-        StartCoroutine(updateNetwork());
+        networkUpdateCoroutine = StartCoroutine(updateNetwork());
     }
 
 
@@ -89,24 +109,30 @@ public class DroneNetworkManager : MonoBehaviour
 
     void BuildNetwork()
     {
-        // Clear previous connections
-        foreach (var drone in adjacencyList.Keys)
+        try
         {
-            adjacencyList[drone].Clear();
-        }
-
-        // Build new connections
-        foreach (GameObject drone in drones)
-        {
-            foreach (GameObject otherDrone in drones)
+            // Clear previous connections
+            foreach (var drone in adjacencyList.Keys)
             {
-                if (drone == otherDrone) continue;
-
-                if (IsNeighbor(drone, otherDrone))
+                adjacencyList[drone].Clear();
+            }
+            // Build new connections
+            foreach (GameObject drone in drones)
+            {
+                foreach (GameObject otherDrone in drones)
                 {
-                    adjacencyList[drone].Add(otherDrone);
+                    if (drone == otherDrone) continue;
+
+                    if (IsNeighbor(drone, otherDrone))
+                    {
+                        adjacencyList[drone].Add(otherDrone);
+                    }
                 }
             }
+        }
+        catch (System.Exception e)
+        {
+            print("DroneNetworkManager: BuildNetwork: " + e.Message);
         }
     }
 

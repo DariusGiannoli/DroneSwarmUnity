@@ -122,7 +122,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   maxSpeed: 30
-  maxForce: 20
+  maxForce: 30
   alpha: 25
   beta: 0
   gamma: 3
@@ -149,6 +149,7 @@ MonoBehaviour:
   prediction: 0
   crashedPrediction: 0
   lastDT: 1
+  fireworkParticle: {fileID: 2777406680294339996, guid: 32208367bb31dcf4dac2a87bc1c62028, type: 3}
 --- !u!114 &-2915315480619927013
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -64,6 +64,8 @@ public class DroneController : MonoBehaviour
 
     public float lastDT = 1;
 
+    public GameObject fireworkParticle;
+
     float realScore 
     {
         get
@@ -340,7 +342,11 @@ public class DroneController : MonoBehaviour
                         CameraMovement.embodiedDrone = null;
                         CameraMovement.nextEmbodiedDrone = null;
                     }
-                    gm.GetComponent<swarmModel>().RemoveDrone(this.gameObject);    
+                    gm.GetComponent<swarmModel>().RemoveDrone(this.gameObject);
+                    //spawn     firework
+                    GameObject firework = Instantiate(fireworkParticle, transform.position, Quaternion.identity);
+                    firework.transform.position = transform.position;
+                    Destroy(firework, 0.5f);
 
                 }else{
                     crashedPrediction = true;

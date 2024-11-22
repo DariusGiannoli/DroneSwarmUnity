@@ -26,6 +26,15 @@ public class HapticAudioManager : MonoBehaviour
         }
     }
 
+    public void Reset()
+    {
+        drones.Clear();
+        for (int i = 0; i < swarmModel.swarmHolder.transform.childCount; i++)
+        {
+            drones.Add(new droneStatus(swarmModel.swarmHolder.transform.GetChild(i).gameObject));
+        }
+    }
+
     // Update is called once per frame
     void Update()
     {
@@ -117,9 +126,6 @@ public class droneStatus
         droneScores.Add(score);
         updateScore();
     }
-
-    
-
 
     private void updateScore()
     {

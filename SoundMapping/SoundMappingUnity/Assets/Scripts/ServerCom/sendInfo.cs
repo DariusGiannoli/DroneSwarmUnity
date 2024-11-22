@@ -10,6 +10,8 @@ public class SendInfo : MonoBehaviour
     private const string ServerUrl = "localhost:5000/endpoint"; // Set your server endpoint here
     public float sendEvery = 1f; // Send data every 1 second
 
+    public static bool connectedToServer = false;
+
 
     void Start()
     {
@@ -62,11 +64,11 @@ public class SendInfo : MonoBehaviour
 
             if (request.result == UnityWebRequest.Result.Success)
             {
+                connectedToServer = true;
             }
             else
             {
-
-                Debug.LogWarning("Error: " + request.error);
+                connectedToServer = false;
             }
         }
     }

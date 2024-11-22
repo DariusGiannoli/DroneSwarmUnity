@@ -24,7 +24,7 @@ public class MakePrediction : MonoBehaviour
         }
 
 
-        shortPred = new Prediction(true, 10, 0, shortPredictionLineHolder);
+        shortPred = new Prediction(true, 7, 0, shortPredictionLineHolder);
         longPred = new Prediction(false, 15, 1, longPredictionLineHolder);
 
         StartCoroutine(makePrediction(longPred));
@@ -70,6 +70,14 @@ public class MakePrediction : MonoBehaviour
             newChild.GetComponent<DroneController>().prediction = true;
             newChild.GetComponent<DroneController>().velocity = child.GetComponent<DroneController>().velocity;
 
+            //remove Camera component
+            Destroy(newChild.GetComponent<Camera>());
+            Destroy(newChild.GetComponent<AudioSource>());
+            Destroy(newChild.GetComponent<sendInfoGameObject>());
+            Destroy(newChild.GetComponent<MeshRenderer>());
+            Destroy(newChild.GetComponent<MeshFilter>());
+            Destroy(newChild.GetComponent<SphereCollider>());
+
             newChild.layer = 0;
             newChild.name = "Prediction" + child.name;
             newChild.transform.localScale = new Vector3(0.0f, 0.0f, 0.0f);
@@ -95,7 +103,7 @@ public class MakePrediction : MonoBehaviour
                 pred.allData[allPredictions.IndexOf(child)].crashed.Add(child.GetComponent<DroneController>().crashedPrediction);
             }
 
-            yield return new WaitForSeconds(0.01f);
+            yield return new WaitForSeconds(0.02f);
         }
 
         //crash prediction
@@ -112,6 +120,7 @@ public class MakePrediction : MonoBehaviour
         {
             vibrateForShortPrediction(pred);
         }
+
         UpdateLines(pred);
 
         if (!pred.shortPrediction)
@@ -144,7 +153,7 @@ public class MakePrediction : MonoBehaviour
     }*` */
 
     void UpdateLines(Prediction pred)
-{
+    {
     if (pred.allData == null || pred.allData.Count == 0)
         return; // Exit if no data to draw
 
@@ -208,6 +217,7 @@ public class MakePrediction : MonoBehaviour
         }
     }
 }
+    
     void vibrateForShortPrediction(Prediction pred)
     {
         //if any drone is predicted to crash, vibrate the controller

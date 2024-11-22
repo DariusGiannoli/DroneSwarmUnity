@@ -27,10 +27,6 @@ public class CameraMovement : MonoBehaviour
     {
         cam = Camera.main;
         intialCamRotation = cam.transform.rotation;
-        for(int i = 0; i < swarmHolder.childCount; i++)
-        {
-            fogWarManager.GetComponent<csFogWar>().AddFogRevealer(swarmHolder.GetChild(i).gameObject.transform, FOVDrones, true);
-        }
 
         this.GetComponent<sendInfoGameObject>().setupCallback(getCameraPositionDE);
         this.GetComponent<sendInfoGameObject>().setupCallback(getEmbodiedDrone);
