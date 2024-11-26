@@ -7,6 +7,8 @@ TagManager:
   - Swarm
   - GameManager
   - Drone
+  - Obstacle
+  - FloorCylinder
   layers:
   - Default
   - TransparentFX

@@ -5,6 +5,9 @@ using UnityEngine;
 
 public class DroneController : MonoBehaviour
 {
+
+#region Parameters
+
     // Existing parameters
     public float maxSpeed = 5f;
     public float maxForce = 10f;
@@ -20,9 +23,8 @@ public class DroneController : MonoBehaviour
     public float alpha = 1.5f; // Separation weight
     public float beta = 1.0f;  // Alignment weight
     public float gamma = 1.0f; // Cohesion weight
-
-    // Migration parameters
     public float delta = 1.0f; // Migration weight
+
     public static Vector3 migrationPoint = Vector3.zero;
     public Vector3 migrationPointPredict = Vector3.zero;
 
@@ -54,9 +56,9 @@ public class DroneController : MonoBehaviour
 
     public bool showGuizmos = false;
     public bool prediction = false;
-        
-    const int PRIORITYWHENEMBODIED = 2;
-    private float dampingFactor = 0.98f; 
+
+    public const int PRIORITYWHENEMBODIED = 2;
+    public float dampingFactor = 0.98f;
 
     private GameObject gm;
     private float timeSeparated = 0;
@@ -66,7 +68,9 @@ public class DroneController : MonoBehaviour
 
     public GameObject fireworkParticle;
 
-    float realScore 
+    public Vector3 currentPos;
+
+    float realScore
     {
         get
         {
@@ -79,36 +83,42 @@ public class DroneController : MonoBehaviour
     {
         get
         {
-            if(!prediction)
+            if (!prediction)
                 return swarmModel.swarmHolder.transform;
             else
                 return this.transform.parent.transform;
         }
     }
+    
+    #endregion
+    
+    
     void Start()
     {
         if (!prediction)
         {
             StartNormal();
         }
+        Application.targetFrameRate = 30; // Set the target frame rate to 30 FPS
     }
 
-    void Update()
+    void FixedUpdate()
     {
-        if(!prediction)
+        if (!prediction)
         {
             UpdateNormal();
-            lastDT = Time.deltaTime;
+            lastDT = Time.fixedDeltaTime;
         }
     }
 
 
-#region PredictionMode
+    #region PredictionMode
 
     public void PredictForce()
     {
         Vector3 centerOfSwarm = Vector3.zero;
-        foreach (Transform drone in transform.parent.transform)
+       
+       /* foreach (Transform drone in transform.parent.transform)
         {
             centerOfSwarm += drone.position;
         }
@@ -116,12 +126,12 @@ public class DroneController : MonoBehaviour
         //take into accouht network ?
 
         migrationPointPredict = centerOfSwarm + MigrationPointController.deltaMigration; // the preiciton is going to move the swarm and therefore the migration point should updfate also
-        ComputeForces();
+        ComputeForces();*/
     }
 
     public void PredictMovement(int numberOfTimeApplied)
     {
-        UpdatePositionPrediction(numberOfTimeApplied);
+        //UpdatePositionPrediction(numberOfTimeApplied);
     }
 
     public void UpdatePositionPrediction(int numberOfTimeApplied)
@@ -140,13 +150,12 @@ public class DroneController : MonoBehaviour
         transform.position = newPosition;
 
         acceleration = Vector3.zero;
-}
+    }
 
 
-#endregion
+    #endregion
 
-#region NormalMode
-
+    #region NormalMode
     void StartNormal()
     {
         gm = GameObject.FindGameObjectWithTag("GameManager");
@@ -155,15 +164,15 @@ public class DroneController : MonoBehaviour
 
         swarm.GetComponent<sendInfoGameObject>().setupCallback(() =>
         {
-            return new DataEntry(this.transform.name+"_position", transform.position.ToString());
+            return new DataEntry(this.transform.name + "_position", transform.position.ToString());
         });
 
         swarm.GetComponent<sendInfoGameObject>().setupCallback(() =>
         {
-            return new DataEntry(this.transform.name+"_velocity", velocity.ToString());
+            return new DataEntry(this.transform.name + "_velocity", velocity.ToString());
         });
 
-        
+
         velocity = new Vector3(0, 0, 0);
         acceleration = Vector3.zero;
 
@@ -172,12 +181,11 @@ public class DroneController : MonoBehaviour
 
     void UpdateNormal()
     {
-            ComputeForces();
-            UpdatePositionNormal();
-            updateColor();
-            updateSound();
+        ComputeForces();
+        UpdatePositionNormal();
+        updateColor();
+        updateSound();
     }
-    
     void UpdatePositionNormal()
     {
 
@@ -197,10 +205,9 @@ public class DroneController : MonoBehaviour
         acceleration = Vector3.zero;
     }
 
-#endregion
+    #endregion
 
-#region ControlRules
-
+    #region ControlRules
     void ComputeForces()
     {
         List<Transform> neighbors = GetNeighbors();
@@ -217,21 +224,23 @@ public class DroneController : MonoBehaviour
             int neighborPriority = CameraMovement.embodiedDrone == neighbor.gameObject ? PRIORITYWHENEMBODIED : 1;
 
             Vector3 toNeighbor = neighbor.position - transform.position;
-            float distance = toNeighbor.magnitude - 2*droneRadius;
+            float distance = toNeighbor.magnitude - 2 * droneRadius;
 
             // Separation (repulsion)
             if (distance > 0)
             {
-                if(distance < desiredSeparation)
+                if (distance < desiredSeparation)
                 {
 
-                    Vector3 repulsion = - alpha * (distance - desiredSeparation*0.9f) * (distance - desiredSeparation*0.9f) * toNeighbor.normalized;
+                    Vector3 repulsion = -alpha * (distance - desiredSeparation * 0.9f) * (distance - desiredSeparation * 0.9f) * toNeighbor.normalized;
                     separationForce += repulsion * neighborPriority;
                 }
 
-            }else{
-                float realDistance = distance + 2*droneRadius;
-                Vector3 repulsion = -alpha * (toNeighbor.normalized / (realDistance*realDistance));
+            }
+            else
+            {
+                float realDistance = distance + 2 * droneRadius;
+                Vector3 repulsion = -alpha * (toNeighbor.normalized / (realDistance * realDistance));
                 separationForce += repulsion * neighborPriority;
             }
 
@@ -262,10 +271,11 @@ public class DroneController : MonoBehaviour
         }
 
         // Migration Force towards the migrationPoint
-        if(prediction)
+        if (prediction)
         {
             migrationForce = delta * (migrationPointPredict - transform.position).normalized;
-        }else
+        }
+        else
         {
             migrationForce = delta * (migrationPoint - transform.position).normalized;
         }
@@ -277,7 +287,6 @@ public class DroneController : MonoBehaviour
         acceleration = computeAllForcesAccordingToControlRules();
 
     }
-
     Vector3 computeAllForcesAccordingToControlRules()
     {
         if (CameraMovement.embodiedDrone == this.gameObject)
@@ -298,6 +307,18 @@ public class DroneController : MonoBehaviour
         {
             if (drone == this.gameObject.transform) continue;
 
+            if (prediction)
+            {
+                if (Vector3.Distance(currentPos, drone.GetComponent<DroneController>().currentPos) < neighborRadius)
+                {
+                    //create a fake drone Transform
+                    Transform fakeDrone = new GameObject().transform;
+                    fakeDrone.position = drone.GetComponent<DroneController>().currentPos;
+
+                    neighbors.Add(fakeDrone);
+                }
+            }
+
             if (Vector3.Distance(transform.position, drone.position) < neighborRadius)
             {
                 neighbors.Add(drone);
@@ -311,33 +332,29 @@ public class DroneController : MonoBehaviour
         Vector3 avoidanceForceVector = Vector3.zero;
 
         // Find all colliders within the avoidance radius on the obstacle layer
-        Collider[] obstacles = Physics.OverlapSphere(transform.position, avoidanceRadius+droneRadius, obstacleLayer);
+        List<Vector3> obstaclesPoint = ClosestPointCalculator.ClosestPointsWithinRadius(transform.position, avoidanceRadius);
         obstaclesInRange.Clear();
 
-        foreach (Collider obstacle in obstacles)
+        foreach (Vector3 obstacle in obstaclesPoint)
         {
             // Calculate a force away from the obstacle
-            Vector3 awayFromObstacle = transform.position - obstacle.ClosestPoint(transform.position);
+            Vector3 awayFromObstacle = transform.position - obstacle;
             float distance = awayFromObstacle.magnitude - droneRadius;
 
             if (distance > 0)
             {
                 // The force magnitude decreases with distance
-                Vector3 repulsion = awayFromObstacle.normalized * (avoidanceForce / (distance*distance));
-                //apply friction with speed
-                Vector3 friction = -velocity * 0.3f;
-
-
+                Vector3 repulsion = awayFromObstacle.normalized * (avoidanceForce / (distance * distance));
                 repulsion.y = 0; // Keep movement in the XZ plane
-                avoidanceForceVector += repulsion + friction;
+                avoidanceForceVector += repulsion;
 
-                obstaclesInRange.Add(new ObstacleInRange(obstacle.ClosestPoint(transform.position), obstacle.gameObject, distance));
+                obstaclesInRange.Add(new ObstacleInRange(obstacle, null, distance));
             }
             else
             {
-                if(!prediction)
+                if (!prediction)
                 {
-                    if(CameraMovement.embodiedDrone == this.gameObject)
+                    if (CameraMovement.embodiedDrone == this.gameObject)
                     {
                         CameraMovement.embodiedDrone = null;
                         CameraMovement.nextEmbodiedDrone = null;
@@ -348,32 +365,34 @@ public class DroneController : MonoBehaviour
                     firework.transform.position = transform.position;
                     Destroy(firework, 0.5f);
 
-                }else{
+                }
+                else
+                {
                     crashedPrediction = true;
-                }             
+                }
             }
-                
+
         }
 
         // Limit the avoidance force to maxForce
-        
-        
+
+
         //avoidanceForceVector = Vector3.ClampMagnitude(avoidanceForceVector, maxForce);
 
         return avoidanceForceVector;
     }
 
-#endregion
+    #endregion
 
-#region Gizmos
+
+    #region Gizmos
     void OnDrawGizmos()
     {
 
     }
-
     void OnDrawGizmosSelected()
     {
-        if(showGuizmos)
+        if (showGuizmos)
         {
             Gizmos.color = Color.red;
             Gizmos.DrawLine(transform.position, transform.position + obstacleAvoidanceForce);
@@ -392,9 +411,9 @@ public class DroneController : MonoBehaviour
         }
     }
 
-#endregion
+    #endregion
 
-#region HapticAudio
+    #region HapticAudio
     void updateColor()
     {
         if (CameraMovement.embodiedDrone == this.gameObject || CameraMovement.nextEmbodiedDrone == this.gameObject || MigrationPointController.selectedDrone == this.gameObject)
@@ -405,13 +424,15 @@ public class DroneController : MonoBehaviour
 
         float score = realScore;
 
-        if(score < -0.9f)
+        if (score < -0.9f)
         {
             this.GetComponent<Renderer>().material = notConnectedColor;
-        }else if(score < 1)
+        }
+        else if (score < 1)
         {
             this.GetComponent<Renderer>().material.Lerp(farColor, connectedColor, score);
-        }else // == 1
+        }
+        else // == 1
         {
             this.GetComponent<Renderer>().material = connectedColor;
         }
@@ -421,18 +442,20 @@ public class DroneController : MonoBehaviour
     {
         float score = realScore;
 
-        if(score < -0.9f)
+        if (score < -0.9f)
         {
             timeSeparated += Time.deltaTime;
             this.GetComponent<AudioSource>().enabled = HapticAudioManager.GetAudioSourceCharacteristics(timeSeparated);
-        }else{
+        }
+        else
+        {
             timeSeparated = 0;
             this.GetComponent<AudioSource>().enabled = false;
         }
 
     }
 
-#endregion
+    #endregion
 
 }
 
