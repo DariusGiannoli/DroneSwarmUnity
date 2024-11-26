@@ -9,6 +9,7 @@ TagManager:
   - Drone
   - Obstacle
   - FloorCylinder
+  - FloorWall
   layers:
   - Default
   - TransparentFX
