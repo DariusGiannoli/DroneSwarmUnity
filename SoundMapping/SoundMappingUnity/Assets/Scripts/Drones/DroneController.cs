@@ -11,11 +11,13 @@ public class DroneController : MonoBehaviour
     // Existing parameters
     public float maxSpeed = 5f;
     public float maxForce = 10f;
+
+    public static int extraDistanceNeighboor = 3;
     public static float neighborRadius
     {
         get
         {
-            return desiredSeparation + 1;
+            return desiredSeparation + extraDistanceNeighboor;
         }
     }
 
@@ -112,49 +114,6 @@ public class DroneController : MonoBehaviour
     }
 
 
-    #region PredictionMode
-
-    public void PredictForce()
-    {
-        Vector3 centerOfSwarm = Vector3.zero;
-       
-       /* foreach (Transform drone in transform.parent.transform)
-        {
-            centerOfSwarm += drone.position;
-        }
-        centerOfSwarm /= transform.parent.transform.childCount;
-        //take into accouht network ?
-
-        migrationPointPredict = centerOfSwarm + MigrationPointController.deltaMigration; // the preiciton is going to move the swarm and therefore the migration point should updfate also
-        ComputeForces();*/
-    }
-
-    public void PredictMovement(int numberOfTimeApplied)
-    {
-        //UpdatePositionPrediction(numberOfTimeApplied);
-    }
-
-    public void UpdatePositionPrediction(int numberOfTimeApplied)
-    {
-        for (int i = 0; i < numberOfTimeApplied; i++)
-        {
-            velocity += acceleration * lastDT;
-            velocity = Vector3.ClampMagnitude(velocity, maxSpeed);
-
-            // Apply damping to reduce the velocity over time
-            velocity *= dampingFactor;
-        }
-
-        Vector3 newPosition = transform.position + velocity * lastDT * numberOfTimeApplied;
-        newPosition.y = swarmModel.spawnHeight;
-        transform.position = newPosition;
-
-        acceleration = Vector3.zero;
-    }
-
-
-    #endregion
-
     #region NormalMode
     void StartNormal()
     {
@@ -189,13 +148,13 @@ public class DroneController : MonoBehaviour
     void UpdatePositionNormal()
     {
 
-        velocity += acceleration * Time.deltaTime;
+        velocity += acceleration * 0.02f;
         velocity = Vector3.ClampMagnitude(velocity, maxSpeed);
 
         // Apply damping to reduce the velocity over time
         velocity *= dampingFactor;
 
-        Vector3 newPosition = transform.position + velocity * Time.deltaTime;
+        Vector3 newPosition = transform.position + velocity * 0.02f;
 
         // Keep the drone at the same height
         newPosition.y = swarmModel.spawnHeight;
@@ -210,7 +169,7 @@ public class DroneController : MonoBehaviour
     #region ControlRules
     void ComputeForces()
     {
-        List<Transform> neighbors = GetNeighbors();
+        List<GameObject> neighbors = GetNeighbors();
 
         int neighborCount = 0;
         int realNeighborCount = 0;
@@ -219,11 +178,11 @@ public class DroneController : MonoBehaviour
         alignmentForce = Vector3.zero;
         cohesionForce = Vector3.zero;
 
-        foreach (Transform neighbor in neighbors)
+        foreach (GameObject neighbor in neighbors)
         {
             int neighborPriority = CameraMovement.embodiedDrone == neighbor.gameObject ? PRIORITYWHENEMBODIED : 1;
 
-            Vector3 toNeighbor = neighbor.position - transform.position;
+            Vector3 toNeighbor = neighbor.transform.position - transform.position;
             float distance = toNeighbor.magnitude - 2 * droneRadius;
 
             // Separation (repulsion)
@@ -251,7 +210,7 @@ public class DroneController : MonoBehaviour
                 alignmentForce += neighborController.velocity * neighborPriority;
             }
 
-            cohesionForce += neighbor.position * neighborPriority;
+            cohesionForce += neighbor.transform.position * neighborPriority;
 
             neighborCount += neighborPriority;
             realNeighborCount++;
@@ -261,6 +220,7 @@ public class DroneController : MonoBehaviour
         {
             // Alignment
             alignmentForce /= neighborCount;
+            alignmentForce = (alignmentForce + MigrationPointController.alignementVector) / 2; //average with control rule
             alignmentForce = (alignmentForce - velocity) * beta;
 
             // Cohesion
@@ -269,17 +229,15 @@ public class DroneController : MonoBehaviour
 
             distanceToSwarmCenter = Vector3.Distance(transform.position, cohesionForce);
         }
-
-        // Migration Force towards the migrationPoint
-        if (prediction)
-        {
-            migrationForce = delta * (migrationPointPredict - transform.position).normalized;
-        }
         else
         {
-            migrationForce = delta * (migrationPoint - transform.position).normalized;
+            alignmentForce = MigrationPointController.alignementVector;
+            alignmentForce = (alignmentForce - velocity) * beta;
         }
-        migrationForce.y = 0; // Keep the migration force in XZ plane
+
+        migrationForce = Vector3.zero;
+
+        alignmentForce.y = 0;
 
         // Obstacle Avoidance Force
         obstacleAvoidanceForce = ComputeObstacleAvoidanceForce();
@@ -287,6 +245,8 @@ public class DroneController : MonoBehaviour
         acceleration = computeAllForcesAccordingToControlRules();
 
     }
+    
+    
     Vector3 computeAllForcesAccordingToControlRules()
     {
         if (CameraMovement.embodiedDrone == this.gameObject)
@@ -300,28 +260,16 @@ public class DroneController : MonoBehaviour
 
     }
 
-    List<Transform> GetNeighbors()
+    List<GameObject> GetNeighbors()
     {
-        List<Transform> neighbors = new List<Transform>();
+        List<GameObject> neighbors = new List<GameObject>();
         foreach (Transform drone in transform.parent.transform)
         {
             if (drone == this.gameObject.transform) continue;
-
-            if (prediction)
+            
+            if (Vector3.Distance(currentPos, drone.GetComponent<DroneController>().currentPos) < neighborRadius)
             {
-                if (Vector3.Distance(currentPos, drone.GetComponent<DroneController>().currentPos) < neighborRadius)
-                {
-                    //create a fake drone Transform
-                    Transform fakeDrone = new GameObject().transform;
-                    fakeDrone.position = drone.GetComponent<DroneController>().currentPos;
-
-                    neighbors.Add(fakeDrone);
-                }
-            }
-
-            if (Vector3.Distance(transform.position, drone.position) < neighborRadius)
-            {
-                neighbors.Add(drone);
+                neighbors.Add(drone.gameObject);
             }
         }
         return neighbors;
@@ -330,8 +278,6 @@ public class DroneController : MonoBehaviour
     Vector3 ComputeObstacleAvoidanceForce()
     {
         Vector3 avoidanceForceVector = Vector3.zero;
-
-        // Find all colliders within the avoidance radius on the obstacle layer
         List<Vector3> obstaclesPoint = ClosestPointCalculator.ClosestPointsWithinRadius(transform.position, avoidanceRadius);
         obstaclesInRange.Clear();
 
@@ -344,7 +290,7 @@ public class DroneController : MonoBehaviour
             if (distance > 0)
             {
                 // The force magnitude decreases with distance
-                Vector3 repulsion = awayFromObstacle.normalized * (avoidanceForce / (distance * distance));
+                Vector3 repulsion = awayFromObstacle.normalized * (avoidanceForce / ( distance * distance));
                 repulsion.y = 0; // Keep movement in the XZ plane
                 avoidanceForceVector += repulsion;
 
@@ -352,24 +298,16 @@ public class DroneController : MonoBehaviour
             }
             else
             {
-                if (!prediction)
+                if (CameraMovement.embodiedDrone == this.gameObject)
                 {
-                    if (CameraMovement.embodiedDrone == this.gameObject)
-                    {
-                        CameraMovement.embodiedDrone = null;
-                        CameraMovement.nextEmbodiedDrone = null;
-                    }
-                    gm.GetComponent<swarmModel>().RemoveDrone(this.gameObject);
-                    //spawn     firework
-                    GameObject firework = Instantiate(fireworkParticle, transform.position, Quaternion.identity);
-                    firework.transform.position = transform.position;
-                    Destroy(firework, 0.5f);
-
+                    CameraMovement.embodiedDrone = null;
+                    CameraMovement.nextEmbodiedDrone = null;
                 }
-                else
-                {
-                    crashedPrediction = true;
-                }
+                gm.GetComponent<swarmModel>().RemoveDrone(this.gameObject);
+                //spawn     firework
+                GameObject firework = Instantiate(fireworkParticle, transform.position, Quaternion.identity);
+                firework.transform.position = transform.position;
+                Destroy(firework, 0.5f);
             }
 
         }

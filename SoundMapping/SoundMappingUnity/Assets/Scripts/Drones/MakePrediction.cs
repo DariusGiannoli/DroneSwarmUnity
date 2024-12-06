@@ -7,6 +7,7 @@ using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Interactions;
+using UnityEngine.Scripting;
 
 public class MakePrediction : MonoBehaviour
 {
@@ -35,26 +36,20 @@ public class MakePrediction : MonoBehaviour
         }
 
         shortPred = new Prediction(true, 30, 1, 0, shortPredictionLineHolder);
-        longPred = new Prediction(false, 15, 3, 1, longPredictionLineHolder);
+        //longPred = new Prediction(false, 15, 3, 1, longPredictionLineHolder);
 
         launchPreditionThread(shortPred);
     }
 
     void StartPrediction(Prediction pred)
     {
-        Vector3 centerOfSwarm = Vector3.zero;
-        foreach (DroneFake drone in pred.dronesPrediction)
-        {
-            centerOfSwarm += drone.position;
-        }
-        centerOfSwarm /= pred.dronesPrediction.Count;
-        //take into accouht network ?
-        Vector3 migrationPointPredict = centerOfSwarm + pred.directionOfMigration;
+        Vector3 alignementVector = pred.alignementVector;   
+
         for(int i = 0; i < pred.deep; i++)
         {
             foreach (DroneFake drone in pred.dronesPrediction)
             {
-                drone.startPrediction(pred.dronesPrediction,migrationPointPredict);
+                drone.startPrediction(pred.dronesPrediction,alignementVector);
             }
 
 
@@ -77,7 +72,7 @@ public class MakePrediction : MonoBehaviour
 
     void spawnPredictions()
     {
-        spawnPrediction(longPred);
+       // spawnPrediction(longPred);
         spawnPrediction(shortPred);
     }
 
@@ -85,6 +80,7 @@ public class MakePrediction : MonoBehaviour
     {
         GameObject drone = swarmModel.swarmHolder.transform.GetChild(0).gameObject;
         DroneController scrip = drone.GetComponent<DroneController>();
+
         DroneFake.maxForce = scrip.maxForce;
         DroneFake.maxSpeed = scrip.maxSpeed;
         DroneFake.desiredSeparation = DroneController.desiredSeparation;
@@ -101,9 +97,13 @@ public class MakePrediction : MonoBehaviour
         DroneFake.dampingFactor = scrip.dampingFactor;
         DroneFake.spawnHeight = swarmModel.spawnHeight;
 
+        pred.alignementVector = MigrationPointController.alignementVector;
+
+   //     pred.lastMigrationPoint = this.GetComponent<MigrationPointController>().migrationPoint;
+
 
         //start a thread with short prediction
-        shortPred.directionOfMigration = MigrationPointController.deltaMigration;
+        shortPred.directionOfMigration = this.GetComponent<MigrationPointController>().deltaMigration;
         spawnPredictions();
         lock (shortPred)
         {
@@ -275,12 +275,15 @@ public class DroneFake
 
             if (Vector3.Distance(this.position, drone.position) < neighborRadius)
             {
+                if(drone.hasCrashed)
+                {
+                    continue;
+                }
                 neighbors.Add(drone);
             }
         }
         return neighbors;
     }
-
 
     public Vector3 ComputeObstacleAvoidanceForce()
     {
@@ -307,12 +310,12 @@ public class DroneFake
         return avoidanceForceVector;
     }
     
-    public void startPrediction(List<DroneFake> allDrones, Vector3 migrationPointPredict)
+    public void startPrediction(List<DroneFake> allDrones, Vector3 alignementVector)
     {
-        ComputeForces(allDrones, migrationPointPredict);
+        ComputeForces(allDrones, alignementVector);
     }
 
-    void ComputeForces(List<DroneFake> allDrones, Vector3 migrationPointPredict)
+    void ComputeForces(List<DroneFake> allDrones, Vector3 alignmentVector)
     {
         List<DroneFake> neighbors = GetNeighbors(allDrones);
 
@@ -348,26 +351,36 @@ public class DroneFake
                 separationForce += repulsion * neighborPriority;
             }
 
+            // Alignment
+            alignmentForce += neighbor.velocity * neighborPriority;
             cohesionForce += neighbor.position * neighborPriority;
-
             neighborCount += neighborPriority;
             realNeighborCount++;
         }
 
         if (neighborCount > 0 && realNeighborCount > 0)
         {
+            alignmentForce /= neighborCount;
+            alignmentForce = (alignmentForce +alignmentVector) / 2; //average with control rule
+            alignmentForce = (alignmentForce - velocity) * beta;
+
             cohesionForce /= neighborCount;
             cohesionForce = (cohesionForce - position) * gamma;
         }
+        else
+        {
+            alignmentForce = alignmentVector;
+            alignmentForce = (alignmentForce - velocity) * beta;
+        }
 
-        // Migration Force towards the migrationPoint
-        Vector3 migrationForce = delta * (migrationPointPredict - position).normalized;
-        migrationForce.y = 0; // Keep the migration force in XZ plane
+        Vector3 migrationForce = Vector3.zero;
+
+        alignmentForce.y = 0;
 
         // Obstacle Avoidance Force
         Vector3 obstacleAvoidanceForce = ComputeObstacleAvoidanceForce();
 
-        Vector3 fo = separationForce + cohesionForce + migrationForce;
+        Vector3 fo = separationForce + cohesionForce + migrationForce + alignmentForce;
         fo = Vector3.ClampMagnitude(fo + obstacleAvoidanceForce, maxForce);
         
         acceleration = fo;
@@ -382,10 +395,10 @@ public class DroneFake
 
             // Apply damping to reduce the velocity over time
             velocity *= dampingFactor;
-        }
 
-        position += velocity * lastDT * numberOfTimeApplied;
-        position.y = spawnHeight;
+            position += velocity * 0.02f;
+            position.y = spawnHeight;
+        }
 
         acceleration = Vector3.zero;
     }
@@ -408,6 +421,8 @@ public class Prediction
 
     public List<DroneDataPrediction> allData;
     public List<LineRenderer> LineRenderers;
+
+    public Vector3 alignementVector;
 
     public Prediction(bool prediction, int deep, int step, int current,  Transform lineHolder)
     {

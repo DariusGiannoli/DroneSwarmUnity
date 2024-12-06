@@ -121,15 +121,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 46e6a424b4eb989429a5f69b336de643, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  maxSpeed: 30
-  maxForce: 30
-  alpha: 25
-  beta: 0
+  maxSpeed: 5
+  maxForce: 15
+  alpha: 30
+  beta: 5
   gamma: 3
-  delta: 10
+  delta: 0
   migrationPointPredict: {x: 0, y: 0, z: 0}
-  avoidanceRadius: 2
-  avoidanceForce: 2
+  avoidanceRadius: 5
+  avoidanceForce: 4
   obstacleLayer:
     serializedVersion: 2
     m_Bits: 64
@@ -147,9 +147,11 @@ MonoBehaviour:
   embodiedColor: {fileID: 2100000, guid: ea2740c202d629d46883c000bb8326dc, type: 2}
   showGuizmos: 0
   prediction: 0
+  dampingFactor: 0.98
   crashedPrediction: 0
   lastDT: 1
   fireworkParticle: {fileID: 2777406680294339996, guid: 32208367bb31dcf4dac2a87bc1c62028, type: 3}
+  currentPos: {x: 0, y: 0, z: 0}
 --- !u!114 &-2915315480619927013
 MonoBehaviour:
   m_ObjectHideFlags: 0

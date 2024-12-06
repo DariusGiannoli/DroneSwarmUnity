@@ -16,7 +16,8 @@ public class MigrationPointController : MonoBehaviour
     public Material normalMaterial;
     public Material selectedMaterial;
 
-    public static Vector3 deltaMigration = new Vector3(0, 0, 0); 
+    public Vector3 deltaMigration = new Vector3(0, 0, 0); 
+    public static Vector3 alignementVector = new Vector3(0, 0, 0);
 
     bool firstTime = true;
 
@@ -100,11 +101,11 @@ public class MigrationPointController : MonoBehaviour
         float horizontal = Input.GetAxis("Horizontal");
         float vertical = Input.GetAxis("Vertical");
 
-
-
         Transform body = null;
         Vector3 right = new Vector3(0, 0, 0);
         Vector3 forward = new Vector3(0, 0, 0);
+
+        Vector3 final = new Vector3(0, 0, 0);
 
         if(CameraMovement.embodiedDrone == null)
         {
@@ -132,16 +133,20 @@ public class MigrationPointController : MonoBehaviour
         }else{
             firstTime = true;
             Vector3 centerOfSwarm = body.position;
-            Vector3 final = vertical * forward + horizontal * right;
+            final = vertical * forward + horizontal * right;
             final.Normalize();
             final = final * radius;
             migrationPoint = new Vector2(centerOfSwarm.x + final.x, centerOfSwarm.z + final.z);
 
             deltaMigration = new Vector3(final.x, 0, final.z);
         }
+
+        alignementVector = final;
         
         DroneController.migrationPoint = new Vector3(migrationPoint.x, spawnHeight, migrationPoint.y);
         Debug.DrawRay(DroneController.migrationPoint, Vector3.up*10, Color.green, 0.01f);
+
+        Debug.DrawRay(body.position, alignementVector, Color.red, 0.01f);
     }
     void UpdateMigrationEmbodiementMouse()
     {
@@ -172,4 +177,5 @@ public class MigrationPointController : MonoBehaviour
         }
 
     }
+
 }

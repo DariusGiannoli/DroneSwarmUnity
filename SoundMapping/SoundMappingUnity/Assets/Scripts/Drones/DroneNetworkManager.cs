@@ -6,7 +6,6 @@ using System.Collections.Generic;
 
 public class DroneNetworkManager : MonoBehaviour
 {
-    public float neighborRadius = DroneController.neighborRadius*1.2f;
     public LayerMask obstacleMask;
 
     public List<GameObject> drones
@@ -23,9 +22,12 @@ public class DroneNetworkManager : MonoBehaviour
     }
 
     private Dictionary<GameObject, List<GameObject>> adjacencyList = new Dictionary<GameObject, List<GameObject>>();
+    private Dictionary<GameObject, List<GameObject>> adjacencyListDistance = new Dictionary<GameObject, List<GameObject>>();
     public static HashSet<GameObject> largestComponent = new HashSet<GameObject>();
+    public static List<GameObject> largestComponentDistance = new List<GameObject>();
 
     public static List<GameObject> dronesInMainNetwork;
+    public static List<GameObject> dronesInMainNetworkDistance;
 
     public List<float> droneScores = new List<float>();
 
@@ -46,6 +48,9 @@ public class DroneNetworkManager : MonoBehaviour
             dronesInMainNetwork.Clear();
             droneScores.Clear();
 
+            adjacencyListDistance.Clear();
+            largestComponentDistance.Clear();
+
 
             StopCoroutine(networkUpdateCoroutine);
             networkUpdateCoroutine = null;
@@ -62,6 +67,7 @@ public class DroneNetworkManager : MonoBehaviour
         foreach (GameObject drone in drones)
         {
             adjacencyList[drone] = new List<GameObject>();
+            adjacencyListDistance[drone] = new List<GameObject>();
         }
 
         networkUpdateCoroutine = StartCoroutine(updateNetwork());
@@ -72,6 +78,7 @@ public class DroneNetworkManager : MonoBehaviour
     {
         BuildNetwork();
         FindLargestComponent();
+        FindLargestComponentDistance();
         GetDronesScores(out droneScores);
         TimerStart();
         yield return new WaitForSeconds(GlobalConstants.NETWORK_REFRESH_RATE);
@@ -116,6 +123,11 @@ public class DroneNetworkManager : MonoBehaviour
             {
                 adjacencyList[drone].Clear();
             }
+
+            foreach (var drone in adjacencyListDistance.Keys)
+            {
+                adjacencyListDistance[drone].Clear();
+            }
             // Build new connections
             foreach (GameObject drone in drones)
             {
@@ -126,6 +138,10 @@ public class DroneNetworkManager : MonoBehaviour
                     if (IsNeighbor(drone, otherDrone))
                     {
                         adjacencyList[drone].Add(otherDrone);
+                    }
+                    if (IsDistanceNeighbor(drone, otherDrone))
+                    {
+                        adjacencyListDistance[drone].Add(otherDrone);
                     }
                 }
             }
@@ -139,17 +155,24 @@ public class DroneNetworkManager : MonoBehaviour
     bool IsNeighbor(GameObject a, GameObject b)
     {
         float distance = Vector3.Distance(a.transform.position, b.transform.position);
-        if (distance > neighborRadius) return false;
+        if (distance > DroneController.neighborRadius) return false;
 
         Vector3 direction = b.transform.position - a.transform.position;
         Ray ray = new Ray(a.transform.position, direction);
         float rayDistance = direction.magnitude;
 
-        if (Physics.Raycast(ray, rayDistance, obstacleMask))
+        if (IsVisible(a, b))
         {
-            // Obstacle in the way
-            return false;
+            return true;
         }
+
+        return false;
+    }
+
+    bool IsDistanceNeighbor(GameObject a, GameObject b)
+    {
+        float distance = Vector3.Distance(a.transform.position, b.transform.position);
+        if (distance > DroneController.neighborRadius) return false;
 
         return true;
     }
@@ -213,6 +236,59 @@ public class DroneNetworkManager : MonoBehaviour
         }
     }
 
+    void FindLargestComponentDistance()
+    {
+        HashSet<GameObject> visited = new HashSet<GameObject>();
+        List<HashSet<GameObject>> components = new List<HashSet<GameObject>>();
+
+        foreach (GameObject drone in drones)
+        {
+            if (!visited.Contains(drone))
+            {
+                HashSet<GameObject> component = new HashSet<GameObject>();
+                Queue<GameObject> queue = new Queue<GameObject>();
+                queue.Enqueue(drone);
+                visited.Add(drone);
+
+                while (queue.Count > 0)
+                {
+                    GameObject current = queue.Dequeue();
+                    component.Add(current);
+
+                    foreach (GameObject neighbor in adjacencyListDistance[current])
+                    {
+                        if (!visited.Contains(neighbor))
+                        {
+                            visited.Add(neighbor);
+                            queue.Enqueue(neighbor);
+                        }
+                    }
+                }
+
+                components.Add(component);
+            }
+        }
+
+        // Find the largest component
+        largestComponentDistance.Clear();
+        int maxCount = 0;
+        foreach (var component in components)
+        {
+            if (component.Count > maxCount)
+            {
+                maxCount = component.Count;
+                largestComponentDistance = new List<GameObject>(component);
+            }
+        }
+
+        dronesInMainNetworkDistance = new List<GameObject>();
+        foreach (var drone in largestComponentDistance)
+        {
+            dronesInMainNetworkDistance.Add(drone.gameObject);
+        }
+    }
+
+
     public bool IsInMainNetwork(GameObject drone)
     {
         return largestComponent.Contains(drone);
@@ -262,18 +338,18 @@ public class DroneNetworkManager : MonoBehaviour
             return -1.0f;
         }
 
-        if (minDistance <= neighborRadius)
+        if (minDistance <= DroneController.neighborRadius)
         {
             return 1.0f;
         }
-        else if (minDistance >= 3 * neighborRadius)
+        else if (minDistance >= 3 * DroneController.neighborRadius)
         {
             return -1.0f;
         }
         else
         {
             // Linear interpolation between neighborRadius and 3*neighborRadius
-            float score = 1.0f - ((minDistance - neighborRadius) / (2 * neighborRadius));
+            float score = 1.0f - ((minDistance - DroneController.neighborRadius) / (2 * DroneController.neighborRadius));
             if (score < 0.0f) score = 0.0f;
             return score;
         }

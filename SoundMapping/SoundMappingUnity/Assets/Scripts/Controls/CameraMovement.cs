@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Data.Common;
 using FischlWorks_FogWar;
+using Unity.VisualScripting;
 using UnityEngine;
 
 public class CameraMovement : MonoBehaviour
@@ -86,7 +87,7 @@ public class CameraMovement : MonoBehaviour
         state = "TDView";
         yield return new WaitForSeconds(0.01f);
 
-        List<GameObject> drones = DroneNetworkManager.dronesInMainNetwork;
+        List<GameObject> drones = DroneNetworkManager.dronesInMainNetworkDistance;
         if (drones.Count > 0)
         {
             Vector3 center = Vector3.zero;
@@ -97,8 +98,7 @@ public class CameraMovement : MonoBehaviour
             center /= drones.Count;
 
             center.y = heightCamera;
-            cam.transform.position = Vector3.Lerp(cam.transform.position, center, 2*Time.deltaTime);         
-
+            cam.transform.position = Vector3.Lerp(cam.transform.position, center, Time.deltaTime * 2);        
 
         }
     
