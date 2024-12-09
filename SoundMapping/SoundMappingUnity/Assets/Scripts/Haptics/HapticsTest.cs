@@ -23,7 +23,7 @@ public class HapticsTest : MonoBehaviour
     IEnumerator startHaptics()
     {
         if(CameraMovement.embodiedDrone != null) { //carefull change only return the Vector3
-            List<ObstacleInRange> obstacles = CameraMovement.embodiedDrone.GetComponent<DroneController>().obstaclesInRange;
+            List<ObstacleInRange> obstacles = new List<ObstacleInRange>();
             if(obstacles.Count > 0) {
                 //find the closest obstacle and take its distance
                 ObstacleInRange closestObstacle = obstacles[0];

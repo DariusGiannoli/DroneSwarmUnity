@@ -121,37 +121,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 46e6a424b4eb989429a5f69b336de643, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  maxSpeed: 5
-  maxForce: 15
-  alpha: 30
-  beta: 5
-  gamma: 3
-  delta: 0
-  migrationPointPredict: {x: 0, y: 0, z: 0}
-  avoidanceRadius: 5
-  avoidanceForce: 4
-  obstacleLayer:
-    serializedVersion: 2
-    m_Bits: 64
-  velocity: {x: 0, y: 0, z: 0}
-  droneRadius: 1
   separationForce: {x: 0, y: 0, z: 0}
   alignmentForce: {x: 0, y: 0, z: 0}
   cohesionForce: {x: 0, y: 0, z: 0}
   migrationForce: {x: 0, y: 0, z: 0}
   obstacleAvoidanceForce: {x: 0, y: 0, z: 0}
-  distanceToSwarmCenter: 0
   connectedColor: {fileID: 2100000, guid: 3d0ff9fe2342035478da2ac0c2bafcf1, type: 2}
   farColor: {fileID: 2100000, guid: fe9ec3770cd68894897f458383097c5b, type: 2}
   notConnectedColor: {fileID: 2100000, guid: 8e24c799730ccb64b9ffb8cb7083d4da, type: 2}
   embodiedColor: {fileID: 2100000, guid: ea2740c202d629d46883c000bb8326dc, type: 2}
   showGuizmos: 0
   prediction: 0
-  dampingFactor: 0.98
-  crashedPrediction: 0
-  lastDT: 1
   fireworkParticle: {fileID: 2777406680294339996, guid: 32208367bb31dcf4dac2a87bc1c62028, type: 3}
-  currentPos: {x: 0, y: 0, z: 0}
 --- !u!114 &-2915315480619927013
 MonoBehaviour:
   m_ObjectHideFlags: 0

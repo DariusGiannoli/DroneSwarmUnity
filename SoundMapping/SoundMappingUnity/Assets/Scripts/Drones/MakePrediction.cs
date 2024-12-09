@@ -78,25 +78,6 @@ public class MakePrediction : MonoBehaviour
 
     void launchPreditionThread(Prediction pred)
     {
-        GameObject drone = swarmModel.swarmHolder.transform.GetChild(0).gameObject;
-        DroneController scrip = drone.GetComponent<DroneController>();
-
-        DroneFake.maxForce = scrip.maxForce;
-        DroneFake.maxSpeed = scrip.maxSpeed;
-        DroneFake.desiredSeparation = DroneController.desiredSeparation;
-        DroneFake.alpha = scrip.alpha;
-        DroneFake.beta = scrip.beta;
-        DroneFake.gamma = scrip.gamma;
-        DroneFake.delta = scrip.delta;
-        DroneFake.avoidanceRadius = scrip.avoidanceRadius;
-        DroneFake.avoidanceForce = scrip.avoidanceForce;
-        DroneFake.droneRadius = scrip.droneRadius;
-        DroneFake.neighborRadius = DroneController.neighborRadius;
-        DroneFake.obstacleLayer = scrip.obstacleLayer;
-        DroneFake.PRIORITYWHENEMBODIED = DroneController.PRIORITYWHENEMBODIED;
-        DroneFake.dampingFactor = scrip.dampingFactor;
-        DroneFake.spawnHeight = swarmModel.spawnHeight;
-
         pred.alignementVector = MigrationPointController.alignementVector;
 
    //     pred.lastMigrationPoint = this.GetComponent<MigrationPointController>().migrationPoint;
@@ -118,7 +99,7 @@ public class MakePrediction : MonoBehaviour
         foreach (Transform child in swarmModel.swarmHolder.transform)
         {
             DroneDataPrediction data = new DroneDataPrediction();
-            pred.dronesPrediction.Add(new DroneFake(child.transform.position, child.GetComponent<DroneController>().velocity, false));
+            pred.dronesPrediction.Add(new DroneFake(child.transform.position, child.GetComponent<DroneController>().droneFake.velocity, false));
             pred.allData.Add(data);
         }
     }
@@ -225,184 +206,6 @@ public class MakePrediction : MonoBehaviour
 }
 
 
-public class DroneFake
-{
-    #region Paramters Classes
-    public Vector3 position;
-    public Vector3 acceleration;
-    public Vector3 velocity;
-    
-    public static float maxSpeed;
-    public static float maxForce;
-    public static float desiredSeparation = 3f;
-    public static float neighborRadius = 10f;
-    public static float alpha = 1.5f; // Separation weight
-    public static float beta = 1.0f;  // Alignment weight
-    public static float gamma = 1.0f; // Cohesion weight
-    public static float delta = 1.0f; // Migration weight
-    public static float avoidanceRadius = 2f;     // Radius for obstacle detection
-    public static float avoidanceForce = 10f;     // Strength of the avoidance force
-    public static float droneRadius = 1.0f;
-
-    public static float dampingFactor = 0.96f;
-
-    public static float lastDT = 0.02f;
-
-    public static float spawnHeight = 0.5f;
-
-    public bool embodied = false;
-
-    public static int PRIORITYWHENEMBODIED = 2;
-
-    public bool hasCrashed = false;
-
-    public static LayerMask obstacleLayer;
-
-    #endregion
-
-    public DroneFake(Vector3 position, Vector3 velocity, bool embodied)
-    {
-        this.position = position;
-        this.velocity = velocity;
-        this.embodied = embodied;
-    }
-    public List<DroneFake> GetNeighbors(List<DroneFake> allDrones)
-    {
-        List<DroneFake> neighbors = new List<DroneFake>();
-        foreach (DroneFake drone in allDrones)
-        {
-            if (drone == this) continue;
-
-            if (Vector3.Distance(this.position, drone.position) < neighborRadius)
-            {
-                if(drone.hasCrashed)
-                {
-                    continue;
-                }
-                neighbors.Add(drone);
-            }
-        }
-        return neighbors;
-    }
-
-    public Vector3 ComputeObstacleAvoidanceForce()
-    {
-        Vector3 avoidanceForceVector = Vector3.zero;
-        List<Vector3> obstacles = ClosestPointCalculator.ClosestPointsWithinRadius(position, avoidanceRadius);
-        foreach (Vector3 obstacle in obstacles)
-        {
-            // Calculate a force away from the obstacle
-            Vector3 awayFromObstacle = position - obstacle;
-            float distance = awayFromObstacle.magnitude - droneRadius;
-
-            if (distance > 0)
-            {
-                Vector3 repulsion = awayFromObstacle.normalized * (avoidanceForce / (distance * distance));
-                repulsion.y = 0; // Keep movement in the XZ plane
-                avoidanceForceVector += repulsion;
-            }
-            else
-            {
-                hasCrashed = true;
-            }
-
-        }
-        return avoidanceForceVector;
-    }
-    
-    public void startPrediction(List<DroneFake> allDrones, Vector3 alignementVector)
-    {
-        ComputeForces(allDrones, alignementVector);
-    }
-
-    void ComputeForces(List<DroneFake> allDrones, Vector3 alignmentVector)
-    {
-        List<DroneFake> neighbors = GetNeighbors(allDrones);
-
-        int neighborCount = 0;
-        int realNeighborCount = 0;
-
-        Vector3 separationForce = Vector3.zero;
-        Vector3 alignmentForce = Vector3.zero;
-        Vector3 cohesionForce = Vector3.zero;
-
-        foreach (DroneFake neighbor in neighbors)
-        {
-            int neighborPriority = CameraMovement.embodiedDrone == neighbor.embodied ? PRIORITYWHENEMBODIED : 1;
-
-            Vector3 toNeighbor = neighbor.position - position;
-            float distance = toNeighbor.magnitude - 2 * droneRadius;
-
-            // Separation (repulsion)
-            if (distance > 0)
-            {
-                if (distance < desiredSeparation)
-                {
-
-                    Vector3 repulsion = -alpha * (distance - desiredSeparation * 0.9f) * (distance - desiredSeparation * 0.9f) * toNeighbor.normalized;
-                    separationForce += repulsion * neighborPriority;
-                }
-
-            }
-            else
-            {
-                float realDistance = distance + 2 * droneRadius;
-                Vector3 repulsion = -alpha * (toNeighbor.normalized / (realDistance * realDistance));
-                separationForce += repulsion * neighborPriority;
-            }
-
-            // Alignment
-            alignmentForce += neighbor.velocity * neighborPriority;
-            cohesionForce += neighbor.position * neighborPriority;
-            neighborCount += neighborPriority;
-            realNeighborCount++;
-        }
-
-        if (neighborCount > 0 && realNeighborCount > 0)
-        {
-            alignmentForce /= neighborCount;
-            alignmentForce = (alignmentForce +alignmentVector) / 2; //average with control rule
-            alignmentForce = (alignmentForce - velocity) * beta;
-
-            cohesionForce /= neighborCount;
-            cohesionForce = (cohesionForce - position) * gamma;
-        }
-        else
-        {
-            alignmentForce = alignmentVector;
-            alignmentForce = (alignmentForce - velocity) * beta;
-        }
-
-        Vector3 migrationForce = Vector3.zero;
-
-        alignmentForce.y = 0;
-
-        // Obstacle Avoidance Force
-        Vector3 obstacleAvoidanceForce = ComputeObstacleAvoidanceForce();
-
-        Vector3 fo = separationForce + cohesionForce + migrationForce + alignmentForce;
-        fo = Vector3.ClampMagnitude(fo + obstacleAvoidanceForce, maxForce);
-        
-        acceleration = fo;
-    }
-
-    public void UpdatePositionPrediction(int numberOfTimeApplied)
-    {
-        for (int i = 0; i < numberOfTimeApplied; i++)
-        {
-            velocity += acceleration * 0.02f;
-            velocity = Vector3.ClampMagnitude(velocity, maxSpeed);
-
-            // Apply damping to reduce the velocity over time
-            velocity *= dampingFactor;
-
-            position += velocity * 0.02f;
-            position.y = spawnHeight;
-        }
-
-        acceleration = Vector3.zero;
-    }
-}
 
 public class Prediction
 {

@@ -20,8 +20,8 @@ public class ObstacleGeneration : MonoBehaviour
 
     void Awake()
     {
-        PlaceObstacles();
-        PlaceWalls();
+       // PlaceObstacles();
+       // PlaceWalls();
     }
 
     void Start()

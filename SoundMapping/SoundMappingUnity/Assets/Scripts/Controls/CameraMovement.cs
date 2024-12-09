@@ -155,8 +155,7 @@ public class CameraMovement : MonoBehaviour
 
                 cam.transform.position = embodiedDrone.transform.position;
                 cam.transform.LookAt(nextEmbodiedDrone.transform.position);
-                embodiedDrone = nextEmbodiedDrone;
-                nextEmbodiedDrone = null;
+                setEmbodiedDrone(nextEmbodiedDrone);
 
                 StartCoroutine(goAnimation(0.5f));
                 yield break;
@@ -169,6 +168,19 @@ public class CameraMovement : MonoBehaviour
         cam.enabled = true;
         StartCoroutine(TDView());
 
+    }
+
+    public static void setEmbodiedDrone(GameObject drone)
+    {
+        embodiedDrone = drone;
+        drone.GetComponent<DroneController>().droneFake.embodied = true;
+        nextEmbodiedDrone = null;
+    }
+
+    public static void desembodiedDrone()
+    {
+        embodiedDrone.GetComponent<DroneController>().droneFake.embodied = false;
+        embodiedDrone = null;
     }
 
     DataEntry getCameraPositionDE()

@@ -155,7 +155,7 @@ public class DroneNetworkManager : MonoBehaviour
     bool IsNeighbor(GameObject a, GameObject b)
     {
         float distance = Vector3.Distance(a.transform.position, b.transform.position);
-        if (distance > DroneController.neighborRadius) return false;
+        if (distance > swarmModel.neighborRadius) return false;
 
         Vector3 direction = b.transform.position - a.transform.position;
         Ray ray = new Ray(a.transform.position, direction);
@@ -172,7 +172,7 @@ public class DroneNetworkManager : MonoBehaviour
     bool IsDistanceNeighbor(GameObject a, GameObject b)
     {
         float distance = Vector3.Distance(a.transform.position, b.transform.position);
-        if (distance > DroneController.neighborRadius) return false;
+        if (distance > swarmModel.neighborRadius) return false;
 
         return true;
     }
@@ -338,18 +338,18 @@ public class DroneNetworkManager : MonoBehaviour
             return -1.0f;
         }
 
-        if (minDistance <= DroneController.neighborRadius)
+        if (minDistance <= swarmModel.neighborRadius)
         {
             return 1.0f;
         }
-        else if (minDistance >= 3 * DroneController.neighborRadius)
+        else if (minDistance >= 3 * swarmModel.neighborRadius)
         {
             return -1.0f;
         }
         else
         {
             // Linear interpolation between neighborRadius and 3*neighborRadius
-            float score = 1.0f - ((minDistance - DroneController.neighborRadius) / (2 * DroneController.neighborRadius));
+            float score = 1.0f - ((minDistance - swarmModel.neighborRadius) / (2 * swarmModel.neighborRadius));
             if (score < 0.0f) score = 0.0f;
             return score;
         }

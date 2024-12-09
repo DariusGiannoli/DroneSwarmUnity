@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 public class MigrationPointController : MonoBehaviour
@@ -64,17 +65,17 @@ public class MigrationPointController : MonoBehaviour
             {
                 if(selectedDrone != CameraMovement.embodiedDrone)
                 {
-                    CameraMovement.nextEmbodiedDrone = selectedDrone;
+                    CameraMovement.setEmbodiedDrone(selectedDrone);
                 }
                 else
                 {
                     CameraMovement.embodiedDrone.GetComponent<Camera>().enabled = false;                
-                    CameraMovement.embodiedDrone = null;  
+                    CameraMovement.desembodiedDrone(); 
                 }
             }
             else if(selectedDrone != null)
             {
-                CameraMovement.embodiedDrone = selectedDrone;
+                CameraMovement.setEmbodiedDrone(selectedDrone);
             }
         }
     }
@@ -84,14 +85,14 @@ public class MigrationPointController : MonoBehaviour
         float spreadness = Input.GetAxis("LR");
         if(spreadness != 0)
         {
-            DroneController.desiredSeparation+= spreadness * Time.deltaTime * 1.3f;
-            if(DroneController.desiredSeparation < 1.5)
+            swarmModel.desiredSeparation+= spreadness * Time.deltaTime * 1.3f;
+            if(swarmModel.desiredSeparation < 1.5)
             {
-                DroneController.desiredSeparation = 1.5f;
+                swarmModel.desiredSeparation = 1.5f;
             } 
-            if(DroneController.desiredSeparation > 10)
+            if(swarmModel.desiredSeparation > 10)
             {
-                DroneController.desiredSeparation = 10;
+                swarmModel.desiredSeparation = 10;
             }
         }
     }
@@ -118,10 +119,7 @@ public class MigrationPointController : MonoBehaviour
             forward = body.forward;
         }
 
-        horizontal = horizontal * Time.deltaTime * 5;
-        vertical = vertical * Time.deltaTime * 5;  
-
-        if(horizontal == 0 && vertical == 0)
+        if((horizontal == 0 && vertical == 0))
         {
             if(firstTime)
             {
@@ -135,16 +133,21 @@ public class MigrationPointController : MonoBehaviour
             Vector3 centerOfSwarm = body.position;
             final = vertical * forward + horizontal * right;
             final.Normalize();
-            final = final * radius;
-            migrationPoint = new Vector2(centerOfSwarm.x + final.x, centerOfSwarm.z + final.z);
 
-            deltaMigration = new Vector3(final.x, 0, final.z);
+            float newR = Mathf.Sqrt(horizontal * horizontal + vertical * vertical);
+            Vector3 finalAlignement = final * newR * radius;
+
+            final = final * radius;
+
+
+            migrationPoint = new Vector2(centerOfSwarm.x + final.x, centerOfSwarm.z + final.z);
+            deltaMigration = new Vector3(finalAlignement.x, 0, finalAlignement.z);
         }
 
-        alignementVector = final;
+        alignementVector = deltaMigration;
         
-        DroneController.migrationPoint = new Vector3(migrationPoint.x, spawnHeight, migrationPoint.y);
-        Debug.DrawRay(DroneController.migrationPoint, Vector3.up*10, Color.green, 0.01f);
+        //DroneController.migrationPoint = new Vector3(migrationPoint.x, spawnHeight, migrationPoint.y);
+        //Debug.DrawRay(DroneController.migrationPoint, Vector3.up*10, Color.green, 0.01f);
 
         Debug.DrawRay(body.position, alignementVector, Color.red, 0.01f);
     }
@@ -157,7 +160,7 @@ public class MigrationPointController : MonoBehaviour
             if(CameraMovement.embodiedDrone != null)
             {
                 CameraMovement.embodiedDrone.GetComponent<Camera>().enabled = false;
-                CameraMovement.embodiedDrone = null;
+                CameraMovement.desembodiedDrone();
             }
              // Get the mouse position in screen coordinates
             Vector3 mousePosition = Input.mousePosition;
@@ -172,7 +175,7 @@ public class MigrationPointController : MonoBehaviour
             {
               //  point.y = spawnHeight; // Ensure the height matches the drones' height
                 print("embodied to : " + hit.collider.gameObject.name);
-                CameraMovement.embodiedDrone = hit.collider.gameObject;
+                //CameraMovement.embodiedDrone = hit.collider.gameObject;
             }
         }
 
