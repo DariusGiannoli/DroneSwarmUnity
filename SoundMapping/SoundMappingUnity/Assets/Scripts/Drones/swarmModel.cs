@@ -429,6 +429,12 @@ public class DroneFake
 
             cohesionForce /= neighborCount;
             cohesionForce = (cohesionForce - position) * gamma;
+        }else{
+            if(allDrones.Count <= 1)
+            {
+                alignmentForce = MigrationPointController.alignementVector;
+                alignmentForce = (alignmentForce - velocity) * beta;
+            }
         }
 
         alignmentForce.y = 0;
