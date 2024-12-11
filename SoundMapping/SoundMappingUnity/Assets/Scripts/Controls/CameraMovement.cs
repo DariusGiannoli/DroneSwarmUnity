@@ -11,18 +11,21 @@ public class CameraMovement : MonoBehaviour
     public Transform swarmHolder;
     private int FOVDrones = 5;
 
-    public float heightCamera = 35;
+    public float heightCamera = 10;
 
     public GameObject fogWarManager;
 
     public string state = "TDView";
     // Start is called before the first frame update
 
-    public const float animationTime = 2f;
+    public const float animationTime = 1f;
 
     public static GameObject embodiedDrone = null;
     public static GameObject nextEmbodiedDrone = null;
     public Quaternion intialCamRotation;
+    const float DEFAULT_HEIGHT_CAMERA = 20;
+
+    public float rotationSpeed = 80;
 
     void Start()
     {
@@ -69,7 +72,7 @@ public class CameraMovement : MonoBehaviour
         float rightStickHorizontal = Input.GetAxis("JoystickRightHorizontal");
 
         // applz rotation to the camera with lerp
-        cam.transform.Rotate(-Vector3.forward, rightStickHorizontal * Time.deltaTime * 40);
+        cam.transform.Rotate(-Vector3.forward, rightStickHorizontal * Time.deltaTime * rotationSpeed);
     }
 
     void updateDroneView()
@@ -80,7 +83,6 @@ public class CameraMovement : MonoBehaviour
         embodiedDrone.transform.Rotate(Vector3.up, rightStickHorizontal * Time.deltaTime * 40);
 
     }
-
 
     public IEnumerator TDView()
     {
@@ -97,7 +99,8 @@ public class CameraMovement : MonoBehaviour
             }
             center /= drones.Count;
 
-            center.y = heightCamera;
+            center.y = DEFAULT_HEIGHT_CAMERA;
+            cam.GetComponent<Camera>().orthographicSize = heightCamera;
             cam.transform.position = Vector3.Lerp(cam.transform.position, center, Time.deltaTime * 2);        
 
         }
@@ -129,7 +132,8 @@ public class CameraMovement : MonoBehaviour
             }
             
             
-            cam.transform.position = Vector3.Lerp(startingPos, embodiedDrone.transform.position, elapsedTime / _animationTime);
+            cam.GetComponent<Camera>().orthographicSize = Mathf.Lerp(cam.GetComponent<Camera>().orthographicSize, swarmModel.spawnHeight, elapsedTime / _animationTime);
+            //cam.transform.position = Vector3.Lerp(startingPos, embodiedDrone.transform.position, elapsedTime / _animationTime);
             elapsedTime += Time.deltaTime;
             yield return new WaitForEndOfFrame();
         }
@@ -150,13 +154,17 @@ public class CameraMovement : MonoBehaviour
             updateDroneView();
             if(nextEmbodiedDrone != null)
             {
+                print("nextEmbodiedDrone");
                 embodiedDrone.GetComponent<Camera>().enabled = false;
+
                 cam.enabled = true;
+                Vector3 position = embodiedDrone.transform.position;
+                position.y = DEFAULT_HEIGHT_CAMERA;
 
-                cam.transform.position = embodiedDrone.transform.position;
+                cam.transform.position = position;
                 cam.transform.LookAt(nextEmbodiedDrone.transform.position);
-                setEmbodiedDrone(nextEmbodiedDrone);
 
+                setEmbodiedDrone(nextEmbodiedDrone);
                 StartCoroutine(goAnimation(0.5f));
                 yield break;
             }

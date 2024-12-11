@@ -149,17 +149,11 @@ public class DroneController : MonoBehaviour
 public class ObstacleInRange
 {
     public Vector3 position;
-    public GameObject obstacle;
     public float distance;
 
-    public bool insideObstacle;
-
-    public ObstacleInRange(Vector3 position, GameObject obstacle, float distance, bool insideObstacle = false)
+    public ObstacleInRange(Vector3 position, float distance)
     {
         this.position = position;
-        this.obstacle = obstacle;
         this.distance = distance;
-        this.insideObstacle = insideObstacle;
-
     }
 }

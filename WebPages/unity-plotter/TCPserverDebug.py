@@ -12,6 +12,9 @@ CONTROL_UNIT_NAME = 'QT Py ESP32-S3'
 
 ble_client = None  # Global BLE client
 
+global message_queue
+
+
 def create_command(addr, mode, duty, freq):
     serial_group = addr // 30
     serial_addr = addr % 30
@@ -68,6 +71,7 @@ async def ble_task():
         await asyncio.sleep(5)  # Retry every 5 seconds
 
 async def handle_connection(websocket):
+    global message_queue
     print('WebSocket connection established!')
     message_queue = asyncio.Queue()
     messages = []
@@ -113,6 +117,8 @@ async def process_messages(message_queue, messages, messages_lock):
 
 async def timer_task(messages, messages_lock):
     while True:
+        timestart = time.time()
+       # print(f"Time step: ", timestart)
         await asyncio.sleep(0.02)  # Wait for 20 ms
         messages_to_send = None
         async with messages_lock:
@@ -121,17 +127,19 @@ async def timer_task(messages, messages_lock):
                 messages.clear()
         if messages_to_send:
             await process_and_send_messages(messages_to_send)
+            print(f"Took {time.time() - timestart} seconds to process and send messages")
 
 async def process_and_send_messages(messages):
     print(f"Processing messages: {messages}")
     combined_message = ''.join(messages)
     if ble_client and ble_client.is_connected:
         #launmc coroutine to send await setMotor(ble_client, combined_message)
-        asyncio.create_task(setMotor(ble_client, combined_message))
+        await setMotor(ble_client, combined_message)
         # Launch coroutine to send response to client
         asyncio.create_task(send_to_server(combined_message))
     else:
         print("BLE client not connected yet.")
+        asyncio.create_task(send_to_server(combined_message))
 
 async def send_to_server(message):
     async with aiohttp.ClientSession() as session:

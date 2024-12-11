@@ -352,6 +352,7 @@ public class DroneFake
     {
         Vector3 avoidanceForceVector = Vector3.zero;
         List<Vector3> obstacles = ClosestPointCalculator.ClosestPointsWithinRadius(position, avoidanceRadius);
+
         foreach (Vector3 obstacle in obstacles)
         {
             // Calculate a force away from the obstacle

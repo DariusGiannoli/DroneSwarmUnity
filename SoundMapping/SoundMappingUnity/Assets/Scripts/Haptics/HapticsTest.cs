@@ -3,27 +3,58 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using UnityEngine;
+using System.Threading;
 
 public class HapticsTest : MonoBehaviour
 {
     public int dutyIntensity = 4;
+    Thread hapticsThread;
+    List<ObstacleInRange> obstacles = new List<ObstacleInRange>();
+    Vector3 forwardVector = new Vector3(0, 0, 1);   
     // Update is called once per frame
     void Update()
     {
-
+        if(hapticsThread.ThreadState == ThreadState.Stopped) {
+            closeToWall();
+        }
     }
 
     void Start()
     {
-        StartCoroutine(startHaptics());
+        hapticsThread = new Thread(new ThreadStart(CloseToWallThread));
+        hapticsThread.Start();
+    }
+
+
+    void closeToWall()
+    {
+        if(CameraMovement.embodiedDrone != null) { //carefull change only return the Vector3
+            getObstacles();
+            print("Obstacles: " + obstacles.Count);
+
+            hapticsThread = new Thread(new ThreadStart(CloseToWallThread));
+            hapticsThread.Start();
+        }
+    }
+
+    void getObstacles()
+    {
+        forwardVector = CameraMovement.embodiedDrone.transform.forward;
+
+        GameObject drone = CameraMovement.embodiedDrone;
+        List<Vector3> pointObstacles = ClosestPointCalculator.ClosestPointsWithinRadius(drone.transform.position, DroneFake.avoidanceRadius);
+        obstacles.Clear();
+        foreach(Vector3 point in pointObstacles) {
+            ObstacleInRange obstacle = new ObstacleInRange(point, Vector3.Distance(drone.transform.position, point));
+            obstacles.Add(obstacle);
+        }
     }
 
 
 
-    IEnumerator startHaptics()
+    void CloseToWallThread()
     {
         if(CameraMovement.embodiedDrone != null) { //carefull change only return the Vector3
-            List<ObstacleInRange> obstacles = new List<ObstacleInRange>();
             if(obstacles.Count > 0) {
                 //find the closest obstacle and take its distance
                 ObstacleInRange closestObstacle = obstacles[0];
@@ -45,12 +76,11 @@ public class HapticsTest : MonoBehaviour
             }
         }
 
-        yield return new WaitForSeconds(0.3f);
-        StartCoroutine(startHaptics());
+        //delay the next haptic feedback
+        Thread.Sleep(1000);
     }
 
     void mappingObstacleToHaptics(ObstacleInRange obstacle) {
-        Vector3 forwardVector = CameraMovement.embodiedDrone.transform.forward;
         float angleToForward = Vector3.SignedAngle(forwardVector, obstacle.position, Vector3.up);
         float distance = obstacle.distance;
 

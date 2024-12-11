@@ -31,11 +31,10 @@ public class MigrationPointController : MonoBehaviour
 
     void SelectionUpdate()
     {        
-        if(Input.GetKeyDown("joystick button " + 5) || Input.GetKeyDown("joystick button " + 4)) // Assuming up to 20 buttons (adjust if needed)
+        if(Input.GetKeyDown("joystick button " + 5) || Input.GetKeyDown("joystick button " + 4)) 
         {
             if(selectedDrone == null)
             {
-                //select the first child
                 if(swarmModel.swarmHolder.transform.childCount > 0)
                 {
                     selectedDrone = swarmModel.swarmHolder.transform.GetChild(0).gameObject;
@@ -65,7 +64,7 @@ public class MigrationPointController : MonoBehaviour
             {
                 if(selectedDrone != CameraMovement.embodiedDrone)
                 {
-                    CameraMovement.setEmbodiedDrone(selectedDrone);
+                    CameraMovement.nextEmbodiedDrone = selectedDrone; // set next selected drone diff to null to trigger animation to the other drone
                 }
                 else
                 {
@@ -145,40 +144,7 @@ public class MigrationPointController : MonoBehaviour
         }
 
         alignementVector = deltaMigration;
-        
-        //DroneController.migrationPoint = new Vector3(migrationPoint.x, spawnHeight, migrationPoint.y);
-        //Debug.DrawRay(DroneController.migrationPoint, Vector3.up*10, Color.green, 0.01f);
 
         Debug.DrawRay(body.position, alignementVector, Color.red, 0.01f);
     }
-    void UpdateMigrationEmbodiementMouse()
-    {
-
-
-        if (Input.GetMouseButtonDown(2))
-        {
-            if(CameraMovement.embodiedDrone != null)
-            {
-                CameraMovement.embodiedDrone.GetComponent<Camera>().enabled = false;
-                CameraMovement.desembodiedDrone();
-            }
-             // Get the mouse position in screen coordinates
-            Vector3 mousePosition = Input.mousePosition;
-            // Create a ray from the camera through the mouse position
-            Ray ray = mainCamera.ScreenPointToRay(mousePosition);
-            RaycastHit hit;
-            //draws a line from the camera to the mouse position
-            Debug.DrawRay(ray.origin, ray.direction * 100, Color.green, 2f);
-
-            // Perform the raycast and check if it hits the ground
-            if (Physics.Raycast(ray, out hit, Mathf.Infinity, droneLayer))
-            {
-              //  point.y = spawnHeight; // Ensure the height matches the drones' height
-                print("embodied to : " + hit.collider.gameObject.name);
-                //CameraMovement.embodiedDrone = hit.collider.gameObject;
-            }
-        }
-
-    }
-
 }
