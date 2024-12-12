@@ -21,8 +21,8 @@ public class DroneNetworkManager : MonoBehaviour
         }
     }
 
-    private Dictionary<GameObject, List<GameObject>> adjacencyList = new Dictionary<GameObject, List<GameObject>>();
-    private Dictionary<GameObject, List<GameObject>> adjacencyListDistance = new Dictionary<GameObject, List<GameObject>>();
+    public Dictionary<GameObject, List<GameObject>> adjacencyList = new Dictionary<GameObject, List<GameObject>>();
+    public Dictionary<GameObject, List<GameObject>> adjacencyListDistance = new Dictionary<GameObject, List<GameObject>>();
     public static HashSet<GameObject> largestComponent = new HashSet<GameObject>();
     public static List<GameObject> largestComponentDistance = new List<GameObject>();
 
@@ -104,11 +104,18 @@ public class DroneNetworkManager : MonoBehaviour
     {
         if (adjacencyList == null) return;
 
-        Gizmos.color = Color.green;
         foreach (var drone in adjacencyList.Keys)
         {
             foreach (var neighbor in adjacencyList[drone])
             {
+                if(CameraMovement.embodiedDrone == drone || CameraMovement.embodiedDrone == neighbor)
+                {
+                    Gizmos.color = Color.red;
+                }
+                else
+                {
+                    Gizmos.color = Color.green;
+                }
                 Gizmos.DrawLine(drone.transform.position, neighbor.transform.position);
             }
         }

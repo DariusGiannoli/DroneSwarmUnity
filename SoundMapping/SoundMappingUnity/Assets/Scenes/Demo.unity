@@ -6521,7 +6521,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   dronePrefab: {fileID: 2904365767565868958, guid: 8665b86975cd58e49a996d130ca17994, type: 3}
-  numDrones: 7
+  numDrones: 2
   spawnRadius: 10
   lastObstacleAvoidance: -1
   maxSpeed: 15
@@ -6594,6 +6594,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   dutyIntensity: 3
+  sendEvery: 50
 --- !u!114 &1573697198
 MonoBehaviour:
   m_ObjectHideFlags: 0

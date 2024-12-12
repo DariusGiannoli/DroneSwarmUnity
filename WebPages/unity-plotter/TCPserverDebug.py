@@ -96,6 +96,7 @@ async def collect_messages(websocket, message_queue):
 async def process_messages(message_queue, messages, messages_lock):
     while True:
         message = await message_queue.get()
+        print(f"Processing message: {message}")
         messages_to_send = None
         async with messages_lock:
             # Replace message if one with the same 'addr' exists
@@ -110,6 +111,7 @@ async def process_messages(message_queue, messages, messages_lock):
                 messages.append(message)
             # If we have 10 messages, process them immediately
             if len(messages) >= 10:
+                print(f"More than 10 messages, processing immediately")
                 messages_to_send = messages.copy()
                 messages.clear()
         if messages_to_send:

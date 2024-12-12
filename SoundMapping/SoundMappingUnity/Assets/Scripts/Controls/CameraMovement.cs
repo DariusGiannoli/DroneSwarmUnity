@@ -88,21 +88,26 @@ public class CameraMovement : MonoBehaviour
     {
         state = "TDView";
         yield return new WaitForSeconds(0.01f);
-
-        List<GameObject> drones = DroneNetworkManager.dronesInMainNetworkDistance;
-        if (drones.Count > 0)
-        {
-            Vector3 center = Vector3.zero;
-            foreach (GameObject drone in drones)
+        try
+        {       
+            List<GameObject> drones = DroneNetworkManager.dronesInMainNetworkDistance;
+            if (drones.Count > 0)
             {
-                center += drone.transform.position;
+                Vector3 center = Vector3.zero;
+                foreach (GameObject drone in drones)
+                {
+                    center += drone.transform.position;
+                }
+                center /= drones.Count;
+
+                center.y = DEFAULT_HEIGHT_CAMERA;
+                cam.GetComponent<Camera>().orthographicSize = heightCamera;
+                cam.transform.position = Vector3.Lerp(cam.transform.position, center, Time.deltaTime * 2);        
+
             }
-            center /= drones.Count;
-
-            center.y = DEFAULT_HEIGHT_CAMERA;
-            cam.GetComponent<Camera>().orthographicSize = heightCamera;
-            cam.transform.position = Vector3.Lerp(cam.transform.position, center, Time.deltaTime * 2);        
-
+        } catch
+        {
+            print("Error TDView");
         }
     
         updateTDView();
