@@ -3717,7 +3717,7 @@ Transform:
   m_GameObject: {fileID: 823177243}
   serializedVersion: 2
   m_LocalRotation: {x: 0.6830127, y: -0.18301266, z: 0.18301266, w: 0.6830127}
-  m_LocalPosition: {x: 0, y: 9, z: 2.4000244}
+  m_LocalPosition: {x: -15.44, y: 9, z: 29.14}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -5653,7 +5653,7 @@ Transform:
   m_GameObject: {fileID: 1384928189}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: -45.24, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -6521,7 +6521,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   dronePrefab: {fileID: 2904365767565868958, guid: 8665b86975cd58e49a996d130ca17994, type: 3}
-  numDrones: 2
+  numDrones: 7
   spawnRadius: 10
   lastObstacleAvoidance: -1
   maxSpeed: 15
@@ -6594,7 +6594,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   dutyIntensity: 3
-  sendEvery: 50
+  distanceDetection: 2
+  sendEvery: 200
 --- !u!114 &1573697198
 MonoBehaviour:
   m_ObjectHideFlags: 0

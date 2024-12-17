@@ -49,6 +49,7 @@ public class swarmModel : MonoBehaviour
 
     void Awake()
     {
+        swarmHolder = GameObject.FindGameObjectWithTag("Swarm");
         spawn();
     }
 
@@ -111,16 +112,21 @@ public class swarmModel : MonoBehaviour
     {
         fogWar.ResetMapAndFogRevealers();
 
-        swarmHolder = GameObject.FindGameObjectWithTag("Swarm");
+        GameObject[] dronesToDelete = GameObject.FindGameObjectsWithTag("Drone");
         //kill all drones
-        foreach (Transform child in swarmHolder.transform)
+        foreach (GameObject drone in dronesToDelete)
         {
-            GameObject.Destroy(child.gameObject);
+            Destroy(drone.gameObject);
         }
+
+        drones.Clear();
+
 
         for (int i = 0; i < numDrones; i++)
         {
-            Vector3 spawnPosition = new Vector3(Random.Range(-spawnRadius, spawnRadius), spawnHeight, Random.Range(-1, 1));
+            //spawn on a circle
+            Vector3 spawnPosition = new Vector3(spawnRadius * Mathf.Cos(i * 2 * Mathf.PI / numDrones), spawnHeight, spawnRadius * Mathf.Sin(i * 2 * Mathf.PI / numDrones));
+            
             GameObject drone = Instantiate(dronePrefab, spawnPosition, Quaternion.identity);
 
             drone.GetComponent<DroneController>().droneFake = new DroneFake(spawnPosition, Vector3.zero, false);
@@ -305,7 +311,7 @@ public class DroneFake
     public static float delta = 1.0f; // Migration weight
     public static float avoidanceRadius = 2f;     // Radius for obstacle detection
     public static float avoidanceForce = 10f;     // Strength of the avoidance force
-    public static float droneRadius = 1.0f;
+    public static float droneRadius = 0.17f;
 
     public static float dampingFactor = 0.96f;
 

@@ -5,14 +5,17 @@ using System.Runtime.InteropServices;
 using UnityEngine;
 using System.Threading;
 using Unity.VisualScripting;
+using UnityEngine.InputSystem;
 
 public class HapticsTest : MonoBehaviour
 {
     #region ObstalceInRange
     public int dutyIntensity = 4;
+    public float distanceDetection = 5;
     Thread hapticsThread;
     List<ObstacleInRange> obstacles = new List<ObstacleInRange>();
     Vector3 forwardVector = new Vector3(0, 0, 1);   
+    Vector3 rightVector = new Vector3(1, 0, 0);
 
     List<Actuators> actuatorsRange = new List<Actuators>();
 
@@ -21,6 +24,16 @@ public class HapticsTest : MonoBehaviour
     #region NetworkLines
 
     List<Actuators> actuatorsBelly = new List<Actuators>();
+
+    List<Actuators> lastDefined = new List<Actuators>();
+
+    #endregion
+
+    #region HapticsGamePad
+
+    private Gamepad gamepad;
+
+
 
     #endregion
 
@@ -56,7 +69,51 @@ public class HapticsTest : MonoBehaviour
         StartCoroutine(HapticsCoroutine());
 
         hapticsThread.Start();
+
+        gamepad = Gamepad.current;
+        if (gamepad == null)
+        {
+            Debug.LogWarning("No gamepad connected.");
+            gamepad.SetMotorSpeeds(0, 0);
+        }
     }
+
+    void OnDisable()
+    {
+        hapticsThread.Abort();
+        gamepad.SetMotorSpeeds(0, 0);
+    }
+    public void HapticsPrediction(Prediction pred)
+    {
+        if (gamepad == null)
+        {
+            return;
+        }
+
+        if (pred.allData == null || pred.allData.Count == 0)
+        {
+            return; // Exit if no data to draw
+        }
+
+        //check is there is a crash
+        float bestFractionOfPath = 2;
+        foreach(DroneDataPrediction data in pred.allData) {
+            if(data.idFirstCrash <= 0) {
+                continue;
+            }
+
+            float fractionOfPath = 1-(float)data.idFirstCrash / data.positions.Count;
+            if(fractionOfPath < bestFractionOfPath) {
+                bestFractionOfPath = fractionOfPath;
+            }
+        }
+
+        if(bestFractionOfPath < 1) {
+            gamepad.SetMotorSpeeds(bestFractionOfPath, bestFractionOfPath);
+        }else {
+            gamepad.SetMotorSpeeds(0, 0);
+        }
+    } 
 
 
     IEnumerator HapticsCoroutine()
@@ -91,9 +148,38 @@ public class HapticsTest : MonoBehaviour
             }
         }
 
+        List<Actuators> toSendList = new List<Actuators>();
+        foreach (Actuators actuator in finalListNoDouble)
+        {
+            bool found = false;
+            foreach (Actuators last in lastDefined)
+            {
+                if(actuator.Adresse == last.Adresse) {
+                    found = true;
+                    if (!actuator.Equal(last))
+                    {
+                        toSendList.Add(actuator); //send the new data
 
-        print("finalListNoDouble: " + finalListNoDouble.Count);
-        foreach(Actuators actuator in finalListNoDouble) {
+                        last.dutyIntensity = actuator.dutyIntensity; // update the old data 
+                        last.frequency = actuator.frequency;
+                    }
+                }
+            }
+
+            if(!found) {
+                Actuators newActuator = new Actuators(actuator.Adresse, actuator.Angle);
+                newActuator.dutyIntensity = actuator.dutyIntensity;
+                newActuator.frequency = actuator.frequency;
+
+                toSendList.Add(newActuator);
+                lastDefined.Add(newActuator);
+            }
+        }
+
+       // print("FinalList: " + finalListNoDouble.Count + " toSendList: " + toSendList.Count + " lastDefined: " + lastDefined.Count);
+
+
+        foreach(Actuators actuator in toSendList) {
             VibraForge.SendCommand(actuator.Adresse, (int)actuator.duty == 0 ? 0:1, (int)actuator.duty, (int)actuator.frequency);
         }
     }
@@ -134,7 +220,7 @@ public class HapticsTest : MonoBehaviour
                             }
                             //map the internsity linearly
                             if(diff < 30 && diff > -30) {
-                                actuator.dutyIntensity += 10 - diff/3;
+                                actuator.dutyIntensity += (int)(10 - diff/3);
                             }
                         }
                     }
@@ -153,9 +239,7 @@ public class HapticsTest : MonoBehaviour
     void closeToWall()
     {
         if(CameraMovement.embodiedDrone != null) { //carefull change only return the Vector3
-            print("CloseToWall");
             getObstacles();
-            print("Obstacles: " + obstacles.Count);
 
             hapticsThread = new Thread(new ThreadStart(CloseToWallThread));
             hapticsThread.Start();
@@ -165,9 +249,10 @@ public class HapticsTest : MonoBehaviour
     void getObstacles()
     {
         forwardVector = CameraMovement.embodiedDrone.transform.forward;
+        rightVector = CameraMovement.embodiedDrone.transform.right;
 
         GameObject drone = CameraMovement.embodiedDrone;
-        List<Vector3> pointObstacles = ClosestPointCalculator.ClosestPointsWithinRadius(drone.transform.position, DroneFake.avoidanceRadius);
+        List<Vector3> pointObstacles = ClosestPointCalculator.ClosestPointsWithinRadius(drone.transform.position, distanceDetection);
         obstacles.Clear();
         foreach(Vector3 point in pointObstacles) {
             ObstacleInRange obstacle = new ObstacleInRange(point, Vector3.Distance(drone.transform.position, point));
@@ -178,69 +263,73 @@ public class HapticsTest : MonoBehaviour
     void CloseToWallThread()
     {
         resetActuator(actuatorsRange);
-        print("Obstacles: " + obstacles.Count);
         if(CameraMovement.embodiedDrone != null) { //carefull change only return the Vector3
             if(obstacles.Count > 0) {
                 //find the closest obstacle and take its distance
-                ObstacleInRange closestObstacle = obstacles[0];
                 foreach(ObstacleInRange obstacle in obstacles) {
-                    if(obstacle.distance < closestObstacle.distance) {
-                        closestObstacle = obstacle;
-                    }
+                    mappingObstacleToHaptics(obstacle);
                 }
-
-                mappingObstacleToHaptics(closestObstacle);
             }
         }
     }
 
     void mappingObstacleToHaptics(ObstacleInRange obstacle) {
         float angleToForward = Vector3.SignedAngle(forwardVector, obstacle.position, Vector3.up);
+        float angleToBackward = Vector3.SignedAngle(-forwardVector, obstacle.position, Vector3.up);
+        float angleToRight = Vector3.SignedAngle(rightVector, obstacle.position, Vector3.up);
+        float angleToLeft = Vector3.SignedAngle(-rightVector, obstacle.position, Vector3.up);
+        
         float distance = obstacle.distance;
 
-        float forwardHaptic = 1/(Math.Abs(angleToForward)+float.Epsilon);
-        float backwardHaptic = 1/(Math.Abs(180-angleToForward)+float.Epsilon);
-        float leftHaptic = 1/(Math.Abs(angleToForward+90)+float.Epsilon);
-        float rightHaptic = 1/(Math.Abs(angleToForward-90)+float.Epsilon);
+        int forwardHaptic = Math.Abs(angleToForward) < 45 ? 1 : 0;
+        int backwardHaptic = Math.Abs(angleToBackward) < 45 ? 1 : 0;
+        int leftHaptic = Math.Abs(angleToLeft) < 45 ? 1 : 0;
+        int rightHaptic = Math.Abs(angleToRight) < 45 ? 1 : 0;
 
-        float sum = forwardHaptic + backwardHaptic + leftHaptic + rightHaptic;
-
-        //apply min max scaling
-        float maxHaptic = Mathf.Max(forwardHaptic, backwardHaptic, leftHaptic, rightHaptic);
-        float minHaptic = Mathf.Min(forwardHaptic, backwardHaptic, leftHaptic, rightHaptic);
-
-        forwardHaptic = (forwardHaptic - minHaptic) / (maxHaptic - minHaptic);
-        backwardHaptic = (backwardHaptic - minHaptic) / (maxHaptic - minHaptic);
-        leftHaptic = (leftHaptic - minHaptic) / (maxHaptic - minHaptic);
-        rightHaptic = (rightHaptic - minHaptic) / (maxHaptic - minHaptic);
-
-        float intensity =  (1 - distance / 5)*(1 - distance / 5);
+        int intensity = (int)(6 - 4 * distance / distanceDetection);
+        
         int freq = (int)(intensity * 1) + 1;
+        int dutyForward = forwardHaptic * intensity;
+        int dutyBackward = backwardHaptic * intensity;
+        int dutyRight = rightHaptic * intensity;
+        int dutyLeft = leftHaptic * intensity;
 
-        setActuator(actuatorsRange, 4, (int)(forwardHaptic*dutyIntensity), freq);
-        setActuator(actuatorsRange, 0, (int)(rightHaptic*dutyIntensity), freq);
-        setActuator(actuatorsRange, 1, (int)(backwardHaptic*dutyIntensity), freq);
-        setActuator(actuatorsRange, 2, (int)(backwardHaptic*dutyIntensity), freq);
-        setActuator(actuatorsRange, 3, (int)(leftHaptic*dutyIntensity), freq);
-
-        setActuator(actuatorsRange, 5, 10, freq);
-        print("actuatorsRange: " + actuatorsRange.Count);
-        foreach (Actuators actuator in actuatorsRange)
-        {
-            if(actuator.Adresse == 5) {
-                print("Adresse: " + actuator.Adresse + " Intensity: " + actuator.dutyIntensity + " Frequency: " + actuator.frequency);
-            }
+        if(dutyForward > 0) {
+            setActuator(actuatorsRange, 4, dutyForward, freq);
+            setActuator(actuatorsRange, 3, dutyForward, freq);
+            setActuator(actuatorsRange, 7, dutyForward, freq);
+            setActuator(actuatorsRange, 0, dutyForward, freq);
         }
 
-        print("Forward: " + forwardHaptic + " Backward: " + backwardHaptic + " Left: " + leftHaptic + " Right: " + rightHaptic + " distance: " + distance);
+        if(dutyBackward > 0) {
+            setActuator(actuatorsRange, 2, dutyBackward, freq);
+            setActuator(actuatorsRange, 5, dutyBackward, freq);
+            setActuator(actuatorsRange, 1, dutyBackward, freq);
+            setActuator(actuatorsRange, 6, dutyBackward, freq);
+        }
+
+        if(dutyRight > 0) {
+            setActuator(actuatorsRange, 4, dutyRight, freq);
+            setActuator(actuatorsRange, 5, dutyRight, freq);
+            setActuator(actuatorsRange, 6, dutyRight, freq);
+            setActuator(actuatorsRange, 7, dutyRight, freq);
+        }
+
+        if(dutyLeft > 0) {
+            setActuator(actuatorsRange, 1, dutyLeft, freq);
+            setActuator(actuatorsRange, 2, dutyLeft, freq);
+            setActuator(actuatorsRange, 3, dutyLeft, freq);
+            setActuator(actuatorsRange, 0, dutyLeft, freq);
+        }
+
     }
 
 
-    void setActuator(List<Actuators> actuators, int adresse, float intensity)
+    void setActuator(List<Actuators> actuators, int adresse, int intensity)
     {
         setActuator(actuators, adresse, intensity, 1);
     }
-    void setActuator(List<Actuators> actuators, int adresse, float intensity, int freq)
+    void setActuator(List<Actuators> actuators, int adresse, int intensity, int freq)
     {
         foreach(Actuators actuator in actuators) {
             if(actuator.Adresse == adresse) {
@@ -267,10 +356,10 @@ public class Actuators
     public int Adresse { get; set; }
     public float Angle { get; set; }
 
-    public float dutyIntensity = 0;
-    public float frequency = 1;
+    public int dutyIntensity = 0;
+    public int frequency = 1;
 
-    public float duty
+    public int duty
     {
         get{
             if(dutyIntensity > 10) {
@@ -283,5 +372,11 @@ public class Actuators
     {
         Adresse = adresse;
         Angle = angle;
+    }
+
+    //create operator overload
+    public bool Equal(Actuators a)
+    {
+        return a.duty == this.duty && a.frequency == this.frequency;
     }
 }

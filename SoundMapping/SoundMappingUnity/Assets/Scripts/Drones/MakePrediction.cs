@@ -5,7 +5,6 @@ using Unity.VisualScripting;
 using Unity.VisualScripting.Dependencies.Sqlite;
 using UnityEditor.UIElements;
 using UnityEngine;
-using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Interactions;
 using UnityEngine.Scripting;
 
@@ -19,7 +18,6 @@ public class MakePrediction : MonoBehaviour
 
     List<Vector3> allPredictions = new List<Vector3>();
 
-    private Gamepad gamepad;
     public LayerMask obstacleLayer;
 
     public GameObject testObject;
@@ -29,11 +27,6 @@ public class MakePrediction : MonoBehaviour
 
     void Start()
     {
-        gamepad = Gamepad.current;
-        if (gamepad == null)
-        {
-            Debug.LogWarning("No gamepad connected.");
-        }
 
         shortPred = new Prediction(true, 30, 1, 0, shortPredictionLineHolder);
         //longPred = new Prediction(false, 15, 3, 1, longPredictionLineHolder);
@@ -108,6 +101,7 @@ public class MakePrediction : MonoBehaviour
     {   
         if(shortPred.donePrediction)
         {
+            this.GetComponent<HapticsTest>().HapticsPrediction(shortPred);
             UpdateLines(shortPred);
             shortPred.donePrediction = false;
             launchPreditionThread(shortPred);
@@ -118,89 +112,52 @@ public class MakePrediction : MonoBehaviour
     void OnDisable()
     {
         StopAllCoroutines();
-        gamepad.SetMotorSpeeds(0.0f, 0.0f);
     }
-
-   /* void OnDrawGizmos()
-    {
-        if (allDataRecap == null || allDataRecap.Count == 0)
-            return; // Exit if no data to draw
-
-
-        float currentTime = Time.time;
-
-        foreach (DroneDataPrediction data in allDataRecap)
-        {
-            for (int i = 0; i < data.positions.Count - 1; i++)
-            {
-                // Only draw if the timestamp is within the last 1 second
-                if (currentTime - data.timestamps[i] <= 1f)
-                {
-                    Gizmos.color = data.crashed[i] ? Color.red : Color.blue;
-                    Gizmos.DrawLine(data.positions[i], data.positions[i + 1]);
-                }
-            }
-        }
-    }*` */
 
     void UpdateLines(Prediction pred)
     {
-    if (pred.allData == null || pred.allData.Count == 0)
-    {
-        print("No data to draw");
-        return; // Exit if no data to draw
-
-    }
-
-    // Destroy all existing line renderers
-    foreach (LineRenderer line in pred.LineRenderers)
-    {
-        Destroy(line.gameObject);
-    }
-    pred.LineRenderers.Clear();
-
-    int downsampleRate = 1; // Select 1 point every 5 data points
-
-    foreach (DroneDataPrediction data in pred.allData)
-    {
-        float fractionOfPath = (float)data.idFirstCrash / data.positions.Count;
-        Color purpleColor = new Color(0.5f, 0f, 0.5f, 1f); // Purple
-        Color greyColor = new Color(0.5f, 0.5f, 0.5f, 0.2f); // Grey
-        Color colorPath = Color.Lerp(greyColor, purpleColor, fractionOfPath);
-
-        for(int i = 0; i < data.positions.Count - 1; i++)
+        if (pred.allData == null || pred.allData.Count == 0)
         {
-            if (i % downsampleRate == 0)
-            {
+            return; // Exit if no data to draw
 
-                bool isCrashed = data.crashed[i];
-                Color segmentColor = isCrashed ? Color.red : colorPath;
-                LineRenderer line = new GameObject().AddComponent<LineRenderer>();
-                line.transform.SetParent(pred.lineHolder);
-                line.positionCount = 2;
-                line.SetPosition(0, data.positions[i]);
-                line.SetPosition(1, data.positions[i + 1]);
-                line.startWidth = 0.1f;
-                line.endWidth = 0.1f;
-                line.material = new Material(Shader.Find("Unlit/Color"));
-                line.material.color = segmentColor;
-
-                pred.LineRenderers.Add(line);                    
-            } 
-        }   
-    }
-}
-    
-    void vibrateForShortPrediction(Prediction pred)
-    {
-        //if any drone is predicted to crash, vibrate the controller
-        if (pred.allData.Exists(data => data.crashedPrediction))
-        {
-            gamepad.SetMotorSpeeds(0.5f, 0.5f);
         }
-        else
+
+        // Destroy all existing line renderers
+        foreach (LineRenderer line in pred.LineRenderers)
         {
-            gamepad.SetMotorSpeeds(0.0f, 0.0f);
+            Destroy(line.gameObject);
+        }
+        pred.LineRenderers.Clear();
+
+        int downsampleRate = 1; // Select 1 point every 5 data points
+
+        foreach (DroneDataPrediction data in pred.allData)
+        {
+            float fractionOfPath = (float)data.idFirstCrash / data.positions.Count;
+            Color purpleColor = new Color(0.5f, 0f, 0.5f, 1f); // Purple
+            Color greyColor = new Color(0.5f, 0.5f, 0.5f, 0.2f); // Grey
+            Color colorPath = Color.Lerp(greyColor, purpleColor, fractionOfPath);
+
+            for(int i = 0; i < data.positions.Count - 1; i++)
+            {
+                if (i % downsampleRate == 0)
+                {
+
+                    bool isCrashed = data.crashed[i];
+                    Color segmentColor = isCrashed ? Color.red : colorPath;
+                    LineRenderer line = new GameObject().AddComponent<LineRenderer>();
+                    line.transform.SetParent(pred.lineHolder);
+                    line.positionCount = 2;
+                    line.SetPosition(0, data.positions[i]);
+                    line.SetPosition(1, data.positions[i + 1]);
+                    line.startWidth = 0.1f;
+                    line.endWidth = 0.1f;
+                    line.material = new Material(Shader.Find("Unlit/Color"));
+                    line.material.color = segmentColor;
+
+                    pred.LineRenderers.Add(line);                    
+                } 
+            }   
         }
     }
 }

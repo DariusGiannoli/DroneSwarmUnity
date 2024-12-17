@@ -80,7 +80,7 @@ public class CameraMovement : MonoBehaviour
         float rightStickHorizontal = Input.GetAxis("JoystickRightHorizontal");
 
         // applz rotation to the embodied drone with lerp
-        embodiedDrone.transform.Rotate(Vector3.up, rightStickHorizontal * Time.deltaTime * 40);
+        embodiedDrone.transform.Rotate(Vector3.up, rightStickHorizontal * Time.deltaTime * rotationSpeed);
 
     }
 
