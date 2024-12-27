@@ -18,7 +18,7 @@ public class swarmModel : MonoBehaviour
     public float maxSpeed = 5f;
     public float maxForce = 10f;
 
-    public static int extraDistanceNeighboor = 3;
+    public static int extraDistanceNeighboor = 5;
     public static float neighborRadius
     {
         get
@@ -40,7 +40,7 @@ public class swarmModel : MonoBehaviour
 
     public csFogWar fogWar;
 
-    public const int PRIORITYWHENEMBODIED = 2;
+    public const int PRIORITYWHENEMBODIED = 5;
     public float dampingFactor = 0.98f;
 
 
@@ -141,7 +141,6 @@ public class swarmModel : MonoBehaviour
         this.GetComponent<DroneNetworkManager>().Reset();
     }
 
- 
     public void RemoveDrone(GameObject drone)
     {
         if (drone.transform.parent == swarmHolder.transform)
@@ -452,7 +451,7 @@ public class DroneFake
         float r0Obs = avoidanceRadius;
 
         float cVm = 1.0f; // Velocity matching coefficient
-        float cPmObs = 4.3f;
+        float cPmObs = 10f;
 
                 // Reference velocity
         Vector3 vRef = alignmentVector;
@@ -463,13 +462,14 @@ public class DroneFake
 
         foreach (DroneFake neighbour in neighbors)
         {
+            float neighborPriority = neighbour.embodied ? PRIORITYWHENEMBODIED : 1;
             Vector3 posRelD = neighbour.position - position;
             float distD = posRelD.magnitude - 2*droneRadius;
             if (distD <= Mathf.Epsilon)
             {
                 hasCrashed = true;
             }
-            accCoh += GetCohesionForce(distD, dRef, a, b, c, r0Coh, delta, posRelD);
+            accCoh += GetCohesionForce(distD, dRef, a, b, c, r0Coh, delta, posRelD) * neighborPriority;
         }
 
         // Obstacle avoidance
@@ -495,16 +495,30 @@ public class DroneFake
         if (embodied)
         {
             Vector3 force = accVel;
-            force = Vector3.ClampMagnitude(force, maxForce/3);
+            force = Vector3.ClampMagnitude(force, maxForce/4);
             acceleration = force;
             return;
         }
 
+        DroneFake embodiedDrone = allDrones.Find(d => d.embodied);
+        if (embodiedDrone != null)
+        {
+            float dist = Vector3.Distance(position, embodiedDrone.position);
+            if (dist > neighborRadius)
+            {
+                accVel = Vector3.zero;
+            }
+        }
+
         Vector3 fo = accCoh + accObs + accVel;
-       // Debug.Log("accCoh: " + accCoh + " accObs: " + accObs + " accVel: " + accVel);
         fo = Vector3.ClampMagnitude(fo, maxForce);
         
         acceleration = fo;
+    }
+
+    public bool isNeighboor(DroneFake drone)
+    {
+        return Vector3.Distance(position, drone.position) < neighborRadius;
     }
 
     public void UpdatePositionPrediction(int numberOfTimeApplied)

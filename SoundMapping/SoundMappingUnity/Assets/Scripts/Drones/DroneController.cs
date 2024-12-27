@@ -53,6 +53,7 @@ public class DroneController : MonoBehaviour
         {
             CameraMovement.desembodiedDrone();
             CameraMovement.nextEmbodiedDrone = null;
+            MigrationPointController.selectedDrone = null;
         }
 
         gm.GetComponent<swarmModel>().RemoveDrone(this.gameObject);

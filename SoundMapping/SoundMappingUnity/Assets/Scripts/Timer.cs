@@ -107,8 +107,14 @@ public class Timer : MonoBehaviour
 
     public void SaveScore()
     {
+        if (elapsedTime <= 10)
+        {
+            return;
+        }
         // Get the player's name from the InputField
         string playerName = nameInputField.text;
+
+
 
         // Create a new leaderboard entry
         LeaderboardEntry newEntry = new LeaderboardEntry

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class MigrationPointController : MonoBehaviour
@@ -43,17 +44,54 @@ public class MigrationPointController : MonoBehaviour
             }
             else
             {
-                int increment = Input.GetKeyDown("joystick button " + 5) ? 1 : -1;
-                //change material
-                selectedDrone.GetComponent<Renderer>().material = normalMaterial;
-                lastSelectedChild = (lastSelectedChild + increment) % swarmModel.swarmHolder.transform.childCount;
-                if(lastSelectedChild < 0)
+                if(CameraMovement.embodiedDrone != null)
                 {
-                    lastSelectedChild = swarmModel.swarmHolder.transform.childCount - 1;
-                }
+                    Dictionary<GameObject, float> scores = new Dictionary<GameObject, float>();
 
-                selectedDrone = swarmModel.swarmHolder.transform.GetChild(lastSelectedChild).gameObject;
-                selectedDrone.GetComponent<Renderer>().material = selectedMaterial;
+                    foreach(Transform drone in swarmModel.swarmHolder.transform)
+                    {
+                        if(drone.gameObject == CameraMovement.embodiedDrone)
+                        {
+                            continue;
+                        }
+
+                        Vector3 diff = drone.position - CameraMovement.embodiedDrone.transform.position;
+                        float score = Vector3.Dot(diff, CameraMovement.embodiedDrone.transform.forward);
+
+                        if(score > 0.5)
+                        {
+                            score /= diff.magnitude;
+                            scores.Add(drone.gameObject, score);
+                        }
+
+                    }
+
+                    //select the highest score
+                    if(scores.Count > 0)
+                    {
+                        //sort the dictionary
+                        List<KeyValuePair<GameObject, float>> sortedScores = new List<KeyValuePair<GameObject, float>>(scores);
+                        sortedScores.Sort((x, y) => y.Value.CompareTo(x.Value));
+
+                        //select the highest score
+                        selectedDrone = sortedScores[0].Key;
+                        selectedDrone.GetComponent<Renderer>().material = selectedMaterial;
+                    }
+                }
+                else
+                {
+                    int increment = Input.GetKeyDown("joystick button " + 5) ? 1 : -1;
+                    //change material
+                    selectedDrone.GetComponent<Renderer>().material = normalMaterial;
+                    lastSelectedChild = (lastSelectedChild + increment) % swarmModel.swarmHolder.transform.childCount;
+                    if(lastSelectedChild < 0)
+                    {
+                        lastSelectedChild = swarmModel.swarmHolder.transform.childCount - 1;
+                    }
+
+                    selectedDrone = swarmModel.swarmHolder.transform.GetChild(lastSelectedChild).gameObject;
+                    selectedDrone.GetComponent<Renderer>().material = selectedMaterial;
+                }
             }
         }
 

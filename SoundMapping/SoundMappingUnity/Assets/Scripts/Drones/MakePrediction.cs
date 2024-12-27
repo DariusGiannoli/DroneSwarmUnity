@@ -28,7 +28,7 @@ public class MakePrediction : MonoBehaviour
     void Start()
     {
 
-        shortPred = new Prediction(true, 30, 1, 0, shortPredictionLineHolder);
+        shortPred = new Prediction(true, 50, 1, 0, shortPredictionLineHolder);
         //longPred = new Prediction(false, 15, 3, 1, longPredictionLineHolder);
 
         launchPreditionThread(shortPred);
@@ -154,6 +154,8 @@ public class MakePrediction : MonoBehaviour
                     line.endWidth = 0.1f;
                     line.material = new Material(Shader.Find("Unlit/Color"));
                     line.material.color = segmentColor;
+                    //set the layer of the line
+                    line.gameObject.layer = 10;
 
                     pred.LineRenderers.Add(line);                    
                 } 

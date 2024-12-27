@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Data.Common;
@@ -8,10 +9,12 @@ using UnityEngine;
 public class CameraMovement : MonoBehaviour
 {
     public static Camera cam;
+    public GameObject camMinimap;
+    public GameObject minimap;
     public Transform swarmHolder;
     private int FOVDrones = 5;
 
-    public float heightCamera = 10;
+    public float heightCamera = 20;
 
     public GameObject fogWarManager;
 
@@ -22,6 +25,7 @@ public class CameraMovement : MonoBehaviour
 
     public static GameObject embodiedDrone = null;
     public static GameObject nextEmbodiedDrone = null;
+    public GameObject lastEmbodiedDrone = null;
     public Quaternion intialCamRotation;
     const float DEFAULT_HEIGHT_CAMERA = 20;
 
@@ -30,6 +34,10 @@ public class CameraMovement : MonoBehaviour
     void Start()
     {
         cam = Camera.main;
+
+        cam.transform.position = new Vector3(0, DEFAULT_HEIGHT_CAMERA, 0);
+        heightCamera = DEFAULT_HEIGHT_CAMERA;
+
         intialCamRotation = cam.transform.rotation;
 
         this.GetComponent<sendInfoGameObject>().setupCallback(getCameraPositionDE);
@@ -64,13 +72,24 @@ public class CameraMovement : MonoBehaviour
     // Update is called once per frame
     void updateTDView()
     {
-        //if scolling up
-        float rightStickVertical = Input.GetAxis("JoystickRightVertical");
+        List<GameObject> drones = DroneNetworkManager.dronesInMainNetworkDistance;
+        if (drones.Count > 0)
+        {
+            Vector3 center = Vector3.zero;
+            foreach (GameObject drone in drones)
+            {
+                center += drone.transform.position;
+            }
+            center /= drones.Count; 
 
-        heightCamera += rightStickVertical * Time.deltaTime * 10;
+            center.y = heightCamera;
+
+            cam.GetComponent<Camera>().orthographicSize = heightCamera;
+            cam.transform.position = Vector3.Lerp(cam.transform.position, center, Time.deltaTime * 2);
+        }
+
 
         float rightStickHorizontal = Input.GetAxis("JoystickRightHorizontal");
-
         // applz rotation to the camera with lerp
         cam.transform.Rotate(-Vector3.forward, rightStickHorizontal * Time.deltaTime * rotationSpeed);
     }
@@ -78,47 +97,30 @@ public class CameraMovement : MonoBehaviour
     void updateDroneView()
     {
         float rightStickHorizontal = Input.GetAxis("JoystickRightHorizontal");
+        float heightChange = Input.GetAxis("JoystickRightVertical") * Time.deltaTime * 10;
 
         // applz rotation to the embodied drone with lerp
         embodiedDrone.transform.Rotate(Vector3.up, rightStickHorizontal * Time.deltaTime * rotationSpeed);
+        
 
+        updateTDView();
+
+        camMinimap.GetComponent<Camera>().orthographicSize = Mathf.Clamp(camMinimap.GetComponent<Camera>().orthographicSize + heightChange, swarmModel.desiredSeparation*2, swarmModel.desiredSeparation*5);
+        cam.transform.position = new Vector3(embodiedDrone.transform.position.x, heightCamera, embodiedDrone.transform.position.z);
     }
 
     public IEnumerator TDView()
     {
         state = "TDView";
+        minimap.SetActive(false);
         yield return new WaitForSeconds(0.01f);
-        try
-        {       
-            List<GameObject> drones = DroneNetworkManager.dronesInMainNetworkDistance;
-            if (drones.Count > 0)
-            {
-                Vector3 center = Vector3.zero;
-                foreach (GameObject drone in drones)
-                {
-                    center += drone.transform.position;
-                }
-                center /= drones.Count;
+        while(CameraMovement.embodiedDrone == null)
+        {
+            updateTDView();
+            yield return new WaitForSeconds(0.01f);
+        }
 
-                center.y = DEFAULT_HEIGHT_CAMERA;
-                cam.GetComponent<Camera>().orthographicSize = heightCamera;
-                cam.transform.position = Vector3.Lerp(cam.transform.position, center, Time.deltaTime * 2);        
-
-            }
-        } catch
-        {
-            print("Error TDView");
-        }
-    
-        updateTDView();
-        if(embodiedDrone != null)
-        {
-            StartCoroutine(goAnimation());
-        }
-        else
-        {
-            StartCoroutine(TDView());
-        }
+        StartCoroutine(goAnimation());
     }
 
     public IEnumerator goAnimation(float _animationTime = animationTime)
@@ -131,20 +133,52 @@ public class CameraMovement : MonoBehaviour
         {
             if(embodiedDrone == null)
             {
-                cam.transform.rotation = intialCamRotation;
+                Vector3 forwardDroneC = lastEmbodiedDrone.transform.forward;
+                forwardDroneC.y = 0;
+                cam.transform.position = new Vector3(lastEmbodiedDrone.transform.position.x, heightCamera, lastEmbodiedDrone.transform.position.z);
+                cam.transform.forward = forwardDroneC;
+                
                 StartCoroutine(TDView());
                 yield break;
             }
             
             
-            cam.GetComponent<Camera>().orthographicSize = Mathf.Lerp(cam.GetComponent<Camera>().orthographicSize, swarmModel.spawnHeight, elapsedTime / _animationTime);
-            //cam.transform.position = Vector3.Lerp(startingPos, embodiedDrone.transform.position, elapsedTime / _animationTime);
+            cam.GetComponent<Camera>().orthographicSize = Mathf.Lerp(cam.GetComponent<Camera>().orthographicSize, 5, elapsedTime / _animationTime);
             elapsedTime += Time.deltaTime;
             yield return new WaitForEndOfFrame();
         }
 
+        Vector3 forwardDrone = cam.transform.up;
+        forwardDrone.y = 0;
+        embodiedDrone.transform.forward = forwardDrone;
+
         embodiedDrone.GetComponent<Camera>().enabled = true;
         cam.enabled = false;
+
+        StartCoroutine(droneView());
+    }
+
+    public IEnumerator goAnimationDoneToDrone(float _animationTime = animationTime)
+    {
+        state = "goAnimationDroneToDrone";
+        float elapsedTime = 0;
+        float initialFOV = embodiedDrone.GetComponent<Camera>().fieldOfView;
+        
+        while (elapsedTime < _animationTime)
+        {           
+            lastEmbodiedDrone.GetComponent<Camera>().fieldOfView = Mathf.Lerp(lastEmbodiedDrone.GetComponent<Camera>().fieldOfView, 20, elapsedTime / _animationTime);
+            lastEmbodiedDrone.transform.LookAt(embodiedDrone.transform.position);
+            
+            elapsedTime += Time.deltaTime;
+            yield return new WaitForEndOfFrame();
+        }
+
+        lastEmbodiedDrone.GetComponent<Camera>().fieldOfView = initialFOV;
+        lastEmbodiedDrone.GetComponent<Camera>().enabled = false;
+
+        embodiedDrone.GetComponent<Camera>().enabled = true;
+        Vector3 forwardDrone = new Vector3(lastEmbodiedDrone.transform.forward.x, 0, lastEmbodiedDrone.transform.forward.z);
+        embodiedDrone.transform.forward = forwardDrone;
 
         StartCoroutine(droneView());
     }
@@ -153,24 +187,16 @@ public class CameraMovement : MonoBehaviour
     {
         state = "droneView";
         Vector3 lastPosition = embodiedDrone.transform.position;
+        minimap.SetActive(true);
         while (embodiedDrone != null)
         {
             lastPosition = embodiedDrone.transform.position;
             updateDroneView();
             if(nextEmbodiedDrone != null)
             {
-                print("nextEmbodiedDrone");
-                embodiedDrone.GetComponent<Camera>().enabled = false;
-
-                cam.enabled = true;
-                Vector3 position = embodiedDrone.transform.position;
-                position.y = DEFAULT_HEIGHT_CAMERA;
-
-                cam.transform.position = position;
-                cam.transform.LookAt(nextEmbodiedDrone.transform.position);
-
+                lastEmbodiedDrone = embodiedDrone;
                 setEmbodiedDrone(nextEmbodiedDrone);
-                StartCoroutine(goAnimation(0.5f));
+                StartCoroutine(goAnimationDoneToDrone(animationTime));
                 yield break;
             }
             yield return new WaitForSeconds(0.01f);

@@ -75,6 +75,8 @@ public class HapticsTest : MonoBehaviour
         {
             Debug.LogWarning("No gamepad connected.");
             gamepad.SetMotorSpeeds(0, 0);
+        }else {
+            gamepad.SetMotorSpeeds(0.5f, 0.5f);
         }
     }
 
