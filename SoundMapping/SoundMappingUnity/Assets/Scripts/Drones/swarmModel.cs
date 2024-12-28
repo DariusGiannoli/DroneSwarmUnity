@@ -118,6 +118,7 @@ public class swarmModel : MonoBehaviour
         foreach (DroneFake drone in drones)
         {
             drone.ComputeForces(MigrationPointController.alignementVector, network);
+            drone.score = network.IsInMainNetwork(drone) ? 1.0f : 0.0f;
         }
 
         foreach (Transform drone in swarmHolder.transform)
@@ -341,6 +342,8 @@ public class DroneFake
 
     public bool embodied = false;
     public bool selected = false;
+
+    public float score = 1.0f;
 
     public static int PRIORITYWHENEMBODIED = 2;
 

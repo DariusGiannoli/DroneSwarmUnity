@@ -130,19 +130,14 @@ public class DroneController : MonoBehaviour
         }
 
         this.droneFake.selected = false;
-        float score = realScore;
 
-        if (score < -0.9f)
-        {
-            this.GetComponent<Renderer>().material = notConnectedColor;
-        }
-        else if (score < 1)
-        {
-            this.GetComponent<Renderer>().material.Lerp(farColor, connectedColor, score);
-        }
-        else // == 1
+        if (droneFake.score >= 0.9f)
         {
             this.GetComponent<Renderer>().material = connectedColor;
+        }
+        else 
+        {
+            this.GetComponent<Renderer>().material = notConnectedColor;
         }
     }
 

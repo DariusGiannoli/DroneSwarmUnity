@@ -1514,9 +1514,9 @@ MonoBehaviour:
   numDrones: 7
   spawnRadius: 3
   lastObstacleAvoidance: -1
-  maxSpeed: 15
+  maxSpeed: 12
   maxForce: 25
-  alpha: 1
+  alpha: 2
   beta: 2
   delta: 1
   avoidanceRadius: 1

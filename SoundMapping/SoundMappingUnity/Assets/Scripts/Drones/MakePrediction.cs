@@ -94,7 +94,11 @@ public class MakePrediction : MonoBehaviour
         foreach (Transform child in swarmModel.swarmHolder.transform)
         {
             DroneDataPrediction data = new DroneDataPrediction();
-            pred.dronesPrediction.Add(new DroneFake(child.transform.position, child.GetComponent<DroneController>().droneFake.velocity, false));
+            DroneFake copy = new DroneFake(child.transform.position, child.GetComponent<DroneController>().droneFake.velocity, false);
+            copy.embodied = child.GetComponent<DroneController>().droneFake.embodied;
+            copy.selected = child.GetComponent<DroneController>().droneFake.selected;
+            
+            pred.dronesPrediction.Add(copy);
             pred.allData.Add(data);
         }
     }
