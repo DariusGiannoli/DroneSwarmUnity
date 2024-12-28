@@ -43,6 +43,27 @@ public class swarmModel : MonoBehaviour
     public const int PRIORITYWHENEMBODIED = 5;
     public float dampingFactor = 0.98f;
 
+    public static NetworkCreator network;
+
+    public static List<DroneFake> dronesInMainNetwork
+    {
+        get
+        {
+            List<DroneFake> drones = new List<DroneFake>();
+            if (network == null)
+            {
+                return drones;
+            }
+
+            foreach (DroneFake drone in network.largestComponent)
+            {
+                drones.Add(drone);
+            }
+
+            return drones;
+        }
+    }
+
 
     public List<DroneFake> drones = new List<DroneFake>();
 
@@ -91,9 +112,12 @@ public class swarmModel : MonoBehaviour
             this.GetComponent<Timer>().Restart();
         }
 
+        network = new NetworkCreator(drones);
+        network.refreshNetwork();
+
         foreach (DroneFake drone in drones)
         {
-            drone.ComputeForces(drones, MigrationPointController.alignementVector);
+            drone.ComputeForces(MigrationPointController.alignementVector, network);
         }
 
         foreach (Transform drone in swarmHolder.transform)
@@ -138,7 +162,7 @@ public class swarmModel : MonoBehaviour
         }
 
         this.GetComponent<HapticAudioManager>().Reset();
-        this.GetComponent<DroneNetworkManager>().Reset();
+       // this.GetComponent<DroneNetworkManager>().Reset();
     }
 
     public void RemoveDrone(GameObject drone)
@@ -316,6 +340,7 @@ public class DroneFake
     public static float spawnHeight = 0.5f;
 
     public bool embodied = false;
+    public bool selected = false;
 
     public static int PRIORITYWHENEMBODIED = 2;
 
@@ -350,35 +375,9 @@ public class DroneFake
         return neighbors;
     }
 
-    public Vector3 ComputeObstacleAvoidanceForce()
+    public void startPrediction(Vector3 alignementVector, NetworkCreator network)
     {
-        Vector3 avoidanceForceVector = Vector3.zero;
-        List<Vector3> obstacles = ClosestPointCalculator.ClosestPointsWithinRadius(position, avoidanceRadius);
-
-        foreach (Vector3 obstacle in obstacles)
-        {
-            // Calculate a force away from the obstacle
-            Vector3 awayFromObstacle = position - obstacle;
-            float distance = awayFromObstacle.magnitude - droneRadius;
-
-            if (distance > 0)
-            {
-                Vector3 repulsion = awayFromObstacle.normalized * (avoidanceForce / (distance * distance));
-                repulsion.y = 0; // Keep movement in the XZ plane
-                avoidanceForceVector += repulsion;
-            }
-            else
-            {
-                hasCrashed = true;
-            }
-
-        }
-        return avoidanceForceVector;
-    }
-    
-    public void startPrediction(List<DroneFake> allDrones, Vector3 alignementVector)
-    {
-        ComputeForces(allDrones, alignementVector);
+        ComputeForces(alignementVector, network);
     }
 
     private float GetCohesionIntensity(float r, float dRef, float a, float b, float c)
@@ -435,9 +434,10 @@ public class DroneFake
     }
 
 
-    public void ComputeForces(List<DroneFake> allDrones, Vector3 alignmentVector)
+    public void ComputeForces(Vector3 alignmentVector, NetworkCreator network)
     {
-        List<DroneFake> neighbors = GetNeighbors(allDrones);
+        List<DroneFake> allDrones = network.drones;
+        List<DroneFake> neighbors = network.GetNeighbors(this);
 
         // Constants
         float dRef = desiredSeparation;
@@ -510,6 +510,11 @@ public class DroneFake
             }
         }
 
+        if(!network.IsInMainNetwork(this))
+        {
+            accVel = Vector3.zero;
+        }
+
         Vector3 fo = accCoh + accObs + accVel;
         fo = Vector3.ClampMagnitude(fo, maxForce);
         
@@ -536,5 +541,155 @@ public class DroneFake
         }
 
         acceleration = Vector3.zero;
+    }
+
+}
+
+public class NetworkCreator
+{
+
+    public List<DroneFake> drones = new List<DroneFake>();
+    public Dictionary<DroneFake, List<DroneFake>> adjacencyList = new Dictionary<DroneFake, List<DroneFake>>();
+    public HashSet<DroneFake> largestComponent = new HashSet<DroneFake>();
+
+    bool hasEmbodied = false;
+
+    public NetworkCreator(List<DroneFake> dr)
+    {
+        drones = dr;
+
+        foreach (DroneFake drone in drones)
+        {
+            adjacencyList[drone] = new List<DroneFake>();
+            if (drone.embodied)
+            {
+                hasEmbodied = true;
+            }
+        }
+    }
+    public void refreshNetwork()
+    {
+        BuildNetwork(drones);
+        FindLargestComponent(drones);
+    }
+    void BuildNetwork(List<DroneFake> drones)
+    {
+        try
+        {
+            // Clear previous connections
+            foreach (var drone in adjacencyList.Keys)
+            {
+                adjacencyList[drone].Clear();
+            }
+            // Build new connections
+            foreach (DroneFake drone in drones)
+            {
+                foreach (DroneFake otherDrone in drones)
+                {
+                    if (drone == otherDrone) continue;
+
+                    if (IsDistanceNeighbor(drone, otherDrone))
+                    {
+                        adjacencyList[drone].Add(otherDrone);
+                    }
+                }
+            }
+        }
+        catch (System.Exception e)
+        {
+            return;
+        }
+    }
+
+    void FindLargestComponent(List<DroneFake> drones)
+    {
+        largestComponent.Clear();
+
+        HashSet<DroneFake> visited = new HashSet<DroneFake>();
+        List<HashSet<DroneFake>> components = new List<HashSet<DroneFake>>();
+
+        foreach (DroneFake drone in drones)
+        {
+            if (!visited.Contains(drone))
+            {
+                HashSet<DroneFake> component = new HashSet<DroneFake>();
+                Queue<DroneFake> queue = new Queue<DroneFake>();
+                queue.Enqueue(drone);
+                visited.Add(drone);
+
+                while (queue.Count > 0)
+                {
+                    DroneFake current = queue.Dequeue();
+                    component.Add(current);
+
+                    foreach (DroneFake neighbor in adjacencyList[current])
+                    {
+                        if (!visited.Contains(neighbor))
+                        {
+                            visited.Add(neighbor);
+                            queue.Enqueue(neighbor);
+                        }
+                    }
+                }
+
+                components.Add(component);
+            }
+        }
+
+        // Find the largest component
+        largestComponent.Clear();
+        int maxCount = 0;
+        foreach (HashSet<DroneFake> component in components)
+        {
+            // Check if the component contains an embodied drone
+            bool containsEmbodied = false;
+            bool containsSelected = false;
+            foreach (DroneFake drone in component)
+            {
+                if (drone.embodied)
+                {
+                    containsEmbodied = true;
+                    break;
+                }
+
+                if (drone.selected)
+                {
+                    containsSelected = true;
+                }
+            }
+
+            if (containsEmbodied || containsSelected)
+            {
+                largestComponent = component;
+                break;
+            }
+
+            if (component.Count > maxCount)
+            {
+                maxCount = component.Count;
+                largestComponent = component;
+            }
+        }
+    }
+
+    public bool IsInMainNetwork(DroneFake drone)
+    {
+        return largestComponent.Contains(drone);
+    }
+    bool IsDistanceNeighbor(DroneFake a, DroneFake b)
+    {
+        float distance = Vector3.Distance(a.position, b.position);
+        if (distance > DroneFake.neighborRadius) return false;
+
+        return true;
+    }
+
+    public List<DroneFake> GetNeighbors(DroneFake drone)
+    {
+        if (!adjacencyList.ContainsKey(drone))
+        {
+            return new List<DroneFake>();
+        }
+        return adjacencyList[drone];
     }
 }

@@ -40,9 +40,11 @@ public class MakePrediction : MonoBehaviour
 
         for(int i = 0; i < pred.deep; i++)
         {
+            NetworkCreator network = new NetworkCreator(pred.dronesPrediction);
+            network.refreshNetwork();
             foreach (DroneFake drone in pred.dronesPrediction)
             {
-                drone.startPrediction(pred.dronesPrediction,alignementVector);
+                drone.startPrediction(alignementVector, network);
             }
 
 

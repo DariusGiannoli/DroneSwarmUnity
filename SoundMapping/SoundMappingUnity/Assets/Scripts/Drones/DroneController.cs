@@ -18,10 +18,11 @@ public class DroneController : MonoBehaviour
     public Material connectedColor;
     public Material farColor;
     public Material notConnectedColor;
+    public Material selectedColor;
     public Material embodiedColor;
-
     public bool showGuizmos = false;
     public bool prediction = false;
+    const float distanceToHeigth = 3f;
 
 
     private GameObject gm;
@@ -51,8 +52,10 @@ public class DroneController : MonoBehaviour
     {
         if (CameraMovement.embodiedDrone == this.gameObject)
         {
-            CameraMovement.desembodiedDrone();
+            CameraMovement.desembodiedDrone(this.gameObject);
             CameraMovement.nextEmbodiedDrone = null;
+            this.droneFake.embodied = false;
+            this.droneFake.selected = false;
             MigrationPointController.selectedDrone = null;
         }
 
@@ -92,7 +95,17 @@ public class DroneController : MonoBehaviour
 
     void UpdateNormal()
     {
-        transform.position = droneFake.position;
+        Vector3 positionDrome = droneFake.position;
+        //make a ray to check the height of the drone with the obstacle under it
+      //  Ray ray = new Ray(positionDrome, Vector3.down);
+       // RaycastHit hit;
+      //  if (Physics.Raycast(ray, out hit, 1000))
+      //  {
+     //       positionDrome.y = hit.point.y + distanceToHeigth;
+     //   }
+
+        //update the position of the drone
+        transform.position = positionDrome;
         updateColor();
         updateSound();
     }
@@ -103,12 +116,20 @@ public class DroneController : MonoBehaviour
     #region HapticAudio
     void updateColor()
     {
-        if (CameraMovement.embodiedDrone == this.gameObject || CameraMovement.nextEmbodiedDrone == this.gameObject || MigrationPointController.selectedDrone == this.gameObject)
+        if(droneFake.embodied)
         {
             this.GetComponent<Renderer>().material = embodiedColor;
             return;
         }
 
+        if (MigrationPointController.selectedDrone == this.gameObject)
+        {
+            this.GetComponent<Renderer>().material = selectedColor;
+            this.droneFake.selected = true;
+            return;
+        }
+
+        this.droneFake.selected = false;
         float score = realScore;
 
         if (score < -0.9f)

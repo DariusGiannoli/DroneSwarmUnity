@@ -129,6 +129,7 @@ MonoBehaviour:
   connectedColor: {fileID: 2100000, guid: 3d0ff9fe2342035478da2ac0c2bafcf1, type: 2}
   farColor: {fileID: 2100000, guid: fe9ec3770cd68894897f458383097c5b, type: 2}
   notConnectedColor: {fileID: 2100000, guid: 8e24c799730ccb64b9ffb8cb7083d4da, type: 2}
+  selectedColor: {fileID: 2100000, guid: a74befaa9a69edf47aa26d32856feb55, type: 2}
   embodiedColor: {fileID: 2100000, guid: ea2740c202d629d46883c000bb8326dc, type: 2}
   showGuizmos: 0
   prediction: 0

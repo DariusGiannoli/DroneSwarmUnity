@@ -72,13 +72,13 @@ public class CameraMovement : MonoBehaviour
     // Update is called once per frame
     void updateTDView()
     {
-        List<GameObject> drones = DroneNetworkManager.dronesInMainNetworkDistance;
+        List<DroneFake> drones = swarmModel.dronesInMainNetwork;
         if (drones.Count > 0)
         {
             Vector3 center = Vector3.zero;
-            foreach (GameObject drone in drones)
+            foreach (DroneFake drone in drones)
             {
-                center += drone.transform.position;
+                center += drone.position;
             }
             center /= drones.Count; 
 
@@ -135,8 +135,11 @@ public class CameraMovement : MonoBehaviour
             {
                 Vector3 forwardDroneC = lastEmbodiedDrone.transform.forward;
                 forwardDroneC.y = 0;
+
+                print(forwardDroneC);
+
                 cam.transform.position = new Vector3(lastEmbodiedDrone.transform.position.x, heightCamera, lastEmbodiedDrone.transform.position.z);
-                cam.transform.forward = forwardDroneC;
+                cam.transform.up = forwardDroneC;
                 
                 StartCoroutine(TDView());
                 yield break;
@@ -144,12 +147,14 @@ public class CameraMovement : MonoBehaviour
             
             
             cam.GetComponent<Camera>().orthographicSize = Mathf.Lerp(cam.GetComponent<Camera>().orthographicSize, 5, elapsedTime / _animationTime);
+            cam.transform.position = Vector3.Lerp(cam.transform.position, embodiedDrone.transform.position, elapsedTime / _animationTime);
             elapsedTime += Time.deltaTime;
             yield return new WaitForEndOfFrame();
         }
 
         Vector3 forwardDrone = cam.transform.up;
         forwardDrone.y = 0;
+
         embodiedDrone.transform.forward = forwardDrone;
 
         embodiedDrone.GetComponent<Camera>().enabled = true;
@@ -163,6 +168,8 @@ public class CameraMovement : MonoBehaviour
         state = "goAnimationDroneToDrone";
         float elapsedTime = 0;
         float initialFOV = embodiedDrone.GetComponent<Camera>().fieldOfView;
+
+        lastEmbodiedDrone.GetComponent<DroneController>().droneFake.embodied = false;
         
         while (elapsedTime < _animationTime)
         {           
@@ -203,10 +210,18 @@ public class CameraMovement : MonoBehaviour
         }
 
         cam.transform.position = new Vector3(lastPosition.x, heightCamera, lastPosition.z);
-        cam.transform.rotation = intialCamRotation;
-        cam.enabled = true;
-        StartCoroutine(TDView());
+        
+        if(lastEmbodiedDrone != null)
+        {
+            Vector3 forwardDroneC = lastEmbodiedDrone.transform.forward;
+            forwardDroneC.y = 0;
 
+            cam.transform.position = new Vector3(lastEmbodiedDrone.transform.position.x, heightCamera, lastEmbodiedDrone.transform.position.z);
+        }
+        cam.enabled = true;
+
+
+        StartCoroutine(TDView());
     }
 
     public static void setEmbodiedDrone(GameObject drone)
@@ -216,9 +231,9 @@ public class CameraMovement : MonoBehaviour
         nextEmbodiedDrone = null;
     }
 
-    public static void desembodiedDrone()
+    public static void desembodiedDrone(GameObject drone)
     {
-        embodiedDrone.GetComponent<DroneController>().droneFake.embodied = false;
+        drone.GetComponent<DroneController>().droneFake.embodied = false;
         embodiedDrone = null;
     }
 

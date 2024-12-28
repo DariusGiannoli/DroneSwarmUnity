@@ -51,5 +51,6 @@
         "temp/": true,
         "Temp/": true
     },
-    "dotnet.defaultSolution": "SoundMappingUnity.sln"
+    "dotnet.defaultSolution": "SoundMappingUnity.sln",
+    "dotnet.preferCSharpExtension": true
 }

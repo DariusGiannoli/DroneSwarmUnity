@@ -39,7 +39,7 @@ public class MigrationPointController : MonoBehaviour
                 if(swarmModel.swarmHolder.transform.childCount > 0)
                 {
                     selectedDrone = swarmModel.swarmHolder.transform.GetChild(0).gameObject;
-                    selectedDrone.GetComponent<Renderer>().material = selectedMaterial;
+
                 }
             }
             else
@@ -75,14 +75,12 @@ public class MigrationPointController : MonoBehaviour
 
                         //select the highest score
                         selectedDrone = sortedScores[0].Key;
-                        selectedDrone.GetComponent<Renderer>().material = selectedMaterial;
                     }
                 }
                 else
                 {
                     int increment = Input.GetKeyDown("joystick button " + 5) ? 1 : -1;
                     //change material
-                    selectedDrone.GetComponent<Renderer>().material = normalMaterial;
                     lastSelectedChild = (lastSelectedChild + increment) % swarmModel.swarmHolder.transform.childCount;
                     if(lastSelectedChild < 0)
                     {
@@ -90,7 +88,6 @@ public class MigrationPointController : MonoBehaviour
                     }
 
                     selectedDrone = swarmModel.swarmHolder.transform.GetChild(lastSelectedChild).gameObject;
-                    selectedDrone.GetComponent<Renderer>().material = selectedMaterial;
                 }
             }
         }
@@ -107,7 +104,7 @@ public class MigrationPointController : MonoBehaviour
                 else
                 {
                     CameraMovement.embodiedDrone.GetComponent<Camera>().enabled = false;                
-                    CameraMovement.desembodiedDrone(); 
+                    CameraMovement.desembodiedDrone(CameraMovement.embodiedDrone); 
                 }
             }
             else if(selectedDrone != null)
