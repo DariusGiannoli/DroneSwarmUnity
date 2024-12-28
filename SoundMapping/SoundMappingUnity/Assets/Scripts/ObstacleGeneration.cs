@@ -77,35 +77,6 @@ public class ObstacleGeneration : MonoBehaviour
         }
     }
 
-
-    void PlaceObstacles()
-    {
-        floorObjects = GameObject.FindGameObjectsWithTag("FloorCylinder");
-
-        foreach (GameObject floor in floorObjects)
-        {
-            Mesh mesh = floor.GetComponent<MeshFilter>().sharedMesh;
-
-            if (mesh == null)
-            {
-                Debug.LogWarning($"No mesh found on {floor.name}");
-                continue;
-            }
-
-            // Calculate the surface area of the mesh
-            float area = CalculateMeshArea(mesh, floor.transform);
-            int obstacleCount = Mathf.RoundToInt(area * densityCylinder);
-
-            // Place obstacles randomly on the mesh surface
-            for (int i = 0; i < obstacleCount; i++)
-            {
-                Vector3 position = GetRandomPointOnMesh(mesh, floor.transform);
-                position.y += obstaclePrefab.transform.localScale.y / 4f;
-                Instantiate(obstaclePrefab, position, Quaternion.identity, floorParent);
-            }
-        }
-    }
-
     int DecideNumberOfWalls(GameObject floor)
     {
         // Decide number of walls based on floor area and wall density
@@ -240,6 +211,7 @@ public class ObstacleGeneration : MonoBehaviour
     
     void AddObstacles()
     {
+        print("Adding obstacles");
         GameObject[] obstacleObjects = GameObject.FindGameObjectsWithTag("Obstacle");
         List<Obstacle> obstacles = new List<Obstacle>();
 

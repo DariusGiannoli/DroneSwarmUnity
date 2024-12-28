@@ -250,4 +250,9 @@ public class CameraMovement : MonoBehaviour
         }
         return new DataEntry("embodiedDrone", embodiedDrone.name);
     }
+
+    void OnDisable()
+    {
+        StopAllCoroutines();
+    }
 }

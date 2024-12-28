@@ -1422,13 +1422,13 @@ GameObject:
   - component: {fileID: 1573697196}
   - component: {fileID: 1573697195}
   - component: {fileID: 1573697194}
+  - component: {fileID: 1573697202}
   - component: {fileID: 1573697192}
   - component: {fileID: 1573697191}
   - component: {fileID: 1573697197}
   - component: {fileID: 1573697198}
   - component: {fileID: 1573697200}
   - component: {fileID: 1573697201}
-  - component: {fileID: 1573697202}
   - component: {fileID: 1573697203}
   m_Layer: 0
   m_Name: Gamemanager
@@ -1505,7 +1505,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1573697189}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: eb7bbdd35a46d4944aeb987e372944e4, type: 3}
   m_Name: 
@@ -1651,7 +1651,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1573697189}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d7804f2c46256ce478a56844a6025980, type: 3}
   m_Name: 

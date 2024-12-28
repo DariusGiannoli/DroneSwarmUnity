@@ -10,19 +10,14 @@ using UnityEngine.Scripting;
 
 public class MakePrediction : MonoBehaviour
 {
+    Material defaultMaterial = new Material(Shader.Find("Unlit/Color"));
     public Transform allPredictionsHolder;
     public Prediction longPred, shortPred;
 
 
     public Transform longPredictionLineHolder, shortPredictionLineHolder;
 
-    List<Vector3> allPredictions = new List<Vector3>();
-
-    public LayerMask obstacleLayer;
-
-    public GameObject testObject;
-
-    bool refresh = false;
+    Thread predictionThread;    
 
 
     void Start()
@@ -83,7 +78,8 @@ public class MakePrediction : MonoBehaviour
         spawnPredictions();
         lock (shortPred)
         {
-            new Thread(() => StartPrediction(shortPred)).Start();
+            predictionThread = new Thread(() => StartPrediction(pred));
+            predictionThread.Start();
         }
     }
     void spawnPrediction(Prediction pred)
@@ -108,6 +104,7 @@ public class MakePrediction : MonoBehaviour
         if(shortPred.donePrediction)
         {
             this.GetComponent<HapticsTest>().HapticsPrediction(shortPred);
+            print("Prediction done");
             UpdateLines(shortPred);
             shortPred.donePrediction = false;
             launchPreditionThread(shortPred);
@@ -118,6 +115,14 @@ public class MakePrediction : MonoBehaviour
     void OnDisable()
     {
         StopAllCoroutines();
+        // stop the prediction thread
+        if (predictionThread != null)
+        {
+            predictionThread.Abort();
+        }
+
+        print("Prediction thread stopped");
+
     }
 
     void UpdateLines(Prediction pred)
@@ -131,18 +136,15 @@ public class MakePrediction : MonoBehaviour
         // Destroy all existing line renderers
         foreach (LineRenderer line in pred.LineRenderers)
         {
+            Destroy(line.material);
             Destroy(line.gameObject);
         }
-        pred.LineRenderers.Clear();
 
+        pred.LineRenderers.Clear();
         int downsampleRate = 1; // Select 1 point every 5 data points
 
         foreach (DroneDataPrediction data in pred.allData)
         {
-            float fractionOfPath = (float)data.idFirstCrash / data.positions.Count;
-            Color purpleColor = new Color(0.5f, 0f, 0.5f, 1f); // Purple
-            Color greyColor = new Color(0.5f, 0.5f, 0.5f, 0.2f); // Grey
-            Color colorPath = Color.Lerp(greyColor, purpleColor, fractionOfPath);
 
             for(int i = 0; i < data.positions.Count - 1; i++)
             {
@@ -150,7 +152,7 @@ public class MakePrediction : MonoBehaviour
                 {
 
                     bool isCrashed = data.crashed[i];
-                    Color segmentColor = isCrashed ? Color.red : colorPath;
+                    Color segmentColor = isCrashed ? Color.red : Color.grey;
                     LineRenderer line = new GameObject().AddComponent<LineRenderer>();
                     line.transform.SetParent(pred.lineHolder);
                     line.positionCount = 2;
@@ -158,9 +160,8 @@ public class MakePrediction : MonoBehaviour
                     line.SetPosition(1, data.positions[i + 1]);
                     line.startWidth = 0.1f;
                     line.endWidth = 0.1f;
-                    line.material = new Material(Shader.Find("Unlit/Color"));
+                    line.material = defaultMaterial;
                     line.material.color = segmentColor;
-                    //set the layer of the line
                     line.gameObject.layer = 10;
 
                     pred.LineRenderers.Add(line);                    
