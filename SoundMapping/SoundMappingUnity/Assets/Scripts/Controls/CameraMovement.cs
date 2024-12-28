@@ -83,8 +83,6 @@ public class CameraMovement : MonoBehaviour
             center /= drones.Count; 
 
             center.y = heightCamera;
-
-            cam.GetComponent<Camera>().orthographicSize = heightCamera;
             cam.transform.position = Vector3.Lerp(cam.transform.position, center, Time.deltaTime * 2);
         }
 
@@ -92,6 +90,9 @@ public class CameraMovement : MonoBehaviour
         float rightStickHorizontal = Input.GetAxis("JoystickRightHorizontal");
         // applz rotation to the camera with lerp
         cam.transform.Rotate(-Vector3.forward, rightStickHorizontal * Time.deltaTime * rotationSpeed);
+
+        float leftStickHorizontal = Input.GetAxis("JoystickRightVertical") * Time.deltaTime * 10;
+        cam.GetComponent<Camera>().orthographicSize = Mathf.Clamp(cam.GetComponent<Camera>().orthographicSize - leftStickHorizontal, swarmModel.desiredSeparation*2, swarmModel.desiredSeparation*10);
     }
 
     void updateDroneView()
@@ -114,6 +115,9 @@ public class CameraMovement : MonoBehaviour
         state = "TDView";
         minimap.SetActive(false);
         yield return new WaitForSeconds(0.01f);
+       
+       // cam.GetComponent<Camera>().orthographicSize = heightCamera;
+      
         while(CameraMovement.embodiedDrone == null)
         {
             updateTDView();

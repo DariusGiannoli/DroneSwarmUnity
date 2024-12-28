@@ -104,7 +104,6 @@ public class MakePrediction : MonoBehaviour
         if(shortPred.donePrediction)
         {
             this.GetComponent<HapticsTest>().HapticsPrediction(shortPred);
-            print("Prediction done");
             UpdateLines(shortPred);
             shortPred.donePrediction = false;
             launchPreditionThread(shortPred);
