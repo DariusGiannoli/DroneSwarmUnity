@@ -76,13 +76,7 @@ public class swarmModel : MonoBehaviour
     void Start()
     {
         Application.targetFrameRate = 30; // Set the target frame rate to 30 FPS
-        
-        this.GetComponent<sendInfoGameObject>().setupCallback(getAverageCohesion);
-        this.GetComponent<sendInfoGameObject>().setupCallback(getAverageAlignment);
-        this.GetComponent<sendInfoGameObject>().setupCallback(getAverageSeparation);
-        this.GetComponent<sendInfoGameObject>().setupCallback(getAverageMigration);
-        this.GetComponent<sendInfoGameObject>().setupCallback(getAverageObstacleAvoidance);
-        this.GetComponent<sendInfoGameObject>().setupCallback(getDeltaAverageObstacle);
+
     }
 
     void refreshParameters()
@@ -114,6 +108,9 @@ public class swarmModel : MonoBehaviour
 
         network = new NetworkCreator(drones);
         network.refreshNetwork();
+
+        ClosestPointCalculator.selectObstacle(drones);
+        //draw gizmos for each obstacleInRange
 
         foreach (DroneFake drone in drones)
         {
@@ -186,133 +183,37 @@ public class swarmModel : MonoBehaviour
         drones.Remove(drone.GetComponent<DroneController>().droneFake);
     }
 
-    DataEntry getAverageCohesion()
+    //void on Guizmos
+    void OnDrawGizmos()
     {
-        Vector3 averageCohesion = Vector3.zero;
-        int numDrones = 0;
-
-        foreach (Transform drone in swarmHolder.transform)
+        Gizmos.color = Color.red;
+        List<Obstacle> obstacles = ClosestPointCalculator.obstaclesInRange;
+        if (obstacles == null)
         {
-            averageCohesion += drone.GetComponent<DroneController>().cohesionForce;
-            numDrones++;
+            return;
         }
 
-        if (numDrones > 0)
+        foreach (Obstacle obstacle in obstacles)
         {
-            averageCohesion /= numDrones;
+            Gizmos.DrawWireSphere(obstacle.centerObs, 1f);
         }
 
-        return new DataEntry("averageCohesion", averageCohesion.magnitude.ToString(), fullHistory: true);
+
+        //draw the network
+        if (network == null)
+        {
+            return;
+        }
+
+        foreach (DroneFake drone in network.drones)
+        {
+            foreach (DroneFake neighbour in network.GetNeighbors(drone))
+            {
+                Gizmos.color = Color.green;
+                Gizmos.DrawLine(drone.position, neighbour.position);
+            }
+        }
     }
-
-    DataEntry getDeltaAverageObstacle()
-    {
-        Vector3 averageObstacle = Vector3.zero;
-        int numDrones = 0;
-
-        foreach (Transform drone in swarmHolder.transform)
-        {
-            averageObstacle += drone.GetComponent<DroneController>().obstacleAvoidanceForce;
-            numDrones++;
-        }
-
-        if (numDrones > 0)
-        {
-            averageObstacle /= numDrones;
-        }
-
-
-
-
-        if(lastObstacleAvoidance < 0)
-        {
-            lastObstacleAvoidance = averageObstacle.magnitude;
-            return new DataEntry("deltaObstacle", "0", fullHistory: true);
-        }
-
-        float delta = (averageObstacle.magnitude - lastObstacleAvoidance)*Time.deltaTime;
-        lastObstacleAvoidance = averageObstacle.magnitude;
-
-
-        return new DataEntry("deltaObstacle", delta.ToString(), fullHistory: true);
-    }
-
-    DataEntry getAverageAlignment()
-    {
-        Vector3 averageAlignment = Vector3.zero;
-        int numDrones = 0;
-
-        foreach (Transform drone in swarmHolder.transform)
-        {
-            averageAlignment += drone.GetComponent<DroneController>().alignmentForce;
-            numDrones++;
-        }
-
-        if (numDrones > 0)
-        {
-            averageAlignment /= numDrones;
-        }
-
-        return new DataEntry("averageAlignment", averageAlignment.magnitude.ToString(), fullHistory: true);
-    }
-
-    DataEntry getAverageSeparation()
-    {
-        Vector3 averageSeparation = Vector3.zero;
-        int numDrones = 0;
-
-        foreach (Transform drone in swarmHolder.transform)
-        {
-            averageSeparation += drone.GetComponent<DroneController>().separationForce;
-            numDrones++;
-        }
-
-        if (numDrones > 0)
-        {
-            averageSeparation /= numDrones;
-        }
-
-        return new DataEntry("averageSeparation", averageSeparation.magnitude.ToString(), fullHistory: true);
-    }
-
-    DataEntry getAverageMigration()
-    {
-        Vector3 averageMigration = Vector3.zero;
-        int numDrones = 0;
-
-        foreach (Transform drone in swarmHolder.transform)
-        {
-            averageMigration += drone.GetComponent<DroneController>().migrationForce;
-            numDrones++;
-        }
-
-        if (numDrones > 0)
-        {
-            averageMigration /= numDrones;
-        }
-
-        return new DataEntry("averageMigration", averageMigration.magnitude.ToString(), fullHistory: true);
-    }
-
-    DataEntry getAverageObstacleAvoidance()
-    {
-        Vector3 averageObstacleAvoidance = Vector3.zero;
-        int numDrones = 0;
-
-        foreach (Transform drone in swarmHolder.transform)
-        {
-            averageObstacleAvoidance += drone.GetComponent<DroneController>().obstacleAvoidanceForce;
-            numDrones++;
-        }
-
-        if (numDrones > 0)
-        {
-            averageObstacleAvoidance /= numDrones;
-        }
-
-        return new DataEntry("averageObstacleAvoidance", averageObstacleAvoidance.magnitude.ToString(), fullHistory: true);
-    }
-
 }
 
 
@@ -498,7 +399,7 @@ public class DroneFake
         if (embodied)
         {
             Vector3 force = accVel;
-            force = Vector3.ClampMagnitude(force, maxForce/4);
+            force = Vector3.ClampMagnitude(force, maxForce/3);
             acceleration = force;
             return;
         }
@@ -684,7 +585,8 @@ public class NetworkCreator
         float distance = Vector3.Distance(a.position, b.position);
         if (distance > DroneFake.neighborRadius) return false;
 
-        return true;
+        bool visible = ClosestPointCalculator.IsLineIntersecting(a.position, b.position);
+        return !visible;
     }
 
     public List<DroneFake> GetNeighbors(DroneFake drone)
@@ -695,4 +597,5 @@ public class NetworkCreator
         }
         return adjacencyList[drone];
     }
+
 }

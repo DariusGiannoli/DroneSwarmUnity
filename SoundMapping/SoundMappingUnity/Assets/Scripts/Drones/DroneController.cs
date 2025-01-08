@@ -81,16 +81,6 @@ public class DroneController : MonoBehaviour
         gm = GameObject.FindGameObjectWithTag("GameManager");
 
         swarm = gm.GetComponent<swarmModel>();
-
-//        swarm.GetComponent<sendInfoGameObject>().setupCallback(() =>
-//        {
-//            return new DataEntry(this.transform.name + "_position", transform.position.ToString());
-//       });
-
-//        swarm.GetComponent<sendInfoGameObject>().setupCallback(() =>
-//        {
-//            return new DataEntry(this.transform.name + "_velocity", velocity.ToString());
-//        });
     }
 
     void UpdateNormal()

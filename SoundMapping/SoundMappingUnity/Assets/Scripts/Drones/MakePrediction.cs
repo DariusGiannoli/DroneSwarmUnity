@@ -10,7 +10,7 @@ using UnityEngine.Scripting;
 
 public class MakePrediction : MonoBehaviour
 {
-    Material defaultMaterial = new Material(Shader.Find("Unlit/Color"));
+    Material defaultMaterial;
     public Transform allPredictionsHolder;
     public Prediction longPred, shortPred;
 
@@ -22,6 +22,7 @@ public class MakePrediction : MonoBehaviour
 
     void Start()
     {
+        defaultMaterial = new Material(Shader.Find("Unlit/Color"));
 
         shortPred = new Prediction(true, 50, 1, 0, shortPredictionLineHolder);
         //longPred = new Prediction(false, 15, 3, 1, longPredictionLineHolder);

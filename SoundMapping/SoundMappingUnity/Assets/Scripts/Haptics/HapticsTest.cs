@@ -11,7 +11,7 @@ public class HapticsTest : MonoBehaviour
 {
     #region ObstalceInRange
     public int dutyIntensity = 4;
-    public float distanceDetection = 5;
+    public float distanceDetection = 3;
     Thread hapticsThread;
     List<ObstacleInRange> obstacles = new List<ObstacleInRange>();
     Vector3 forwardVector = new Vector3(0, 0, 1);   
@@ -42,7 +42,6 @@ public class HapticsTest : MonoBehaviour
     // Update is called once per frame
     void Start()
     {
-        hapticsThread = new Thread(new ThreadStart(CloseToWallThread));
 
         for (int i = 28; i <= 39; i++)
         {
@@ -58,17 +57,14 @@ public class HapticsTest : MonoBehaviour
             actuatorsBelly.Add(new Actuators(adresse, angleDeg));
         }
 
-
-        for (int i = 0; i < 8; i++)
+        for (int i = 0; i < 10; i++)
         {
             int adresse = i;
-            actuatorsRange.Add(new Actuators(adresse, 0));
+            actuatorsRange.Add(new Actuators(adresse, 310/10 * i));
         }
 
 
         StartCoroutine(HapticsCoroutine());
-
-        hapticsThread.Start();
 
         gamepad = Gamepad.current;
         if (gamepad == null)
@@ -76,7 +72,7 @@ public class HapticsTest : MonoBehaviour
             Debug.LogWarning("No gamepad connected.");
             gamepad.SetMotorSpeeds(0, 0);
         }else {
-            gamepad.SetMotorSpeeds(0.5f, 0.5f);
+            gamepad.SetMotorSpeeds(0.0f, 0.0f);
         }
     }
 
@@ -122,8 +118,8 @@ public class HapticsTest : MonoBehaviour
     {
         while (true)
         {
+            closeToWall();
             sendCommands();
-            resetThread();
             yield return new WaitForSeconds(sendEvery / 1000);
         }
     }
@@ -178,7 +174,7 @@ public class HapticsTest : MonoBehaviour
             }
         }
 
-       // print("FinalList: " + finalListNoDouble.Count + " toSendList: " + toSendList.Count + " lastDefined: " + lastDefined.Count);
+      //  print("FinalList: " + finalListNoDouble.Count + " toSendList: " + toSendList.Count + " lastDefined: " + lastDefined.Count);
 
 
         foreach(Actuators actuator in toSendList) {
@@ -187,64 +183,74 @@ public class HapticsTest : MonoBehaviour
     }
 
 
-    void resetThread()
-    {
-        if(hapticsThread.ThreadState == ThreadState.Stopped) {
-            closeToWall();
-        }
-        NetworkLinesThread();
-    }
-
 
     void getActuratorsBellyNetworkLines()
     {
-        resetActuator(actuatorsBelly);
+        if(swarmModel.network == null) {
+            return;
+        }
 
-        Dictionary<GameObject, List<GameObject>> adjacencyList = this.GetComponent<DroneNetworkManager>().adjacencyList;
-
-        List<GameObject> alreadyChecked = new List<GameObject>();
+        Dictionary<DroneFake, List<DroneFake>> adjacencyList = swarmModel.network.adjacencyList;
 
         if(CameraMovement.embodiedDrone != null) { //carefull change only return the Vector3
-            foreach (var drone in adjacencyList.Keys){
-                foreach (var neighbor in adjacencyList[drone]){
-                    if(CameraMovement.embodiedDrone == drone)
-                    {
-                        Vector3 direction = (drone.transform.position - neighbor.transform.position).normalized;
-                        float angle = Vector3.SignedAngle(direction, CameraMovement.embodiedDrone.transform.forward, Vector3.up);
-                        if(angle < 0) {
-                            angle += 360;
-                        }
+            DroneFake main = CameraMovement.embodiedDrone.GetComponent<DroneController>().droneFake;
+            List<DroneFake> neighbors = swarmModel.network.GetNeighbors(main);
 
-                        foreach(Actuators actuator in actuatorsBelly) {
-                            float diff = angle - actuator.Angle;
-                            if(diff > 180) {
-                                diff = 360 - diff;
-                            }
-                            //map the internsity linearly
-                            if(diff < 30 && diff > -30) {
-                                actuator.dutyIntensity += (int)(10 - diff/3);
-                            }
-                        }
-                    }
-                }
+            foreach(DroneFake neighbor in neighbors) {
+                Vector3 direction = neighbor.position - main.position;
+                Actuators closestActuator = getDirectionActuator(direction.normalized, actuatorsBelly);
+
+                float dist = (neighbor.position - main.position).magnitude;
+                closestActuator.dutyIntensity = Mathf.Max(10 - 5*(int)(dist / swarmModel.desiredSeparation),0);
             }
         }
     }
 
-
-    void NetworkLinesThread()
+    Actuators getDirectionActuator(Vector3 direction, List<Actuators> actuatorList)
     {
-        getActuratorsBellyNetworkLines();
+        float angle = Vector3.SignedAngle(direction, CameraMovement.embodiedDrone.transform.forward, Vector3.up);
+        if(angle < 0) {
+            angle += 360;
+        }
 
+        //FIUND THE closest actuator
+        float minAngle = 360;
+        Actuators closestActuator = null;
+        foreach(Actuators actuator in actuatorList) {
+            float diff = Math.Abs(actuator.Angle - angle);
+            if(diff < minAngle) {
+                minAngle = diff;
+                closestActuator = actuator;
+            }
+        }
+
+        return closestActuator;
     }
+
+
 
     void closeToWall()
     {
         if(CameraMovement.embodiedDrone != null) { //carefull change only return the Vector3
-            getObstacles();
+            foreach(Actuators actuator in actuatorsRange) {
+                float angle = actuator.Angle;
+                //make a ray and check if it hits something at 4m
+                Vector3 direction = Quaternion.Euler(0, angle, 0) * CameraMovement.embodiedDrone.transform.forward;
+                RaycastHit hit;
+                if(Physics.Raycast(CameraMovement.embodiedDrone.transform.position, direction, out hit, 8)) {
+                    if(hit.collider.gameObject.tag == "Obstacle") {
+                        float distance = Vector3.Distance(CameraMovement.embodiedDrone.transform.position, hit.point);
+                        print("Distance: " + distance);
+                        int intensity = (int)MathF.Max(10 - 3*distance, 0);
 
-            hapticsThread = new Thread(new ThreadStart(CloseToWallThread));
-            hapticsThread.Start();
+                        actuator.dutyIntensity = intensity;
+                        actuator.frequency = 2;
+                    }
+                }else {
+                    actuator.dutyIntensity = 0;
+                    actuator.frequency = 1;
+                }
+            }
         }
     }
 
@@ -331,6 +337,7 @@ public class HapticsTest : MonoBehaviour
     {
         setActuator(actuators, adresse, intensity, 1);
     }
+    
     void setActuator(List<Actuators> actuators, int adresse, int intensity, int freq)
     {
         foreach(Actuators actuator in actuators) {
@@ -351,7 +358,6 @@ public class HapticsTest : MonoBehaviour
     }
 
 }
-
 
 public class Actuators
 {

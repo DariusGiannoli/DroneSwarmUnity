@@ -11,6 +11,7 @@ CHARACTERISTIC_UUID = 'f22535de-5375-44bd-8ca9-d0ea9ff9e410'
 CONTROL_UNIT_NAME = 'QT Py ESP32-S3'
 
 ble_client = None  # Global BLE client
+DEBUG = False
 
 global message_queue
 
@@ -57,6 +58,11 @@ async def setMotor(client, message):
 
 async def ble_task():
     global ble_client
+
+    if DEBUG:
+        print('No connection to BLE device  needed for debugging')
+        return
+
     while True:
         devices = await BleakScanner.discover()
         for d in devices:
@@ -134,6 +140,10 @@ async def timer_task(messages, messages_lock):
 async def process_and_send_messages(messages):
     print(f"Processing messages: {messages}")
     combined_message = ''.join(messages)
+    if DEBUG:
+        asyncio.create_task(send_to_server(combined_message))
+        return
+
     if ble_client and ble_client.is_connected:
         #launmc coroutine to send await setMotor(ble_client, combined_message)
         await setMotor(ble_client, combined_message)

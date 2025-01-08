@@ -18,7 +18,7 @@ public class CameraMovement : MonoBehaviour
 
     public GameObject fogWarManager;
 
-    public string state = "TDView";
+    public static string state = "TDView";
     // Start is called before the first frame update
 
     public const float animationTime = 1f;
@@ -129,7 +129,7 @@ public class CameraMovement : MonoBehaviour
 
     public IEnumerator goAnimation(float _animationTime = animationTime)
     {
-        state = "goAnimation";
+        state = "animation";
         float elapsedTime = 0;
         //position of the active camera
         Vector3 startingPos = cam.transform.position;
@@ -169,7 +169,7 @@ public class CameraMovement : MonoBehaviour
 
     public IEnumerator goAnimationDoneToDrone(float _animationTime = animationTime)
     {
-        state = "goAnimationDroneToDrone";
+        state = "animation";
         float elapsedTime = 0;
         float initialFOV = embodiedDrone.GetComponent<Camera>().fieldOfView;
 

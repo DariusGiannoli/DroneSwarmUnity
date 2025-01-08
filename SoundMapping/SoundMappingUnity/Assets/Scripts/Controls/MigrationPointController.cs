@@ -92,24 +92,32 @@ public class MigrationPointController : MonoBehaviour
             }
         }
 
-        // bvutton 0
-         if(Input.GetKeyDown("joystick button " + 0))
+        // button 0
+        if(Input.GetKeyDown("joystick button " + 0))
         {
+            if(CameraMovement.state == "animation")
+            {
+                return;
+            }
             if(CameraMovement.embodiedDrone != null)
             {
-                if(selectedDrone != CameraMovement.embodiedDrone)
+                if(selectedDrone != CameraMovement.embodiedDrone)//drone 2 drone
                 {
                     CameraMovement.nextEmbodiedDrone = selectedDrone; // set next selected drone diff to null to trigger animation to the other drone
-                }
-                else
-                {
-                    CameraMovement.embodiedDrone.GetComponent<Camera>().enabled = false;                
-                    CameraMovement.desembodiedDrone(CameraMovement.embodiedDrone); 
                 }
             }
             else if(selectedDrone != null)
             {
                 CameraMovement.setEmbodiedDrone(selectedDrone);
+            }
+        }
+
+        if(Input.GetKeyDown("joystick button " + 1)) //desembodie
+        {
+            if(CameraMovement.embodiedDrone != null)
+            {
+                CameraMovement.embodiedDrone.GetComponent<Camera>().enabled = false;                
+                CameraMovement.desembodiedDrone(CameraMovement.embodiedDrone); 
             }
         }
     }

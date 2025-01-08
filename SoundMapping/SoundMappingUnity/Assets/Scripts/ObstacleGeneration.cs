@@ -250,6 +250,7 @@ public class ObstacleGeneration : MonoBehaviour
 
 
         ClosestPointCalculator.obstacles = obstacles;
+        ClosestPointCalculator.obstaclesInRange = obstacles;
 
         print("Obstacles: " + obstacles.Count);
     }

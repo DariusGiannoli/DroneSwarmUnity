@@ -38,7 +38,6 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
-  m_IndirectSpecularColor: {r: 0.17276844, g: 0.21589245, b: 0.2978263, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -1430,6 +1429,7 @@ GameObject:
   - component: {fileID: 1573697200}
   - component: {fileID: 1573697201}
   - component: {fileID: 1573697203}
+  - component: {fileID: 1573697204}
   m_Layer: 0
   m_Name: Gamemanager
   m_TagString: GameManager
@@ -1462,12 +1462,12 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1573697189}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fcc9572d8fdd4e64d97058190dfe3cca, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  printDebug: 0
+  printDebug: 1
 --- !u!114 &1573697192
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1505,7 +1505,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1573697189}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: eb7bbdd35a46d4944aeb987e372944e4, type: 3}
   m_Name: 
@@ -1651,7 +1651,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1573697189}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d7804f2c46256ce478a56844a6025980, type: 3}
   m_Name: 
@@ -1659,10 +1659,6 @@ MonoBehaviour:
   allPredictionsHolder: {fileID: 1476543596}
   longPredictionLineHolder: {fileID: 675233185}
   shortPredictionLineHolder: {fileID: 188965832}
-  obstacleLayer:
-    serializedVersion: 2
-    m_Bits: 64
-  testObject: {fileID: 0}
 --- !u!114 &1573697203
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1681,6 +1677,20 @@ MonoBehaviour:
   densityWall: 0.009
   densityCylinder: 0.03
   wallPrefab: {fileID: 3921256863999493986, guid: 7862fe33627218440b95b70f10e10845, type: 3}
+--- !u!114 &1573697204
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1573697189}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 826c5b08de6bba741bc4c9a8f57264e2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  a: {fileID: 0}
+  b: {fileID: 0}
 --- !u!1 &1746773643
 GameObject:
   m_ObjectHideFlags: 0
