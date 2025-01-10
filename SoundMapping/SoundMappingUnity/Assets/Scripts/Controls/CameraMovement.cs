@@ -206,6 +206,7 @@ public class CameraMovement : MonoBehaviour
             if(nextEmbodiedDrone != null)
             {
                 lastEmbodiedDrone = embodiedDrone;
+
                 setEmbodiedDrone(nextEmbodiedDrone);
                 StartCoroutine(goAnimationDoneToDrone(animationTime));
                 yield break;
@@ -232,6 +233,7 @@ public class CameraMovement : MonoBehaviour
     {
         embodiedDrone = drone;
         drone.GetComponent<DroneController>().droneFake.embodied = true;
+        drone.GetComponent<DroneController>().droneFake.resetEmbodied();
         nextEmbodiedDrone = null;
     }
 

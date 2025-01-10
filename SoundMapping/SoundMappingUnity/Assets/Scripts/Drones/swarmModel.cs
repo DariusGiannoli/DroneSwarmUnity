@@ -2,10 +2,15 @@ using System.Collections;
 using System.Collections.Generic;
 using FischlWorks_FogWar;
 using Unity.VisualScripting;
+using UnityEditor.AnimatedValues;
 using UnityEngine;
+using UnityEngine.InputSystem.Interactions;
 
 public class swarmModel : MonoBehaviour
 {
+    public int depth = 0;
+    public bool saveData = false;
+    DataSave dataSave = new DataSave();
     public static GameObject swarmHolder;
     public GameObject dronePrefab;
     public int numDrones = 10;
@@ -18,7 +23,7 @@ public class swarmModel : MonoBehaviour
     public float maxSpeed = 5f;
     public float maxForce = 10f;
 
-    public static int extraDistanceNeighboor = 5;
+    public static int extraDistanceNeighboor = 3;
     public static float neighborRadius
     {
         get
@@ -40,7 +45,7 @@ public class swarmModel : MonoBehaviour
 
     public csFogWar fogWar;
 
-    public const int PRIORITYWHENEMBODIED = 5;
+    public const int PRIORITYWHENEMBODIED = 15;
     public float dampingFactor = 0.98f;
 
     public static NetworkCreator network;
@@ -126,6 +131,14 @@ public class swarmModel : MonoBehaviour
                 drone.GetComponent<DroneController>().crash();
             }
         }
+
+        if(CameraMovement.embodiedDrone != null)
+        {
+            if (saveData)
+            {
+                dataSave.saveData(CameraMovement.embodiedDrone.GetComponent<DroneController>().droneFake);
+            }
+        }
     }
 
     void spawn()
@@ -145,7 +158,7 @@ public class swarmModel : MonoBehaviour
         for (int i = 0; i < numDrones; i++)
         {
             //spawn on a circle
-            Vector3 spawnPosition = new Vector3(spawnRadius * Mathf.Cos(i * 2 * Mathf.PI / numDrones), spawnHeight, spawnRadius * Mathf.Sin(i * 2 * Mathf.PI / numDrones));
+            Vector3 spawnPosition = new Vector3(spawnRadius * Mathf.Cos(i * 2 * Mathf.PI / numDrones), spawnHeight + Random.Range(-0.5f, 0.5f), spawnRadius * Mathf.Sin(i * 2 * Mathf.PI / numDrones));
             
             GameObject drone = Instantiate(dronePrefab, spawnPosition, Quaternion.identity);
 
@@ -214,8 +227,45 @@ public class swarmModel : MonoBehaviour
             }
         }
     }
+
+    void OnApplicationQuit()
+    {   
+        if (saveData)
+        {
+
+            print("Saving data");
+            //convert dataSave into JSON
+            string json = JsonUtility.ToJson(dataSave);
+            string fileName = System.DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss") + ".json";
+            System.IO.File.WriteAllText("./Assets/Data/"+fileName, json);
+        }
+
+    }
 }
 
+
+public class DataSave
+{
+    public List<Vector3> olfatiData = new List<Vector3>();
+    public List<Vector3> obstacleData = new List<Vector3>();
+
+    public List<Vector3> velocityData = new List<Vector3>();
+    public List<Vector3> positionData = new List<Vector3>();
+    public List<Vector3> forceData = new List<Vector3>();
+
+
+    public void saveData(DroneFake data)
+    {
+        if(data.embodied)
+        {
+            olfatiData.Add(data.lastOlfati);
+            obstacleData.Add(data.lastObstacle);
+            velocityData.Add(data.velocity);
+            positionData.Add(data.position);
+            forceData.Add(data.acceleration);
+        }
+    }
+}
 
 public class DroneFake
 {
@@ -246,11 +296,21 @@ public class DroneFake
 
     public float score = 1.0f;
 
-    public static int PRIORITYWHENEMBODIED = 2;
+    public static int PRIORITYWHENEMBODIED = 1;
 
     public bool hasCrashed = false;
 
     public static LayerMask obstacleLayer;
+
+    public Vector3 lastOlfati = Vector3.zero;
+    public Vector3 lastObstacle = Vector3.zero;
+
+
+    public List<float> olfatiForce = new List<float>();
+    public List<float> obstacleForce = new List<float>();
+
+    public List<Vector3> olfatiForceVec = new List<Vector3>();
+    public List<Vector3> obstacleForceVec = new List<Vector3>();
 
     #endregion
 
@@ -382,6 +442,7 @@ public class DroneFake
 
         foreach (Vector3 obsPos in obstacles)
         {
+
             Vector3 posRel = position - obsPos;
             float dist = posRel.magnitude - droneRadius;
             if (dist <= Mathf.Epsilon)
@@ -398,6 +459,12 @@ public class DroneFake
 
         if (embodied)
         {
+
+            lastOlfati = accCoh;
+            lastObstacle = accObs;
+
+            addDataEmbodied(accCoh, accObs);
+
             Vector3 force = accVel;
             force = Vector3.ClampMagnitude(force, maxForce/3);
             acceleration = force;
@@ -414,7 +481,7 @@ public class DroneFake
             }
         }
 
-        if(!network.IsInMainNetwork(this))
+        if(true)
         {
             accVel = Vector3.zero;
         }
@@ -423,6 +490,96 @@ public class DroneFake
         fo = Vector3.ClampMagnitude(fo, maxForce);
         
         acceleration = fo;
+    }
+
+    public void resetEmbodied()
+    {
+        olfatiForce.Clear();
+        obstacleForce.Clear();
+
+        olfatiForceVec.Clear();
+        obstacleForceVec.Clear();
+    }
+
+    public void addDataEmbodied(Vector3 olfati, Vector3 obstacle)
+    {
+        olfatiForce.Add(olfati.magnitude);
+        obstacleForce.Add(obstacle.magnitude);
+
+        olfatiForceVec.Add(olfati);
+        obstacleForceVec.Add(obstacle);
+
+        if (olfatiForce.Count > 20)
+        {
+            olfatiForce.RemoveAt(0);
+            obstacleForce.RemoveAt(0);
+
+            olfatiForceVec.RemoveAt(0);
+            obstacleForceVec.RemoveAt(0);
+        }
+    }
+
+    public float getHaptic()
+    {
+        //takje the last 10 and average them
+        float olfati = 0;
+        float obstacle = 0;
+        int count = Mathf.Min(olfatiForce.Count, 12);
+
+        if (count < 2)
+        {
+            return 0;
+        }
+
+        for (int i = 0; i < count-1; i++)
+        {
+            float diffOlfati = olfatiForce[olfatiForce.Count - 1 - i] - olfatiForce[olfatiForce.Count - 2 - i];
+            olfati += diffOlfati;
+
+            float diffObstacle = obstacleForce[obstacleForce.Count - 1 - i] - obstacleForce[obstacleForce.Count - 2 - i];
+            obstacle += diffObstacle;
+        }
+
+        olfati /= count;
+        obstacle /= count;
+
+        olfati = Mathf.Max(olfati, 0) / 0.3f * 10;
+        obstacle = Mathf.Max(obstacle, 0) * 10;
+
+        return olfati + obstacle;
+
+    }
+
+    public Vector3 getHapticVector()
+    {
+        Vector3 olfatiVec = Vector3.zero;
+        Vector3 obstacleVec = Vector3.zero;
+
+        int count = Mathf.Min(olfatiForce.Count, 12);
+
+        if (count < 2)
+        {
+            return Vector3.zero;
+        }
+
+        return olfatiForceVec[olfatiForceVec.Count - 1];
+
+
+
+        for (int i = 0; i < count-1; i++)
+        {
+            Vector3 diffOlfati = olfatiForceVec[olfatiForceVec.Count - 1 - i] - olfatiForceVec[olfatiForceVec.Count - 2 - i];
+            olfatiVec += diffOlfati;
+
+            Vector3 diffObstacle = obstacleForceVec[obstacleForceVec.Count - 1 - i] - obstacleForceVec[obstacleForceVec.Count - 2 - i];
+            obstacleVec += diffObstacle;
+        }
+
+        olfatiVec /= count;
+        obstacleVec /= count;
+
+
+        return olfatiVec;
     }
 
     public bool isNeighboor(DroneFake drone)
@@ -441,7 +598,7 @@ public class DroneFake
             velocity *= dampingFactor;
 
             position += velocity * 0.02f;
-            position.y = spawnHeight;
+            //position.y = spawnHeight;
         }
 
         acceleration = Vector3.zero;
@@ -597,5 +754,6 @@ public class NetworkCreator
         }
         return adjacencyList[drone];
     }
+
 
 }

@@ -37,30 +37,32 @@ public class HapticsTest : MonoBehaviour
 
     #endregion
 
+    #region Variables
 
-    public int sendEvery = 200;
+    public List<Actuators> actuatorsVariables = new List<Actuators>();
+    #endregion
+
+    public int sendEvery = 1000;
     // Update is called once per frame
     void Start()
     {
 
-        for (int i = 28; i <= 39; i++)
+        for (int i = 10; i < 10; i++)
         {
-            float angleDeg = (i - 28) * 30;  
-            angleDeg = angleDeg - 90;
-            if(angleDeg < 0) {
-                angleDeg += 360;
-            }
+            int adresse = i;
+            actuatorsBelly.Add(new Actuators(adresse, 310/10 * i));
+        }
 
-            angleDeg = 360 - angleDeg;
-
-            int adresse = 37 + (i - 28);
-            actuatorsBelly.Add(new Actuators(adresse, angleDeg));
+        for (int i = 10; i < 10; i++)
+        {
+            int adresse = i;
+            actuatorsRange.Add(new Actuators(adresse, 310/10 * i));
         }
 
         for (int i = 0; i < 10; i++)
         {
             int adresse = i;
-            actuatorsRange.Add(new Actuators(adresse, 310/10 * i));
+            actuatorsVariables.Add(new Actuators(adresse, 310/10 * i));
         }
 
 
@@ -76,7 +78,7 @@ public class HapticsTest : MonoBehaviour
         }
     }
 
-    void OnDisable()
+    void Disable()
     {
         hapticsThread.Abort();
         gamepad.SetMotorSpeeds(0, 0);
@@ -118,7 +120,9 @@ public class HapticsTest : MonoBehaviour
     {
         while (true)
         {
-            closeToWall();
+            //closeToWall();
+            variableTest();
+            //getActuratorsBellyNetworkLines();
             sendCommands();
             yield return new WaitForSeconds(sendEvery / 1000);
         }
@@ -129,6 +133,7 @@ public class HapticsTest : MonoBehaviour
         List<Actuators> finalList = new List<Actuators>();
         finalList.AddRange(actuatorsRange);
         finalList.AddRange(actuatorsBelly);
+        finalList.AddRange(actuatorsVariables);
 
         //check if the actuators have the same adresse is so add the duty and keep highest frequency
         List<Actuators> finalListNoDouble = new List<Actuators>();
@@ -182,12 +187,36 @@ public class HapticsTest : MonoBehaviour
         }
     }
 
+    void variableTest()
+    {
+        if(CameraMovement.embodiedDrone != null) { //carefull change only return the Vector3
+            DroneFake main = CameraMovement.embodiedDrone.GetComponent<DroneController>().droneFake;
+            Vector3 forcesDir  = main.getHapticVector();
 
+            Actuators closestActuator = getDirectionActuator(forcesDir.normalized, actuatorsVariables);
+            float duty = forcesDir.magnitude / 2;
+
+            foreach(Actuators actuator in actuatorsVariables) {
+                actuator.dutyIntensity = 0;
+                actuator.frequency = 1;
+            }
+
+            duty = MathF.Min(duty, 10);
+        
+            closestActuator.dutyIntensity = (int)duty;  
+            closestActuator.frequency = 1;          
+        }
+    }
 
     void getActuratorsBellyNetworkLines()
     {
         if(swarmModel.network == null) {
             return;
+        }
+
+        foreach(Actuators actuator in actuatorsBelly) {
+            actuator.dutyIntensity = 0;
+            actuator.frequency = 1;
         }
 
         Dictionary<DroneFake, List<DroneFake>> adjacencyList = swarmModel.network.adjacencyList;
@@ -201,10 +230,19 @@ public class HapticsTest : MonoBehaviour
                 Actuators closestActuator = getDirectionActuator(direction.normalized, actuatorsBelly);
 
                 float dist = (neighbor.position - main.position).magnitude;
-                closestActuator.dutyIntensity = Mathf.Max(10 - 5*(int)(dist / swarmModel.desiredSeparation),0);
+                closestActuator.dutyIntensity = Mathf.Max(6 - 5*(int)(dist / swarmModel.desiredSeparation),0);
+            }
+        }
+
+        foreach(Actuators actuator in actuatorsBelly) {
+            if(actuator.dutyIntensity > 0) {
+                print("Actuator: " + actuator.Adresse + " Duty: " + actuator.dutyIntensity + "angle: " + actuator.Angle);
             }
         }
     }
+
+
+
 
     Actuators getDirectionActuator(Vector3 direction, List<Actuators> actuatorList)
     {
@@ -227,8 +265,6 @@ public class HapticsTest : MonoBehaviour
         return closestActuator;
     }
 
-
-
     void closeToWall()
     {
         if(CameraMovement.embodiedDrone != null) { //carefull change only return the Vector3
@@ -240,7 +276,6 @@ public class HapticsTest : MonoBehaviour
                 if(Physics.Raycast(CameraMovement.embodiedDrone.transform.position, direction, out hit, 8)) {
                     if(hit.collider.gameObject.tag == "Obstacle") {
                         float distance = Vector3.Distance(CameraMovement.embodiedDrone.transform.position, hit.point);
-                        print("Distance: " + distance);
                         int intensity = (int)MathF.Max(10 - 3*distance, 0);
 
                         actuator.dutyIntensity = intensity;
@@ -332,7 +367,6 @@ public class HapticsTest : MonoBehaviour
 
     }
 
-
     void setActuator(List<Actuators> actuators, int adresse, int intensity)
     {
         setActuator(actuators, adresse, intensity, 1);
@@ -348,7 +382,6 @@ public class HapticsTest : MonoBehaviour
         }
     }
 
-    
     void resetActuator(List<Actuators> actuators)
     {
         foreach(Actuators actuator in actuators) {
