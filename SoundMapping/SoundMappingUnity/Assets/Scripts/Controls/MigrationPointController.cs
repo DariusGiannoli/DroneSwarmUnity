@@ -8,7 +8,7 @@ public class MigrationPointController : MonoBehaviour
     public LayerMask groundLayer; // Layer mask for the ground
     public LayerMask droneLayer; // Layer mask for the drones
     public float spawnHeight = 10f; // Height at which drones operate
-    public float radius = 0.5f; // Radius of the migration point
+    public float radius = 1f; // Radius of the migration point
 
     public Vector2 migrationPoint = new Vector2(0, 0);
 
@@ -144,6 +144,7 @@ public class MigrationPointController : MonoBehaviour
         float horizontal = Input.GetAxis("Horizontal");
         float vertical = Input.GetAxis("Vertical");
 
+        float heightControl = Input.GetAxis("JoystickRightVertical");
         Transform body = null;
         Vector3 right = new Vector3(0, 0, 0);
         Vector3 forward = new Vector3(0, 0, 0);
@@ -161,7 +162,7 @@ public class MigrationPointController : MonoBehaviour
             forward = body.forward;
         }
 
-        if((horizontal == 0 && vertical == 0))
+        if(horizontal == 0 && vertical == 0 && heightControl == 0)
         {
             if(firstTime)
             {
@@ -173,17 +174,17 @@ public class MigrationPointController : MonoBehaviour
         }else{
             firstTime = true;
             Vector3 centerOfSwarm = body.position;
-            final = vertical * forward + horizontal * right;
+            final = vertical * forward + horizontal * right + heightControl * body.up;
             final.Normalize();
 
-            float newR = Mathf.Sqrt(horizontal * horizontal + vertical * vertical);
+            float newR = Mathf.Sqrt(horizontal * horizontal + vertical * vertical + heightControl * heightControl);
             Vector3 finalAlignement = final * newR * radius;
 
             final = final * radius;
 
 
             migrationPoint = new Vector2(centerOfSwarm.x + final.x, centerOfSwarm.z + final.z);
-            deltaMigration = new Vector3(finalAlignement.x, 0, finalAlignement.z);
+            deltaMigration = new Vector3(finalAlignement.x, finalAlignement.y, finalAlignement.z);
         }
 
         alignementVector = deltaMigration;

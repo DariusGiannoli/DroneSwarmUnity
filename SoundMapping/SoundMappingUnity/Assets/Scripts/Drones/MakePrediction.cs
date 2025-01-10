@@ -24,8 +24,7 @@ public class MakePrediction : MonoBehaviour
     {
         defaultMaterial = new Material(Shader.Find("Unlit/Color"));
 
-        shortPred = new Prediction(true, 50, 1, 0, shortPredictionLineHolder);
-        //longPred = new Prediction(false, 15, 3, 1, longPredictionLineHolder);
+        shortPred = new Prediction(true, 20, 2, 0, shortPredictionLineHolder);
 
         launchPreditionThread(shortPred);
     }
@@ -61,22 +60,13 @@ public class MakePrediction : MonoBehaviour
         pred.donePrediction = true;
     }
 
-    void spawnPredictions()
-    {
-       // spawnPrediction(longPred);
-        spawnPrediction(shortPred);
-    }
 
     void launchPreditionThread(Prediction pred)
     {
         pred.alignementVector = MigrationPointController.alignementVector;
 
-   //     pred.lastMigrationPoint = this.GetComponent<MigrationPointController>().migrationPoint;
-
-
-        //start a thread with short prediction
         shortPred.directionOfMigration = this.GetComponent<MigrationPointController>().deltaMigration;
-        spawnPredictions();
+        spawnPrediction(shortPred);
         lock (shortPred)
         {
             predictionThread = new Thread(() => StartPrediction(pred));
@@ -126,49 +116,47 @@ public class MakePrediction : MonoBehaviour
     }
 
     void UpdateLines(Prediction pred)
+{
+    if (pred.allData == null || pred.allData.Count == 0)
+        return;
+
+    // Destroy all existing line renderers
+    foreach (LineRenderer lr in pred.LineRenderers)
     {
-        if (pred.allData == null || pred.allData.Count == 0)
-        {
-            return; // Exit if no data to draw
-
-        }
-
-        // Destroy all existing line renderers
-        foreach (LineRenderer line in pred.LineRenderers)
-        {
-            Destroy(line.material);
-            Destroy(line.gameObject);
-        }
-
-        pred.LineRenderers.Clear();
-        int downsampleRate = 1; // Select 1 point every 5 data points
-
-        foreach (DroneDataPrediction data in pred.allData)
-        {
-
-            for(int i = 0; i < data.positions.Count - 1; i++)
-            {
-                if (i % downsampleRate == 0)
-                {
-
-                    bool isCrashed = data.crashed[i];
-                    Color segmentColor = isCrashed ? Color.red : Color.grey;
-                    LineRenderer line = new GameObject().AddComponent<LineRenderer>();
-                    line.transform.SetParent(pred.lineHolder);
-                    line.positionCount = 2;
-                    line.SetPosition(0, data.positions[i]);
-                    line.SetPosition(1, data.positions[i + 1]);
-                    line.startWidth = 0.1f;
-                    line.endWidth = 0.1f;
-                    line.material = defaultMaterial;
-                    line.material.color = segmentColor;
-                    line.gameObject.layer = 10;
-
-                    pred.LineRenderers.Add(line);                    
-                } 
-            }   
-        }
+        Destroy(lr.material);
+        Destroy(lr.gameObject);
     }
+    pred.LineRenderers.Clear();
+
+    //single lineRenderer for each drone
+    foreach (DroneDataPrediction data in pred.allData)
+    {
+        GameObject lineObj = new GameObject("DronePredictionLine");
+        lineObj.transform.SetParent(pred.lineHolder);
+
+        LineRenderer line = lineObj.AddComponent<LineRenderer>();
+        line.positionCount = data.positions.Count;
+        line.startWidth = 0.1f;
+        line.endWidth = 0.1f;
+        line.material = defaultMaterial;
+        line.gameObject.layer = 10;
+
+        bool hasCrashed = false;
+
+        // Fill positions in a single pass
+        for (int i = 0; i < data.positions.Count; i++)
+        {
+            hasCrashed = hasCrashed || data.crashed[i];
+            line.SetPosition(i, data.positions[i]);
+        }
+
+        Color segmentColor = hasCrashed ? Color.red : Color.grey;
+        line.material.color = segmentColor; 
+
+        pred.LineRenderers.Add(line);
+    }
+}
+
 }
 
 

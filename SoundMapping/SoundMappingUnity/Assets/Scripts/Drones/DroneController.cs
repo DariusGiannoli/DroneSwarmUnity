@@ -104,30 +104,30 @@ public class DroneController : MonoBehaviour
 
 
     #region HapticAudio
+
     void updateColor()
     {
         if(droneFake.embodied)
         {
             this.GetComponent<Renderer>().material = embodiedColor;
-            return;
-        }
+        }else{
+            if (MigrationPointController.selectedDrone == this.gameObject)
+            {
+                this.GetComponent<Renderer>().material = selectedColor;
+                this.droneFake.selected = true;
+                return;
+            }else{
+                this.droneFake.selected = false;
 
-        if (MigrationPointController.selectedDrone == this.gameObject)
-        {
-            this.GetComponent<Renderer>().material = selectedColor;
-            this.droneFake.selected = true;
-            return;
-        }
-
-        this.droneFake.selected = false;
-
-        if (droneFake.score >= 0.9f)
-        {
-            this.GetComponent<Renderer>().material = connectedColor;
-        }
-        else 
-        {
-            this.GetComponent<Renderer>().material = notConnectedColor;
+                if (droneFake.score >= 0.9f)
+                {
+                    this.GetComponent<Renderer>().material = connectedColor;
+                }
+                else 
+                {
+                    this.GetComponent<Renderer>().material = notConnectedColor;
+                }
+            }
         }
     }
 

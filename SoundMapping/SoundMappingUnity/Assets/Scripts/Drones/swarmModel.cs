@@ -8,7 +8,7 @@ using UnityEngine.InputSystem.Interactions;
 
 public class swarmModel : MonoBehaviour
 {
-    public int depth = 0;
+
     public bool saveData = false;
     DataSave dataSave = new DataSave();
     public static GameObject swarmHolder;
@@ -28,7 +28,7 @@ public class swarmModel : MonoBehaviour
     {
         get
         {
-            return desiredSeparation + extraDistanceNeighboor;
+            return Mathf.Max(desiredSeparation * 1.2f, desiredSeparation + extraDistanceNeighboor);
         }
     }
 
@@ -45,7 +45,7 @@ public class swarmModel : MonoBehaviour
 
     public csFogWar fogWar;
 
-    public const int PRIORITYWHENEMBODIED = 15;
+    public int PRIORITYWHENEMBODIED = 15;
     public float dampingFactor = 0.98f;
 
     public static NetworkCreator network;
@@ -74,6 +74,7 @@ public class swarmModel : MonoBehaviour
 
     void Awake()
     {
+        PRIORITYWHENEMBODIED = (int)(numDrones/3.5f);
         swarmHolder = GameObject.FindGameObjectWithTag("Swarm");
         spawn();
     }
@@ -222,7 +223,21 @@ public class swarmModel : MonoBehaviour
         {
             foreach (DroneFake neighbour in network.GetNeighbors(drone))
             {
-                Gizmos.color = Color.green;
+                if(neighbour.layer == 1 || drone.layer == 1)
+                {
+                    Gizmos.color = Color.red;
+                }else if(neighbour.layer == 2 || drone.layer == 2)
+                {
+                    Gizmos.color = Color.green;
+                }
+                else if (neighbour.layer == 3 || drone.layer == 3)
+                {
+                    Gizmos.color = Color.blue;
+                }
+                else
+                {
+                    Gizmos.color = Color.black;
+                }
                 Gizmos.DrawLine(drone.position, neighbour.position);
             }
         }
@@ -273,6 +288,8 @@ public class DroneFake
     public Vector3 position;
     public Vector3 acceleration;
     public Vector3 velocity;
+
+    public int layer = 0;
     
     public static float maxSpeed;
     public static float maxForce;
@@ -424,9 +441,30 @@ public class DroneFake
         Vector3 accVel = cVm * (vRef - velocity);
         Vector3 accCoh = Vector3.zero;
 
+        float basePriority = 1;
+        DroneFake embodiedDrone = allDrones.Find(d => d.embodied);
+        if (embodiedDrone != null)
+        {
+            basePriority = 0;
+        }
+
         foreach (DroneFake neighbour in neighbors)
         {
-            float neighborPriority = neighbour.embodied ? PRIORITYWHENEMBODIED : 1;
+            float neighborPriority = basePriority;
+            
+            if (neighbour.layer == 1)
+            {
+                neighborPriority = 10;
+            }else if(neighbour.layer == 2)
+            {
+                neighborPriority = 3;
+            }else if(neighbour.layer == 3)
+            {
+                neighborPriority = 2;
+            }else if(neighbour.layer == 4)
+            {
+                neighborPriority = 1f;
+            }
             Vector3 posRelD = neighbour.position - position;
             float distD = posRelD.magnitude - 2*droneRadius;
             if (distD <= Mathf.Epsilon)
@@ -466,12 +504,11 @@ public class DroneFake
             addDataEmbodied(accCoh, accObs);
 
             Vector3 force = accVel;
-            force = Vector3.ClampMagnitude(force, maxForce/3);
+            force = Vector3.ClampMagnitude(force, maxForce/3.5f);
             acceleration = force;
             return;
         }
 
-        DroneFake embodiedDrone = allDrones.Find(d => d.embodied);
         if (embodiedDrone != null)
         {
             float dist = Vector3.Distance(position, embodiedDrone.position);
@@ -481,7 +518,7 @@ public class DroneFake
             }
         }
 
-        if(true)
+        if(!network.IsInMainNetwork(this))
         {
             accVel = Vector3.zero;
         }
@@ -632,6 +669,7 @@ public class NetworkCreator
     {
         BuildNetwork(drones);
         FindLargestComponent(drones);
+        AssignLayers();
     }
     void BuildNetwork(List<DroneFake> drones)
     {
@@ -755,5 +793,50 @@ public class NetworkCreator
         return adjacencyList[drone];
     }
 
+    public void AssignLayers()
+    {
+        DroneFake mainDrone = drones.Find(d => d.embodied);
 
+        foreach (var drone in adjacencyList.Keys)
+        {
+            drone.layer = 0;
+        }
+
+        if (mainDrone == null)
+        {
+            return;
+        }
+
+        // If the main drone does not exist in the adjacency list, just return.
+        if (!adjacencyList.ContainsKey(mainDrone))
+        {
+            return;
+        }
+
+        // Perform BFS starting from the main drone.
+        Queue<DroneFake> queue = new Queue<DroneFake>();
+        
+        mainDrone.layer = 1;
+        queue.Enqueue(mainDrone);
+
+        while (queue.Count > 0)
+        {
+            var currentDrone = queue.Dequeue();
+            int currentLayer = currentDrone.layer;
+
+            // Get neighbors of the current drone
+            if (adjacencyList.ContainsKey(currentDrone))
+            {
+                foreach (var neighbor in adjacencyList[currentDrone])
+                {
+                    // If the neighbor hasn't been assigned a layer yet (still 0)
+                    if (neighbor.layer == 0)
+                    {
+                        neighbor.layer = currentLayer + 1;
+                        queue.Enqueue(neighbor);
+                    }
+                }
+            }
+        }
+    }
 }
