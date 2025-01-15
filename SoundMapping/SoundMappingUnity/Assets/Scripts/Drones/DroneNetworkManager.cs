@@ -308,7 +308,7 @@ public class DroneNetworkManager : MonoBehaviour
         foreach (GameObject drone in drones)
         {
             scores.Add(ComputeDroneNetworkScore(drone));
-            HapticAudioManager.SetDroneNetworkScore(drone, scores[scores.Count - 1]);
+            //HapticAudioManager.SetDroneNetworkScore(drone, scores[scores.Count - 1]);
         }
     }
     

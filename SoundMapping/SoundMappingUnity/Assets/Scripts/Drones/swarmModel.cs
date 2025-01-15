@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using FischlWorks_FogWar;
 using Unity.VisualScripting;
 using UnityEditor.AnimatedValues;
@@ -40,7 +41,7 @@ public class swarmModel : MonoBehaviour
     public float avoidanceRadius = 2f;     // Radius for obstacle detection
     public float avoidanceForce = 10f;     // Strength of the avoidance force
 
-    public float droneRadius = 1.0f;      // Radius of the drone
+    public static float droneRadius = 0.17f;      // Radius of the drone
     public LayerMask obstacleLayer;        // Layer mask for obstacles
 
     public csFogWar fogWar;
@@ -114,6 +115,10 @@ public class swarmModel : MonoBehaviour
 
         network = new NetworkCreator(drones);
         network.refreshNetwork();
+        Dictionary<int, int> layers = network.getLayersConfiguration();
+
+        //update the network representation
+        this.GetComponent<NetworkRepresentation>().UpdateNetworkRepresentation(layers);
 
         ClosestPointCalculator.selectObstacle(drones);
         //draw gizmos for each obstacleInRange
@@ -209,7 +214,7 @@ public class swarmModel : MonoBehaviour
 
         foreach (Obstacle obstacle in obstacles)
         {
-            Gizmos.DrawWireSphere(obstacle.centerObs, 1f);
+            Gizmos.DrawWireSphere(obstacle.centerObs, 0f);
         }
 
 
@@ -437,9 +442,8 @@ public class DroneFake
                 // Reference velocity
         Vector3 vRef = alignmentVector;
 
-        // Velocity matching
-        Vector3 accVel = cVm * (vRef - velocity);
         Vector3 accCoh = Vector3.zero;
+        Vector3 accVel = Vector3.zero;
 
         float basePriority = 1;
         DroneFake embodiedDrone = allDrones.Find(d => d.embodied);
@@ -450,21 +454,8 @@ public class DroneFake
 
         foreach (DroneFake neighbour in neighbors)
         {
-            float neighborPriority = basePriority;
-            
-            if (neighbour.layer == 1)
-            {
-                neighborPriority = 10;
-            }else if(neighbour.layer == 2)
-            {
-                neighborPriority = 3;
-            }else if(neighbour.layer == 3)
-            {
-                neighborPriority = 2;
-            }else if(neighbour.layer == 4)
-            {
-                neighborPriority = 1f;
-            }
+            float neighborPriority = getPriority(basePriority, neighbour);
+
             Vector3 posRelD = neighbour.position - position;
             float distD = posRelD.magnitude - 2*droneRadius;
             if (distD <= Mathf.Epsilon)
@@ -472,7 +463,15 @@ public class DroneFake
                 hasCrashed = true;
             }
             accCoh += GetCohesionForce(distD, dRef, a, b, c, r0Coh, delta, posRelD) * neighborPriority;
+
+
+            if(neighbour.layer == 1)
+            {
+                accVel += cVm * (neighbour.velocity - velocity) * neighborPriority;
+            }
         }
+
+        accVel = Vector3.zero;
 
         // Obstacle avoidance
         Vector3 accObs = Vector3.zero;
@@ -503,19 +502,17 @@ public class DroneFake
 
             addDataEmbodied(accCoh, accObs);
 
+            accVel = cVm * (vRef - velocity);
+
             Vector3 force = accVel;
-            force = Vector3.ClampMagnitude(force, maxForce/3.5f);
+            force = Vector3.ClampMagnitude(force, maxForce/3);
             acceleration = force;
             return;
         }
 
-        if (embodiedDrone != null)
+        if (embodiedDrone == null)
         {
-            float dist = Vector3.Distance(position, embodiedDrone.position);
-            if (dist > neighborRadius)
-            {
-                accVel = Vector3.zero;
-            }
+            accVel = cVm * (vRef - velocity);
         }
 
         if(!network.IsInMainNetwork(this))
@@ -527,6 +524,26 @@ public class DroneFake
         fo = Vector3.ClampMagnitude(fo, maxForce);
         
         acceleration = fo;
+    }
+
+    float getPriority(float basePriority, DroneFake neighbour)
+    {
+        float neighborPriority = basePriority;
+        if (neighbour.layer == 1)
+        {
+            neighborPriority = Mathf.Max((int)(PRIORITYWHENEMBODIED/3),5);
+        }else if(neighbour.layer == 2)
+        {
+            neighborPriority = Mathf.Max((int)(PRIORITYWHENEMBODIED/10),3);
+        }else if(neighbour.layer == 3)
+        {
+            neighborPriority = Mathf.Max((int)(PRIORITYWHENEMBODIED/20), 2);
+        }else if(neighbour.layer == 4)
+        {
+            neighborPriority = 1f;
+        }
+
+        return neighborPriority;
     }
 
     public void resetEmbodied()
@@ -599,7 +616,7 @@ public class DroneFake
             return Vector3.zero;
         }
 
-        return olfatiForceVec[olfatiForceVec.Count - 1];
+       // return olfatiForceVec[olfatiForceVec.Count - 1];
 
 
 
@@ -614,6 +631,8 @@ public class DroneFake
 
         olfatiVec /= count;
         obstacleVec /= count;
+
+        olfatiVec *= 10;
 
 
         return olfatiVec;
@@ -839,4 +858,32 @@ public class NetworkCreator
             }
         }
     }
+
+    public Dictionary<int, int> getLayersConfiguration()
+    {
+        Dictionary<int, int> layers = new Dictionary<int, int>();
+
+        foreach (var drone in drones)
+        {
+            if (!layers.ContainsKey(drone.layer))
+            {
+                layers[drone.layer] = 0;
+            }
+
+            layers[drone.layer]++;
+        }
+        string message = "";
+        //order the layers by key
+        var ordered = layers.OrderBy(x => x.Key);
+
+        foreach (var layer in ordered)
+        {
+            message += "[" + layer.Key + " : " + layer.Value + "] ";
+        }
+
+        Debug.Log(message);
+
+        return layers;
+    }
+
 }

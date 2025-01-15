@@ -11,6 +11,8 @@ TagManager:
   - FloorCylinder
   - FloorWall
   - Floor
+  - StartCollider
+  - EndCollider
   layers:
   - Default
   - TransparentFX

@@ -35,7 +35,7 @@ public class DroneController : MonoBehaviour
     {
         get
         {
-            return HapticAudioManager.GetDroneNetworkScore(this.gameObject);
+            return 0.5f;
         }
     }
     
@@ -60,6 +60,8 @@ public class DroneController : MonoBehaviour
         }
 
         gm.GetComponent<swarmModel>().RemoveDrone(this.gameObject);
+
+        gm.GetComponent<HapticsTest>().crash();
 
         GameObject firework = Instantiate(fireworkParticle, transform.position, Quaternion.identity);
         firework.transform.position = transform.position;
@@ -133,17 +135,23 @@ public class DroneController : MonoBehaviour
 
     void updateSound()
     {
-        float score = realScore;
+        if(CameraMovement.embodiedDrone == this)
+        {
+            this.GetComponent<AudioSource>().enabled = false;
+            return;
+        }
 
-        if (score < -0.9f)
+
+
+        if (swarmModel.dronesInMainNetwork.Contains(this.droneFake))
         {
             timeSeparated += Time.deltaTime;
-            this.GetComponent<AudioSource>().enabled = HapticAudioManager.GetAudioSourceCharacteristics(timeSeparated);
+            this.GetComponent<AudioSource>().enabled = false;
         }
         else
         {
             timeSeparated = 0;
-            this.GetComponent<AudioSource>().enabled = false;
+            this.GetComponent<AudioSource>().enabled = true;
         }
 
     }

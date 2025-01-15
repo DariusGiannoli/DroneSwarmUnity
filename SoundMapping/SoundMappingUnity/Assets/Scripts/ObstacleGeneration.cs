@@ -217,12 +217,6 @@ public class ObstacleGeneration : MonoBehaviour
 
         foreach (GameObject obstacleObject in obstacleObjects)
         {
-            if (obstacleObject.layer != 6)
-            {
-                continue;
-            }
-
-
             Obstacle obstacle = null;
             if (obstacleObject.GetComponent<SphereCollider>() != null)
             {
