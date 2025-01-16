@@ -31,6 +31,8 @@ public class CameraMovement : MonoBehaviour
 
     public float rotationSpeed = 80;
 
+    public bool minimapActive = false;
+
     void Start()
     {
         cam = Camera.main;
@@ -198,7 +200,7 @@ public class CameraMovement : MonoBehaviour
     {
         state = "droneView";
         Vector3 lastPosition = embodiedDrone.transform.position;
-        minimap.SetActive(true);
+        minimap.SetActive(minimapActive);
         while (embodiedDrone != null)
         {
             lastPosition = embodiedDrone.transform.position;

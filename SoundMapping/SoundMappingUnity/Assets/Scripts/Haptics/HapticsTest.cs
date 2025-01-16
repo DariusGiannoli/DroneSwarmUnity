@@ -330,8 +330,17 @@ public class HapticsTest : MonoBehaviour
         return;
     }
 
-    public void crash()
+    public void crash(bool reset )
     {
+        if(reset) {
+            foreach(Actuators actuator in crashActuators) {
+                actuator.dutyIntensity = 0;
+                actuator.frequency = 1;
+            }
+            sendCommands();
+        }
+
+        
         StartCoroutine(crashCoroutine());
     }
 

@@ -5,6 +5,8 @@ using WebSocketSharp;
 
 public class TcpSender : MonoBehaviour
 {
+    public static bool bluetoothon = false;
+    public static bool tcpserveron = false;
     private WebSocket ws;
     public bool isConnected = false;
 
@@ -20,11 +22,19 @@ public class TcpSender : MonoBehaviour
         {
             Debug.Log("WebSocket connected.");
             isConnected = true;
+            tcpserveron = true;
         };
 
         ws.OnMessage += (sender, e) =>
         {
-            Debug.Log("Message received from server: " + e.Data);
+            if(e.Data == "C")
+            {
+                bluetoothon = true;
+            }
+            else
+            {
+                bluetoothon = false;
+            }
         };
 
         ws.OnError += (sender, e) =>
@@ -40,6 +50,7 @@ public class TcpSender : MonoBehaviour
         {
             Debug.Log("WebSocket closed.");
             isConnected = false;
+            tcpserveron = false;
         };
 
         try

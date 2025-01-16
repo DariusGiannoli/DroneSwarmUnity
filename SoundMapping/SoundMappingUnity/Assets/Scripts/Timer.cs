@@ -4,6 +4,7 @@ using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
 using System.IO;
+using System.Data;
 
 public class Timer : MonoBehaviour
 {
@@ -12,8 +13,9 @@ public class Timer : MonoBehaviour
     public TextMeshProUGUI timerTextNetwork;
     public TextMeshProUGUI droneDied;
     public TextMeshProUGUI leaderBoard;
-    public TextMeshProUGUI HTTPserver;
-    public TextMeshProUGUI TCPserver;
+    public Image TCPserver;
+
+    public Image Bluetooth;
     public float elapsedTime = 0f;
     public float elapsedTimeNetwork = 0f;
     private Coroutine timerCoroutine;
@@ -47,6 +49,8 @@ public class Timer : MonoBehaviour
         // Initialize the timer display
         UpdateTimerDisplay();
         UpdateTimerDisplayNetwork();
+
+        StartCoroutine(updateStatus());
     }
 
     void HideLeaderboard()
@@ -83,6 +87,16 @@ public class Timer : MonoBehaviour
         {
             HideLeaderboard();
             timerCoroutine = StartCoroutine(TimerCoroutine());
+        }
+    }
+
+    IEnumerator updateStatus()
+    {
+        while (true)
+        {
+            TCPserver.color = TcpSender.tcpserveron ? Color.green : Color.red;
+            Bluetooth.color = TcpSender.bluetoothon ? Color.green : Color.red;
+            yield return new WaitForSeconds(0.5f);
         }
     }
 
@@ -207,6 +221,7 @@ public class Timer : MonoBehaviour
             yield return null;
         }
     }
+
 
     private IEnumerator TimerCoroutineNetwork()
     {

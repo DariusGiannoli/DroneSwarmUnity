@@ -872,16 +872,7 @@ public class NetworkCreator
 
             layers[drone.layer]++;
         }
-        string message = "";
-        //order the layers by key
-        var ordered = layers.OrderBy(x => x.Key);
 
-        foreach (var layer in ordered)
-        {
-            message += "[" + layer.Key + " : " + layer.Value + "] ";
-        }
-
-        Debug.Log(message);
 
         return layers;
     }

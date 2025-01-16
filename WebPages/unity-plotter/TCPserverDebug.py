@@ -86,8 +86,19 @@ async def handle_connection(websocket):
     asyncio.create_task(collect_messages(websocket, message_queue))
     asyncio.create_task(process_messages(message_queue, messages, messages_lock))
     asyncio.create_task(timer_task(messages, messages_lock))
+    asyncio.create_task(send_message_bluetooth_on(websocket))
     # Keep the connection open
     await websocket.wait_closed()
+
+async def send_message_bluetooth_on(websocket):
+    global ble_client
+    while True:
+        await asyncio.sleep(1)
+        if ble_client and ble_client.is_connected:
+            await websocket.send('C')
+        else:
+            await websocket.send('D')
+        
 
 async def collect_messages(websocket, message_queue):
     try:

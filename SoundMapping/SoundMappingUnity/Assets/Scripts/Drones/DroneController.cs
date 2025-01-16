@@ -9,6 +9,8 @@ public class DroneController : MonoBehaviour
 #region Parameters
     private swarmModel swarm;
 
+    public GameObject droneModel;
+
     public Vector3 separationForce = Vector3.zero;
     public Vector3 alignmentForce = Vector3.zero;
     public Vector3 cohesionForce = Vector3.zero;
@@ -56,12 +58,11 @@ public class DroneController : MonoBehaviour
             CameraMovement.nextEmbodiedDrone = null;
             this.droneFake.embodied = false;
             this.droneFake.selected = false;
-            MigrationPointController.selectedDrone = null;
+            MigrationPointController.selectedDrone = null;   
         }
-
         gm.GetComponent<swarmModel>().RemoveDrone(this.gameObject);
 
-        gm.GetComponent<HapticsTest>().crash();
+        gm.GetComponent<HapticsTest>().crash(CameraMovement.embodiedDrone == this.gameObject);
 
         GameObject firework = Instantiate(fireworkParticle, transform.position, Quaternion.identity);
         firework.transform.position = transform.position;
@@ -100,6 +101,7 @@ public class DroneController : MonoBehaviour
         transform.position = positionDrome;
         updateColor();
         updateSound();
+        droneAnimate();
     }
 
     #endregion
@@ -156,6 +158,23 @@ public class DroneController : MonoBehaviour
 
     }
 
+
+    void droneAnimate()
+    {
+        //look at the same direction as velocity
+        if (CameraMovement.embodiedDrone == this.gameObject)
+        {
+            return;
+        }
+        if (droneFake.velocity.magnitude > 0.5)
+        {
+            Vector3 forwardDrone = new Vector3(droneFake.velocity.x, 0, droneFake.velocity.z);
+            //lerp the rotation
+            transform.forward = Vector3.Lerp(transform.forward, forwardDrone, Time.deltaTime * 5);
+
+        }
+
+    }
     #endregion
 
 }
