@@ -10,6 +10,8 @@ using UnityEngine.InputSystem.Interactions;
 public class swarmModel : MonoBehaviour
 {
 
+    #region Parameters
+
     public bool saveData = false;
     DataSave dataSave = new DataSave();
     public static GameObject swarmHolder;
@@ -71,7 +73,12 @@ public class swarmModel : MonoBehaviour
     }
 
 
-    public List<DroneFake> drones = new List<DroneFake>();
+    public static Vector3 swarmVelocityAvg = Vector3.zero;
+
+    public static List<DroneFake> drones = new List<DroneFake>();
+
+
+    #endregion
 
     void Awake()
     {
@@ -79,6 +86,7 @@ public class swarmModel : MonoBehaviour
         swarmHolder = GameObject.FindGameObjectWithTag("Swarm");
         spawn();
     }
+
 
     void Start()
     {
@@ -117,6 +125,7 @@ public class swarmModel : MonoBehaviour
         network.refreshNetwork();
         Dictionary<int, int> layers = network.getLayersConfiguration();
 
+
         //update the network representation
         this.GetComponent<NetworkRepresentation>().UpdateNetworkRepresentation(layers);
 
@@ -145,6 +154,17 @@ public class swarmModel : MonoBehaviour
                 dataSave.saveData(CameraMovement.embodiedDrone.GetComponent<DroneController>().droneFake);
             }
         }
+
+
+        swarmVelocityAvg = Vector3.zero;
+        foreach (DroneFake drone in dronesInMainNetwork)
+        {
+            swarmVelocityAvg += drone.velocity;
+        }
+        swarmVelocityAvg /= dronesInMainNetwork.Count;
+
+
+        saveInfoToJSON.saveDataPoint();
     }
 
     void spawn()
@@ -168,7 +188,7 @@ public class swarmModel : MonoBehaviour
             
             GameObject drone = Instantiate(dronePrefab, spawnPosition, Quaternion.identity);
 
-            drone.GetComponent<DroneController>().droneFake = new DroneFake(spawnPosition, Vector3.zero, false);
+            drone.GetComponent<DroneController>().droneFake = new DroneFake(spawnPosition, Vector3.zero, false, i);
 
             fogWar.AddFogRevealer(drone.transform, 5, true);
 
@@ -295,6 +315,9 @@ public class DroneFake
     public Vector3 velocity;
 
     public int layer = 0;
+
+    public int id = 0;
+    public string idS = "0";
     
     public static float maxSpeed;
     public static float maxForce;
@@ -336,11 +359,13 @@ public class DroneFake
 
     #endregion
 
-    public DroneFake(Vector3 position, Vector3 velocity, bool embodied)
+    public DroneFake(Vector3 position, Vector3 velocity, bool embodied, int id)
     {
         this.position = position;
         this.velocity = velocity;
         this.embodied = embodied;
+        this.id = id;
+        this.idS = id.ToString();
     }
     public List<DroneFake> GetNeighbors(List<DroneFake> allDrones)
     {

@@ -33,6 +33,7 @@ public class HapticsTest : MonoBehaviour
 
     public List<Actuators> actuatorNetwork = new List<Actuators>();
 
+
     List<Actuators> finalList = new List<Actuators>();
 
 
@@ -48,21 +49,44 @@ public class HapticsTest : MonoBehaviour
     // Update is called once per frame
     void Start()
     {
-        int[] mappingOlfati = {1,2,4,5,7,8,10}; 
-        int[] mappingObstacle = {0,3,6,9};
-        int[] crashMapping = {11,12,13,14,15};
-        int[] networkMapping = {};
+        int[] mappingOlfati = {}; 
+
+        int[] angleMapping = {35,32,31,1,2,5, 34, 33, 30, 0,3,4};
+        int [] velocityMapping = {};
+        Dictionary<int, int> angleMappingDict = new Dictionary<int, int> {
+            {5, 30},
+            {4, 30},
+            {2, 90},
+            {3, 90},
+            {1, 150},
+            {0, 150},
+            {30, 210},
+            {31, 210},
+            {33, 270},
+            {32, 270},
+            {35, 330},
+            {34, 330}
+        };
+        int[] crashMapping = angleMapping;
+        int[] networkMapping = {60, 61, 62, 63, 64, 65};
 
         for (int i = 0; i < networkMapping.Length; i++)
         {
             int adresse = networkMapping[i];
-            actuatorsBelly.Add(new Actuators(adresse, 310/10 * adresse));
+            int level = 0;
+            if(i < 2) {
+                level = 1;
+            }else if (i < 4) {
+                level = 2;
+            }
+            actuatorNetwork.Add(new RefresherActuator(adresse:adresse, level, refresh:getActuatorNetwork));
         }
 
-        for (int i = 0; i < mappingObstacle.Length; i++)
+        for (int i = 0; i < angleMapping.Length; i++)
         {
-            int adresse = mappingObstacle[i];
-            actuatorsRange.Add(new PIDActuator(adresse:adresse, angle:310/10 * adresse,
+            int adresse = angleMapping[i];
+            int angle = angleMappingDict[adresse];
+            actuatorsRange.Add(new PIDActuator(adresse:adresse, angle:angle,
                                                     kp:0, kd:150, referencevalue:distanceDetection, 
                                                     refresh:CloseToWallrefresherFunction));
         }
@@ -79,12 +103,19 @@ public class HapticsTest : MonoBehaviour
             crashActuators.Add(new Actuators(adresse, 0));
         }
 
+        for (int i = 0; i < velocityMapping.Length; i++)
+        {
+            int adresse = velocityMapping[i];
+            actuatorsVariables.Add(new RefresherActuator(adresse:adresse, angle:angleMappingDict[adresse], refresh:SwarmVelocityRefresher));
+        }
 
         finalList.AddRange(actuatorsRange);
-        finalList.AddRange(actuatorsBelly);
-        finalList.AddRange(actuatorsVariables);
+       // finalList.AddRange(actuatorsBelly);
+       // finalList.AddRange(actuatorsVariables);
         finalList.AddRange(crashActuators);
         finalList.AddRange(actuatorNetwork);
+
+        finalList.AddRange(actuatorsVariables);
 
 
 
@@ -207,46 +238,64 @@ public class HapticsTest : MonoBehaviour
     }
 
     #region NetworkActuators
-    void getActuatorNetwork()
+    
+        void getActuatorNetwork(RefresherActuator actuator)
     {
-        if(swarmModel.network == null ) {
+        if(CameraMovement.embodiedDrone == null) {
+            actuator.dutyIntensity = 0;
+            actuator.frequency = 1;
             return;
         }
 
-        foreach(Actuators actuator in actuatorNetwork) {
-            actuator.dutyIntensity = 0;
-            actuator.frequency = 1;
+        Dictionary<int, int> neighbors = swarmModel.network.getLayersConfiguration();
+
+        int totalNeighbors = 0;
+        int firstOrder = 0;
+        foreach (KeyValuePair<int, int> neighbor in neighbors)
+        {
+            totalNeighbors += neighbor.Value;
         }
 
-        if(CameraMovement.embodiedDrone != null) { //carefull change only return the Vector3
-            Dictionary<int, int> networkConnection = NetworkRepresentation.neighborsRep;
-            int totalConnections = 0;
-            foreach(KeyValuePair<int, int> connection in networkConnection) {
-                totalConnections += connection.Value;
-            }
-
-            int firstOrder = 0;
-            if(networkConnection.ContainsKey(1)) {
-                firstOrder = networkConnection[1];
-            }
-
-            //map from 0 to 10  
-            float proportion = 1 - Mathf.Min(2*(float)firstOrder / (float)totalConnections, 1);
-            print("Proportion: " + proportion);
-
-            foreach(Actuators actuator in actuatorNetwork) {
-                if(actuator.Angle < proportion * 310) {
-                    print("Hello");
-                    actuator.dutyIntensity = 4;
-                    actuator.frequency = 1;
-                }
-            }
-
+        // first order is the key = 1
+        if (neighbors.ContainsKey(2))
+        {
+            firstOrder = neighbors[2];
         }
 
-        
+        float proportion = (float)firstOrder / (float)totalNeighbors;
+
+        if(actuator.Angle == 0)
+        {
+            if(proportion < 0.65f) { 
+                print("Proportion: " + proportion);
+                actuator.dutyIntensity = 5;
+                actuator.frequency = 1;
+                return;
+            }
+        }
+        else if(actuator.Angle == 1)
+        {
+            if(proportion < 0.4f) {
+                actuator.dutyIntensity = 5;
+                actuator.frequency = 1;
+                return;
+            }
+        }
+        else
+        {
+            if(proportion < 0.01f) {
+                actuator.dutyIntensity = 5;
+                actuator.frequency = 1;
+                return;
+            }
+        }
+
+        actuator.dutyIntensity = 0;
+        actuator.frequency = 1;
+
+
     }
-
+    
     #endregion
 
     #region ForceActuators
@@ -286,7 +335,7 @@ public class HapticsTest : MonoBehaviour
             float diff = Math.Abs(actuator.Angle - angle);
             if(diff < 20) {
                 actuator.dutyIntensity = (int)(forcesDir.magnitude / 2);
-                actuator.frequency = 1;
+                actuator.frequency = 2;
                 return;
             }
         }
@@ -361,6 +410,58 @@ public class HapticsTest : MonoBehaviour
     }
     
     #endregion
+
+    #region swarmVelocityActuators
+    void SwarmVelocityRefresher(RefresherActuator actuator)
+    {
+        Vector3 velDir  = swarmModel.swarmVelocityAvg;
+        if(velDir.magnitude < 1) {
+            actuator.dutyIntensity = 0;
+            actuator.frequency = 1;
+            return;
+        }
+        if(CameraMovement.embodiedDrone != null) { //carefull change only return the Vector
+
+
+       
+            float angle = Vector3.SignedAngle(velDir, CameraMovement.embodiedDrone.transform.forward, Vector3.up);
+            if(angle < 0) {
+                angle += 360;
+            }
+            
+            float diff = Math.Abs(actuator.Angle - angle);
+            if(diff < 30) {
+                actuator.dutyIntensity = 4;
+                actuator.frequency = 2;
+                return;
+            }
+        }else{
+       
+            float angle = Vector3.SignedAngle(velDir, CameraMovement.cam.transform.up, -Vector3.up);
+            if(angle < 0) {
+                angle += 360;
+            }
+            
+            float diff = Math.Abs(actuator.Angle - angle);
+            if(diff < 30) {
+                actuator.dutyIntensity = 4;
+                actuator.frequency = 2;
+                return;
+            }
+        }
+
+
+        actuator.dutyIntensity = 0;
+        actuator.frequency = 1;
+    }
+
+    #endregion
+
+    #region NetworkActuators
+
+
+
+    #endregion
 }
 
 public class RefresherActuator: Actuators
@@ -406,6 +507,7 @@ public class PIDActuator : Actuators
 
         lastValue = newValue;
         dutyIntensity = (int)(Kp * error - Kd * derivative);
+        frequency = 4;
     }
 
     override public void update()

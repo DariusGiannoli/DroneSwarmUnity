@@ -27,4 +27,5 @@ public class sendInfoGameObject : MonoBehaviour
         }
         return data;
     }
+
 }

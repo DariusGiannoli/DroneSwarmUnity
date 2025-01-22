@@ -53,6 +53,14 @@ public class WebSocketClient : MonoBehaviour
         }
     }
 
+    void OnApplicationQuit()
+    {
+        if (ws != null)
+        {
+            ws.Close();
+        }
+    }
+
     void OnDestroy()
     {
         if (ws != null)
