@@ -68,7 +68,6 @@ public class SwarmState
             entry.droneState.add(drone, network.adjacencyList[drone]);
         }
 
-        Debug.Log("Data point saved");
     }
 
 }
@@ -88,6 +87,8 @@ public class DroneState
     public List<Vector3> velocity = new List<Vector3>();
     public List<Vector3> obstacleAvoidance = new List<Vector3>();
     public List<Vector3> olfatiSaber = new List<Vector3>();
+
+    public List<Vector3> alignment = new List<Vector3>();
     public List<bool> embodied = new List<bool>();
     public List<bool> selected = new List<bool>();
 
@@ -102,6 +103,7 @@ public class DroneState
         selected.Add(drone.selected);
         obstacleAvoidance.Add(drone.lastObstacle);
         olfatiSaber.Add(drone.lastOlfati);
+        alignment.Add(drone.lastAllignement);
 
         addNetwork(connected);
     }

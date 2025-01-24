@@ -1,11 +1,6 @@
-using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using FischlWorks_FogWar;
-using Unity.VisualScripting;
-using UnityEditor.AnimatedValues;
 using UnityEngine;
-using UnityEngine.InputSystem.Interactions;
 
 public class swarmModel : MonoBehaviour
 {
@@ -31,7 +26,8 @@ public class swarmModel : MonoBehaviour
     {
         get
         {
-            return Mathf.Max(desiredSeparation * 1.2f, desiredSeparation + extraDistanceNeighboor);
+            //return 3*desiredSeparation;
+            return Mathf.Max(1.2f * desiredSeparation, desiredSeparation + extraDistanceNeighboor);
         }
     }
 
@@ -350,6 +346,8 @@ public class DroneFake
     public Vector3 lastOlfati = Vector3.zero;
     public Vector3 lastObstacle = Vector3.zero;
 
+    public Vector3 lastAllignement = Vector3.zero;
+
 
     public List<float> olfatiForce = new List<float>();
     public List<float> obstacleForce = new List<float>();
@@ -390,6 +388,8 @@ public class DroneFake
     {
         ComputeForces(alignementVector, network);
     }
+
+    #region forcesFunction
 
     private float GetCohesionIntensity(float r, float dRef, float a, float b, float c)
     {
@@ -444,6 +444,7 @@ public class DroneFake
         return (weightDer * intensity / r0 + weight * intensityDer) * (posRel / r);
     }
 
+    #endregion
 
     public void ComputeForces(Vector3 alignmentVector, NetworkCreator network)
     {
@@ -472,10 +473,14 @@ public class DroneFake
 
         float basePriority = 1;
         DroneFake embodiedDrone = allDrones.Find(d => d.embodied);
+
+
         if (embodiedDrone != null)
         {
-            basePriority = 0;
+            basePriority = 0; 
         }
+
+        basePriority = 0;
 
         foreach (DroneFake neighbour in neighbors)
         {
@@ -489,14 +494,9 @@ public class DroneFake
             }
             accCoh += GetCohesionForce(distD, dRef, a, b, c, r0Coh, delta, posRelD) * neighborPriority;
 
-
-            if(neighbour.layer == 1)
-            {
-                accVel += cVm * (neighbour.velocity - velocity) * neighborPriority;
-            }
+           accVel += cVm * (neighbour.velocity - velocity) / (neighbors.Count + neighborPriority -1) * neighborPriority;
         }
-
-        accVel = Vector3.zero;
+        accVel += cVm * (vRef - velocity) / 2;
 
         // Obstacle avoidance
         Vector3 accObs = Vector3.zero;
@@ -518,16 +518,16 @@ public class DroneFake
                         // + GetCohesionForce(dAg, dRefObs, a, b, c, r0Coh, delta, posGamma - position)
                     );
         }
+        
+        lastOlfati = accCoh;
+        lastObstacle = accObs;
 
         if (embodied)
         {
-
-            lastOlfati = accCoh;
-            lastObstacle = accObs;
-
             addDataEmbodied(accCoh, accObs);
 
             accVel = cVm * (vRef - velocity);
+            lastAllignement = accVel;
 
             Vector3 force = accVel;
             force = Vector3.ClampMagnitude(force, maxForce/3);
@@ -535,15 +535,12 @@ public class DroneFake
             return;
         }
 
-        if (embodiedDrone == null)
-        {
-            accVel = cVm * (vRef - velocity);
-        }
-
         if(!network.IsInMainNetwork(this))
         {
             accVel = Vector3.zero;
         }
+
+        lastAllignement = accVel;
 
         Vector3 fo = accCoh + accObs + accVel;
         fo = Vector3.ClampMagnitude(fo, maxForce);
@@ -554,16 +551,22 @@ public class DroneFake
     float getPriority(float basePriority, DroneFake neighbour)
     {
         float neighborPriority = basePriority;
-        if (neighbour.layer == 1)
+        if (neighbour.layer == 1) // embodied drone
         {
             neighborPriority = Mathf.Max((int)(PRIORITYWHENEMBODIED/3),5);
-        }else if(neighbour.layer == 2)
+            return neighborPriority;
+        }
+        
+        if(neighbour.layer == 2) // neighbor to embodied
         {
             neighborPriority = Mathf.Max((int)(PRIORITYWHENEMBODIED/10),3);
         }else if(neighbour.layer == 3)
         {
             neighborPriority = Mathf.Max((int)(PRIORITYWHENEMBODIED/20), 2);
         }else if(neighbour.layer == 4)
+        {
+            neighborPriority = 1f;
+        }else if(neighbour.layer == 0) // disconnected drone from the network
         {
             neighborPriority = 1f;
         }
@@ -672,7 +675,7 @@ public class DroneFake
     {
         for (int i = 0; i < numberOfTimeApplied; i++)
         {
-            velocity += acceleration * 0.02f;
+            velocity += acceleration * 0.02f; //v(t+1) = v(t) + a(t) * dt  @ a(t) = f(t) w a(t) E Vec3
             velocity = Vector3.ClampMagnitude(velocity, maxSpeed);
 
             // Apply damping to reduce the velocity over time

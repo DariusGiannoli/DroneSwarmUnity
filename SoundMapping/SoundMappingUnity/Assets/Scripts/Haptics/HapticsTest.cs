@@ -33,8 +33,12 @@ public class HapticsTest : MonoBehaviour
 
     public List<Actuators> actuatorNetwork = new List<Actuators>();
 
+    public List<Actuators> actuatorsMovingPlane = new List<Actuators>();
+
 
     List<Actuators> finalList = new List<Actuators>();
+
+    Dictionary<AnimatedActuator, IEnumerator> animatedActuators = new Dictionary<AnimatedActuator, IEnumerator>();
 
 
     #region HapticsGamePad
@@ -52,6 +56,7 @@ public class HapticsTest : MonoBehaviour
         int[] mappingOlfati = {}; 
 
         int[] angleMapping = {35,32,31,1,2,5, 34, 33, 30, 0,3,4};
+        angleMapping = new int[] {};
         int [] velocityMapping = {};
         Dictionary<int, int> angleMappingDict = new Dictionary<int, int> {
             {5, 30},
@@ -69,6 +74,9 @@ public class HapticsTest : MonoBehaviour
         };
         int[] crashMapping = angleMapping;
         int[] networkMapping = {60, 61, 62, 63, 64, 65};
+        networkMapping = new int[] {};
+        int[] movingPlaneMapping = {90, 91, 92, 93, 94, 95, 96, 97, 98, 99};
+        //movingPlaneMapping = new int[] {};
 
         for (int i = 0; i < networkMapping.Length; i++)
         {
@@ -109,6 +117,12 @@ public class HapticsTest : MonoBehaviour
             actuatorsVariables.Add(new RefresherActuator(adresse:adresse, angle:angleMappingDict[adresse], refresh:SwarmVelocityRefresher));
         }
 
+        for (int i = 0; i < movingPlaneMapping.Length; i++)
+        {
+            int adresse = movingPlaneMapping[i];
+            actuatorsMovingPlane.Add(new AnimatedActuator(adresse:adresse, angle:adresse%10, refresh:movingPlaneRefresher));
+        }
+
         finalList.AddRange(actuatorsRange);
        // finalList.AddRange(actuatorsBelly);
        // finalList.AddRange(actuatorsVariables);
@@ -116,6 +130,7 @@ public class HapticsTest : MonoBehaviour
         finalList.AddRange(actuatorNetwork);
 
         finalList.AddRange(actuatorsVariables);
+        finalList.AddRange(actuatorsMovingPlane);
 
 
 
@@ -213,8 +228,15 @@ public class HapticsTest : MonoBehaviour
                     {
                         toSendList.Add(actuator); //send the new data
 
+                                                //check if it is a AnimatedActuator
+                        if(actuator is AnimatedActuator) {
+                            animationHandler(last.dutyIntensity, (AnimatedActuator)actuator);
+                        }
+
                         last.dutyIntensity = actuator.dutyIntensity; // update the old data 
                         last.frequency = actuator.frequency;
+
+
                     }
                 }
             }
@@ -226,20 +248,40 @@ public class HapticsTest : MonoBehaviour
 
                 toSendList.Add(newActuator);
                 lastDefined.Add(newActuator);
+                if(actuator is AnimatedActuator) {
+                    animationHandler(0,(AnimatedActuator)actuator);
+
+                }
             }
         }
-
       //  print("FinalList: " + finalListNoDouble.Count + " toSendList: " + toSendList.Count + " lastDefined: " + lastDefined.Count);
 
 
         foreach(Actuators actuator in toSendList) {
+            if(actuator is AnimatedActuator) {
+                continue;
+            }
             VibraForge.SendCommand(actuator.Adresse, (int)actuator.duty == 0 ? 0:1, (int)actuator.duty, (int)actuator.frequency);
         }
     }
 
+    
+    void animationHandler(int start, AnimatedActuator actuator)
+    {
+        if(animatedActuators.ContainsKey(actuator)) {
+            StopCoroutine(animatedActuators[actuator]);
+            actuator.stopAnimation();
+        }
+
+        actuator.defineAnimation(start, actuator.dutyIntensity);
+        animatedActuators[actuator] = hapticAnimation(start, actuator);
+        StartCoroutine(animatedActuators[actuator]);
+    }
+
+
     #region NetworkActuators
     
-        void getActuatorNetwork(RefresherActuator actuator)
+    void getActuatorNetwork(RefresherActuator actuator)
     {
         if(CameraMovement.embodiedDrone == null) {
             actuator.dutyIntensity = 0;
@@ -267,7 +309,6 @@ public class HapticsTest : MonoBehaviour
         if(actuator.Angle == 0)
         {
             if(proportion < 0.65f) { 
-                print("Proportion: " + proportion);
                 actuator.dutyIntensity = 5;
                 actuator.frequency = 1;
                 return;
@@ -460,8 +501,104 @@ public class HapticsTest : MonoBehaviour
     #region NetworkActuators
 
 
+    IEnumerator hapticAnimation(int oldActIntensity, Actuators newAct)
+    {
+        print("Animation started on " + newAct.Adresse);
+        int startIntensity = oldActIntensity;
+        int endIntensity = newAct.dutyIntensity;
+
+        int currentIntensity = startIntensity;
+
+        while(currentIntensity != endIntensity) {
+            print("Current: " + currentIntensity + " End: " + endIntensity);
+            if(currentIntensity < endIntensity) {
+                currentIntensity++;
+            }else {
+                currentIntensity--;
+            }
+
+            VibraForge.SendCommand(newAct.Adresse, (int)currentIntensity == 0 ? 0:1, (int)currentIntensity, (int)newAct.frequency);
+            yield return new WaitForSeconds(0.1f);
+        }
+
+        print("Animation ended on " + newAct.Adresse);
+    }
+
+    IEnumerator hapticAnimation(Actuators newAct)
+    {
+        print("Animation started on " + newAct.Adresse);
+        int startIntensity = 0;
+        int endIntensity = newAct.dutyIntensity;
+
+        int currentIntensity = startIntensity;
+
+        while(currentIntensity != endIntensity) {
+            if(currentIntensity < endIntensity) {
+                currentIntensity++;
+            }else {
+                currentIntensity--;
+            }
+
+            VibraForge.SendCommand(newAct.Adresse, (int)currentIntensity == 0 ? 0:1, (int)currentIntensity, (int)newAct.frequency);
+            yield return new WaitForSeconds(0.1f);
+        }
+
+        print("Animation ended on " + newAct.Adresse);
+    }
+    void movingPlaneRefresher(RefresherActuator actuator)
+    {
+        if(CameraMovement.embodiedDrone == null) {
+            actuator.dutyIntensity = 0;
+            actuator.frequency = 1;
+            return;
+        }
+
+        float score = NetworkRepresentation.networkScore;
+        int resol = 10;
+
+        score*=resol;
+        int angleToMove = Mathf.Abs(resol-(int)score);
+
+        if(score <= 0)
+        {
+            actuator.dutyIntensity = 0;
+            actuator.frequency = 1;
+            return;
+        }
+
+        if(actuator.Angle == angleToMove) {
+            actuator.dutyIntensity = 10;
+            actuator.frequency = 1;
+            return;
+        }
+
+        actuator.dutyIntensity = 0;
+        actuator.frequency = 1;
+
+    }
+
 
     #endregion
+}
+
+public class AnimatedActuator: RefresherActuator
+{
+    int animationEnd = 0;
+    int animationStart = 0;
+
+    public void defineAnimation(int start, int end)
+    {
+        animationStart = start;
+        animationEnd = end;
+    }
+
+    public void stopAnimation()
+    {
+        VibraForge.SendCommand(Adresse, 0, 0, 1);
+    }
+    public AnimatedActuator(int adresse, float angle, updateFunction refresh) : base(adresse, angle, refresh)
+    {
+    }
 }
 
 public class RefresherActuator: Actuators
@@ -480,7 +617,7 @@ public class RefresherActuator: Actuators
     }
 }
 
-public class PIDActuator : Actuators
+public class PIDActuator : Actuators // creae Ki
 {
     public float Kp { get; set; }
     public float Kd { get; set; }
