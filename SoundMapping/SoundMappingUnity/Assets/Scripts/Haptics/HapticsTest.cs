@@ -503,14 +503,12 @@ public class HapticsTest : MonoBehaviour
 
     IEnumerator hapticAnimation(int oldActIntensity, Actuators newAct)
     {
-        print("Animation started on " + newAct.Adresse);
         int startIntensity = oldActIntensity;
         int endIntensity = newAct.dutyIntensity;
 
         int currentIntensity = startIntensity;
 
         while(currentIntensity != endIntensity) {
-            print("Current: " + currentIntensity + " End: " + endIntensity);
             if(currentIntensity < endIntensity) {
                 currentIntensity++;
             }else {
@@ -521,7 +519,6 @@ public class HapticsTest : MonoBehaviour
             yield return new WaitForSeconds(0.1f);
         }
 
-        print("Animation ended on " + newAct.Adresse);
     }
 
     IEnumerator hapticAnimation(Actuators newAct)

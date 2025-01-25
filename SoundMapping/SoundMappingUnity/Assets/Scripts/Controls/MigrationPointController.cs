@@ -21,6 +21,9 @@ public class MigrationPointController : MonoBehaviour
     public Vector3 deltaMigration = new Vector3(0, 0, 0); 
     public static Vector3 alignementVector = new Vector3(0, 0, 0);
 
+    public static float maxSpreadness = 10f;
+    public static float minSpreadness = 1f;
+
     bool firstTime = true;
 
     void Update()
@@ -128,14 +131,7 @@ public class MigrationPointController : MonoBehaviour
         if(spreadness != 0)
         {
             swarmModel.desiredSeparation+= spreadness * Time.deltaTime * 1.3f;
-            if(swarmModel.desiredSeparation < 1.5)
-            {
-                swarmModel.desiredSeparation = 1.5f;
-            } 
-            if(swarmModel.desiredSeparation > 10)
-            {
-                swarmModel.desiredSeparation = 10;
-            }
+            swarmModel.desiredSeparation = Mathf.Clamp(swarmModel.desiredSeparation, minSpreadness, maxSpreadness);
         }
     }
 

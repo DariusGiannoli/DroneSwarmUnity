@@ -49,6 +49,8 @@ public class swarmModel : MonoBehaviour
 
     public static NetworkCreator network;
 
+    public static float minDistance = float.MaxValue;
+
     public static List<DroneFake> dronesInMainNetwork
     {
         get
@@ -161,6 +163,27 @@ public class swarmModel : MonoBehaviour
 
 
         saveInfoToJSON.saveDataPoint();
+
+        float minDistance = float.MaxValue;
+
+        // Loop through each drone and its neighbors
+        foreach (DroneFake drone in dronesInMainNetwork)
+        {
+            foreach (DroneFake neighbour in network.GetNeighbors(drone))
+            {
+                // Calculate distance once to avoid repeated calls
+                float distance = Vector3.Distance(drone.position, neighbour.position);
+
+                // Update global minimum distance if we find a smaller one
+                if (distance < minDistance)
+                {
+                    minDistance = distance;
+                }
+            }
+        }
+        // Update the global minimum distance
+        swarmModel.minDistance = minDistance;
+                
     }
 
     void spawn()
