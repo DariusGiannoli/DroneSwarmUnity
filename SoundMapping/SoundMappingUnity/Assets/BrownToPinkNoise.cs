@@ -1,5 +1,6 @@
 using UnityEngine;
 using System;
+using System.Collections;
 
 [RequireComponent(typeof(AudioSource))]
 public class BrownToPinkNoise : MonoBehaviour
@@ -7,6 +8,13 @@ public class BrownToPinkNoise : MonoBehaviour
     [Header("Blend = 0 → 100% Brown  |  1 → 100% Pink")]
     [Range(0f, 1f)]
     public float blend = 0f;
+
+    
+    [Header("Moving range for Animation")]
+    [Range(0f, 1f)]
+    public float a = 0.1f;
+
+    public float animationDuration = 1f;
 
     // ------------------ Brown Noise State ------------------
     private float _brownSample = 0f;    
@@ -85,5 +93,29 @@ public class BrownToPinkNoise : MonoBehaviour
             // In case of threading issues, fallback
             return UnityEngine.Random.value;
         }
+    }
+
+    public void Shrink()
+    {
+        StartCoroutine(startAnimation(blend, Mathf.Clamp(blend - a, 0f, 1f), animationDuration));
+    }
+
+    public void Expand()
+    {
+        StartCoroutine(startAnimation(blend, Mathf.Clamp(blend + a, 0f, 1f), animationDuration));
+    }
+
+    IEnumerator startAnimation(float start, float end, float duration)
+    {
+        float startTime = Time.time;
+        float endTime = startTime + duration;
+        float t = 0f;
+        while (Time.time < endTime)
+        {
+            t = (Time.time - startTime) / duration;
+            blend = Mathf.Lerp(start, end, t);
+            yield return null;
+        }
+        blend = start;
     }
 }

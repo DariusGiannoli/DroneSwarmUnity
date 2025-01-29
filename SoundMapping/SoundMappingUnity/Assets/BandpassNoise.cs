@@ -1,5 +1,6 @@
 using UnityEngine;
 using System;
+using System.Collections;
 
 /// <summary>
 /// Generates white noise and applies a simple biquad bandpass filter,
@@ -12,6 +13,13 @@ public class BandpassNoise : MonoBehaviour
 {
     [Header("Center Frequency Control (0 → minFreq, 1 → maxFreq)")]
     [Range(0f, 1f)] public float freqLerp = 0f;
+
+    
+    [Header("Moving range for Animation")]
+    [Range(0f, 1f)]
+    public float a = 0.1f;
+
+    public float animationDuration = 1f;
 
     [Header("Hz Settings")]
     public float minFreq   = 20f;     // in Hz
@@ -138,5 +146,29 @@ public class BandpassNoise : MonoBehaviour
         if (_rng == null)
             return UnityEngine.Random.value;
         return (float)_rng.NextDouble();
+    }
+
+    public void Shrink()
+    {
+        StartCoroutine(startAnimation(freqLerp, Mathf.Clamp(freqLerp - a, 0f, 1f), animationDuration));
+    }
+
+    public void Expand()
+    {
+        StartCoroutine(startAnimation(freqLerp, Mathf.Clamp(freqLerp + a, 0f, 1f), animationDuration));
+    }
+
+    IEnumerator startAnimation(float start, float end, float duration)
+    {
+        float startTime = Time.time;
+        float endTime = startTime + duration;
+        float t = 0f;
+        while (Time.time < endTime)
+        {
+            t = (Time.time - startTime) / duration;
+            freqLerp = Mathf.Lerp(start, end, t);
+            yield return null;
+        }
+        freqLerp = start;
     }
 }
