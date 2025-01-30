@@ -94,3 +94,26 @@ public class BandpassNoiseInspector : Editor
     }
 }
 
+//same thing for ArmyShrink
+[CustomEditor(typeof(ArmyShrink))]
+public class ArmyShrinkInspector : Editor
+{
+    public override void OnInspectorGUI()
+    {
+        DrawDefaultInspector();
+
+        ArmyShrink myScript = (ArmyShrink)target;
+        EditorGUILayout.BeginHorizontal();
+        if(GUILayout.Button("Shrink"))
+        {
+            myScript.Shrink();
+        }
+
+        if(GUILayout.Button("Expand"))
+        {
+            myScript.Expand();
+        }
+        EditorGUILayout.EndHorizontal();
+    }
+}
+
