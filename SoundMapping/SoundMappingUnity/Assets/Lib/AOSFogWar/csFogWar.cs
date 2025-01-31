@@ -205,7 +205,7 @@ namespace FischlWorks_FogWar
         private Color fogColor = new Color32(5, 15, 25, 255);
         [SerializeField]
         [Range(0, 1)]
-        private float fogPlaneAlpha = 1;
+        private float fogPlaneAlpha = 0;
         [SerializeField]
         [Range(1, 5)]
         private float fogLerpSpeed = 2.5f;
@@ -463,11 +463,31 @@ namespace FischlWorks_FogWar
 
             fogPlaneTextureLerpBuffer.filterMode = FilterMode.Bilinear;
 
+
             fogPlane.GetComponent<MeshRenderer>().material = new Material(fogPlaneMaterial);
 
             fogPlane.GetComponent<MeshRenderer>().material.SetTexture("_MainTex", fogPlaneTextureLerpBuffer);
 
             fogPlane.GetComponent<MeshCollider>().enabled = false;
+
+            //make texture not overlay geometry
+            Material fogMat = fogPlane.GetComponent<MeshRenderer>().material;
+            fogMat.renderQueue = 2000;  // Geometry render queue
+
+            // 3. Force ZWrite On (so it writes to the depth buffer)
+            //    NOTE: Only works if your shader has a property named "_ZWrite"
+            if (fogMat.HasProperty("_ZWrite"))
+            {
+                fogMat.SetInt("_ZWrite", 1); 
+            }
+
+            // 4. Force ZTest LEqual (so objects in front will occlude it)
+            //    NOTE: Only works if your shader has a property named "_ZTest"
+            if (fogMat.HasProperty("_ZTest"))
+            {
+                fogMat.SetInt("_ZTest", (int)UnityEngine.Rendering.CompareFunction.LessEqual);
+            }
+
         }
 
 

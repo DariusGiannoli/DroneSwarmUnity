@@ -82,6 +82,7 @@ public class NetworkRepresentation : MonoBehaviour
         hasLeftBehind = leftBehind > 0;
         networkScore = Mathf.Max(a2, b2);
 
+
     }
 
 

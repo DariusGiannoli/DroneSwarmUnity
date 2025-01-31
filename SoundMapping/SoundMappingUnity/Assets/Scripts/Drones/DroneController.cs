@@ -22,6 +22,8 @@ public class DroneController : MonoBehaviour
     public Material notConnectedColor;
     public Material selectedColor;
     public Material embodiedColor;
+
+    private List<GameObject> bodyParts = new List<GameObject>();
     public bool showGuizmos = false;
     public bool prediction = false;
     const float distanceToHeigth = 3f;
@@ -84,6 +86,22 @@ public class DroneController : MonoBehaviour
         gm = GameObject.FindGameObjectWithTag("GameManager");
 
         swarm = gm.GetComponent<swarmModel>();
+
+        //iterate threw all the children and all the children of the children ect and check if tag BodyPart
+        checkChildren(this.gameObject);
+    
+    }
+
+    void checkChildren(GameObject start)
+    {
+        foreach (Transform child in start.transform)
+        {
+            if (child.tag == "BodyMaterial")
+            {
+                bodyParts.Add(child.gameObject);
+            }
+            checkChildren(child.gameObject);
+        }
     }
 
     void UpdateNormal()
@@ -109,6 +127,13 @@ public class DroneController : MonoBehaviour
 
     #region HapticAudio
 
+    void setMaterial(Material mat)
+    {
+        foreach (GameObject bodyPart in bodyParts)
+        {
+            bodyPart.GetComponent<Renderer>().material = mat;
+        }
+    }
     void updateColor()
     {
         if(droneFake.embodied)
@@ -117,7 +142,7 @@ public class DroneController : MonoBehaviour
         }else{
             if (MigrationPointController.selectedDrone == this.gameObject)
             {
-                this.GetComponent<Renderer>().material = selectedColor;
+                setMaterial(selectedColor);
                 this.droneFake.selected = true;
                 return;
             }else{
@@ -125,11 +150,11 @@ public class DroneController : MonoBehaviour
 
                 if (droneFake.score >= 0.9f)
                 {
-                    this.GetComponent<Renderer>().material = connectedColor;
+                    setMaterial(connectedColor);
                 }
                 else 
                 {
-                    this.GetComponent<Renderer>().material = notConnectedColor;
+                    setMaterial(notConnectedColor);
                 }
             }
         }

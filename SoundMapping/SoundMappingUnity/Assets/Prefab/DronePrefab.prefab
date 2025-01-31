@@ -76,7 +76,7 @@ GameObject:
   - component: {fileID: 3932180910338701447}
   m_Layer: 0
   m_Name: Cube
-  m_TagString: Untagged
+  m_TagString: BodyMaterial
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -124,7 +124,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: be106847f0423ea46abec242bee8ecf4, type: 2}
+  - {fileID: 2100000, guid: a74befaa9a69edf47aa26d32856feb55, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -231,7 +231,7 @@ GameObject:
   - component: {fileID: 8717769895677353150}
   m_Layer: 0
   m_Name: Cube
-  m_TagString: Untagged
+  m_TagString: BodyMaterial
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -279,7 +279,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: be106847f0423ea46abec242bee8ecf4, type: 2}
+  - {fileID: 2100000, guid: a74befaa9a69edf47aa26d32856feb55, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -334,7 +334,6 @@ GameObject:
   - component: {fileID: 7234656321179605437}
   - component: {fileID: 4179596954487475393}
   - component: {fileID: 4650950243530992885}
-  - component: {fileID: -2915315480619927013}
   - component: {fileID: 8153997981403382063}
   - component: {fileID: 3179727956488965293}
   m_Layer: 7
@@ -449,18 +448,6 @@ MonoBehaviour:
   showGuizmos: 0
   prediction: 0
   fireworkParticle: {fileID: 2777406680294339996, guid: 32208367bb31dcf4dac2a87bc1c62028, type: 3}
---- !u!114 &-2915315480619927013
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2904365767565868958}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 85983d541ad19a546bb54feabd1c0f7e, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!20 &8153997981403382063
 Camera:
   m_ObjectHideFlags: 0
@@ -721,7 +708,7 @@ GameObject:
   - component: {fileID: 2030906442622632693}
   m_Layer: 0
   m_Name: Cube
-  m_TagString: Untagged
+  m_TagString: BodyMaterial
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -769,7 +756,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: be106847f0423ea46abec242bee8ecf4, type: 2}
+  - {fileID: 2100000, guid: a74befaa9a69edf47aa26d32856feb55, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -1263,7 +1250,7 @@ GameObject:
   - component: {fileID: 8279358342175514446}
   m_Layer: 0
   m_Name: Cube
-  m_TagString: Untagged
+  m_TagString: BodyMaterial
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -1311,7 +1298,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: be106847f0423ea46abec242bee8ecf4, type: 2}
+  - {fileID: 2100000, guid: a74befaa9a69edf47aa26d32856feb55, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -1583,7 +1570,7 @@ PrefabInstance:
     - target: {fileID: -7635826562936255635, guid: 2661eed0e2be0b74397bf986432ea60f, type: 3}
       propertyPath: m_Materials.Array.data[0]
       value: 
-      objectReference: {fileID: 2100000, guid: be106847f0423ea46abec242bee8ecf4, type: 2}
+      objectReference: {fileID: 2100000, guid: a74befaa9a69edf47aa26d32856feb55, type: 2}
     - target: {fileID: 919132149155446097, guid: 2661eed0e2be0b74397bf986432ea60f, type: 3}
       propertyPath: m_Name
       value: ImageToStl.com_x-black drone  - motor-7
@@ -1599,6 +1586,10 @@ PrefabInstance:
     - target: {fileID: 1151388028547126963, guid: 2661eed0e2be0b74397bf986432ea60f, type: 3}
       propertyPath: m_LocalPosition.z
       value: -2.3
+      objectReference: {fileID: 0}
+    - target: {fileID: 8164078558771037576, guid: 2661eed0e2be0b74397bf986432ea60f, type: 3}
+      propertyPath: m_TagString
+      value: BodyMaterial
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -1673,7 +1664,7 @@ PrefabInstance:
     - target: {fileID: -7635826562936255635, guid: 2661eed0e2be0b74397bf986432ea60f, type: 3}
       propertyPath: m_Materials.Array.data[0]
       value: 
-      objectReference: {fileID: 2100000, guid: be106847f0423ea46abec242bee8ecf4, type: 2}
+      objectReference: {fileID: 2100000, guid: a74befaa9a69edf47aa26d32856feb55, type: 2}
     - target: {fileID: 919132149155446097, guid: 2661eed0e2be0b74397bf986432ea60f, type: 3}
       propertyPath: m_Name
       value: ImageToStl.com_x-black drone  - motor-7
@@ -1689,6 +1680,10 @@ PrefabInstance:
     - target: {fileID: 1151388028547126963, guid: 2661eed0e2be0b74397bf986432ea60f, type: 3}
       propertyPath: m_LocalPosition.z
       value: -2.3
+      objectReference: {fileID: 0}
+    - target: {fileID: 8164078558771037576, guid: 2661eed0e2be0b74397bf986432ea60f, type: 3}
+      propertyPath: m_TagString
+      value: BodyMaterial
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -1763,7 +1758,7 @@ PrefabInstance:
     - target: {fileID: -7635826562936255635, guid: 36e60898ebdc6074eb45900554bbb23a, type: 3}
       propertyPath: m_Materials.Array.data[0]
       value: 
-      objectReference: {fileID: 2100000, guid: be106847f0423ea46abec242bee8ecf4, type: 2}
+      objectReference: {fileID: 2100000, guid: a74befaa9a69edf47aa26d32856feb55, type: 2}
     - target: {fileID: 919132149155446097, guid: 36e60898ebdc6074eb45900554bbb23a, type: 3}
       propertyPath: m_Name
       value: ImageToStl.com_x-black drone  - propeller cover-3
@@ -1795,6 +1790,10 @@ PrefabInstance:
     - target: {fileID: 1151388028547126963, guid: 36e60898ebdc6074eb45900554bbb23a, type: 3}
       propertyPath: m_LocalEulerAnglesHint.y
       value: 62.469
+      objectReference: {fileID: 0}
+    - target: {fileID: 8164078558771037576, guid: 36e60898ebdc6074eb45900554bbb23a, type: 3}
+      propertyPath: m_TagString
+      value: BodyMaterial
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -1869,10 +1868,14 @@ PrefabInstance:
     - target: {fileID: -7635826562936255635, guid: 8b9953887dddd504a9c0ed4f4a3879de, type: 3}
       propertyPath: m_Materials.Array.data[0]
       value: 
-      objectReference: {fileID: 2100000, guid: be106847f0423ea46abec242bee8ecf4, type: 2}
+      objectReference: {fileID: 2100000, guid: a74befaa9a69edf47aa26d32856feb55, type: 2}
     - target: {fileID: 919132149155446097, guid: 8b9953887dddd504a9c0ed4f4a3879de, type: 3}
       propertyPath: m_Name
       value: ImageToStl.com_x-black drone  - drone-1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8164078558771037576, guid: 8b9953887dddd504a9c0ed4f4a3879de, type: 3}
+      propertyPath: m_TagString
+      value: BodyMaterial
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -1962,7 +1965,7 @@ PrefabInstance:
     - target: {fileID: -7635826562936255635, guid: 36e60898ebdc6074eb45900554bbb23a, type: 3}
       propertyPath: m_Materials.Array.data[0]
       value: 
-      objectReference: {fileID: 2100000, guid: be106847f0423ea46abec242bee8ecf4, type: 2}
+      objectReference: {fileID: 2100000, guid: a74befaa9a69edf47aa26d32856feb55, type: 2}
     - target: {fileID: 919132149155446097, guid: 36e60898ebdc6074eb45900554bbb23a, type: 3}
       propertyPath: m_Name
       value: ImageToStl.com_x-black drone  - propeller cover-3
@@ -1994,6 +1997,10 @@ PrefabInstance:
     - target: {fileID: 1151388028547126963, guid: 36e60898ebdc6074eb45900554bbb23a, type: 3}
       propertyPath: m_LocalEulerAnglesHint.y
       value: 62.469
+      objectReference: {fileID: 0}
+    - target: {fileID: 8164078558771037576, guid: 36e60898ebdc6074eb45900554bbb23a, type: 3}
+      propertyPath: m_TagString
+      value: BodyMaterial
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -2068,7 +2075,7 @@ PrefabInstance:
     - target: {fileID: -7635826562936255635, guid: 36e60898ebdc6074eb45900554bbb23a, type: 3}
       propertyPath: m_Materials.Array.data[0]
       value: 
-      objectReference: {fileID: 2100000, guid: be106847f0423ea46abec242bee8ecf4, type: 2}
+      objectReference: {fileID: 2100000, guid: a74befaa9a69edf47aa26d32856feb55, type: 2}
     - target: {fileID: 919132149155446097, guid: 36e60898ebdc6074eb45900554bbb23a, type: 3}
       propertyPath: m_Name
       value: ImageToStl.com_x-black drone  - propeller cover-3
@@ -2100,6 +2107,10 @@ PrefabInstance:
     - target: {fileID: 1151388028547126963, guid: 36e60898ebdc6074eb45900554bbb23a, type: 3}
       propertyPath: m_LocalEulerAnglesHint.y
       value: 62.469
+      objectReference: {fileID: 0}
+    - target: {fileID: 8164078558771037576, guid: 36e60898ebdc6074eb45900554bbb23a, type: 3}
+      propertyPath: m_TagString
+      value: BodyMaterial
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -2174,7 +2185,7 @@ PrefabInstance:
     - target: {fileID: -7635826562936255635, guid: 36e60898ebdc6074eb45900554bbb23a, type: 3}
       propertyPath: m_Materials.Array.data[0]
       value: 
-      objectReference: {fileID: 2100000, guid: be106847f0423ea46abec242bee8ecf4, type: 2}
+      objectReference: {fileID: 2100000, guid: a74befaa9a69edf47aa26d32856feb55, type: 2}
     - target: {fileID: 919132149155446097, guid: 36e60898ebdc6074eb45900554bbb23a, type: 3}
       propertyPath: m_Name
       value: ImageToStl.com_x-black drone  - propeller cover-3
@@ -2206,6 +2217,10 @@ PrefabInstance:
     - target: {fileID: 1151388028547126963, guid: 36e60898ebdc6074eb45900554bbb23a, type: 3}
       propertyPath: m_LocalEulerAnglesHint.y
       value: 62.469
+      objectReference: {fileID: 0}
+    - target: {fileID: 8164078558771037576, guid: 36e60898ebdc6074eb45900554bbb23a, type: 3}
+      propertyPath: m_TagString
+      value: BodyMaterial
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -2280,7 +2295,7 @@ PrefabInstance:
     - target: {fileID: -7635826562936255635, guid: 2661eed0e2be0b74397bf986432ea60f, type: 3}
       propertyPath: m_Materials.Array.data[0]
       value: 
-      objectReference: {fileID: 2100000, guid: be106847f0423ea46abec242bee8ecf4, type: 2}
+      objectReference: {fileID: 2100000, guid: a74befaa9a69edf47aa26d32856feb55, type: 2}
     - target: {fileID: 919132149155446097, guid: 2661eed0e2be0b74397bf986432ea60f, type: 3}
       propertyPath: m_Name
       value: ImageToStl.com_x-black drone  - motor-7
@@ -2296,6 +2311,10 @@ PrefabInstance:
     - target: {fileID: 1151388028547126963, guid: 2661eed0e2be0b74397bf986432ea60f, type: 3}
       propertyPath: m_LocalPosition.z
       value: -2.3
+      objectReference: {fileID: 0}
+    - target: {fileID: 8164078558771037576, guid: 2661eed0e2be0b74397bf986432ea60f, type: 3}
+      propertyPath: m_TagString
+      value: BodyMaterial
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -2370,10 +2389,14 @@ PrefabInstance:
     - target: {fileID: -7635826562936255635, guid: 4626e64108d41fc449e1b57c44e52270, type: 3}
       propertyPath: m_Materials.Array.data[0]
       value: 
-      objectReference: {fileID: 2100000, guid: 35ba3aaf851fd954a91e6e95d7777b27, type: 2}
+      objectReference: {fileID: 2100000, guid: a74befaa9a69edf47aa26d32856feb55, type: 2}
     - target: {fileID: 919132149155446097, guid: 4626e64108d41fc449e1b57c44e52270, type: 3}
       propertyPath: m_Name
       value: ImageToStl.com_x-black drone  - kamera-1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8164078558771037576, guid: 4626e64108d41fc449e1b57c44e52270, type: 3}
+      propertyPath: m_TagString
+      value: BodyMaterial
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -2448,10 +2471,14 @@ PrefabInstance:
     - target: {fileID: -7635826562936255635, guid: 2661eed0e2be0b74397bf986432ea60f, type: 3}
       propertyPath: m_Materials.Array.data[0]
       value: 
-      objectReference: {fileID: 2100000, guid: be106847f0423ea46abec242bee8ecf4, type: 2}
+      objectReference: {fileID: 2100000, guid: a74befaa9a69edf47aa26d32856feb55, type: 2}
     - target: {fileID: 919132149155446097, guid: 2661eed0e2be0b74397bf986432ea60f, type: 3}
       propertyPath: m_Name
       value: ImageToStl.com_x-black drone  - motor-7
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 2661eed0e2be0b74397bf986432ea60f, type: 3}
+      propertyPath: m_TagString
+      value: Untagged
       objectReference: {fileID: 0}
     - target: {fileID: 1151388028547126963, guid: 2661eed0e2be0b74397bf986432ea60f, type: 3}
       propertyPath: m_LocalPosition.x
@@ -2464,6 +2491,10 @@ PrefabInstance:
     - target: {fileID: 1151388028547126963, guid: 2661eed0e2be0b74397bf986432ea60f, type: 3}
       propertyPath: m_LocalPosition.z
       value: -2.3
+      objectReference: {fileID: 0}
+    - target: {fileID: 8164078558771037576, guid: 2661eed0e2be0b74397bf986432ea60f, type: 3}
+      propertyPath: m_TagString
+      value: BodyMaterial
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

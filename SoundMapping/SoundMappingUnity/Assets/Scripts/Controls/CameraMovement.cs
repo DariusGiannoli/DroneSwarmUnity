@@ -42,9 +42,6 @@ public class CameraMovement : MonoBehaviour
 
         intialCamRotation = cam.transform.rotation;
 
-        this.GetComponent<sendInfoGameObject>().setupCallback(getCameraPositionDE);
-        this.GetComponent<sendInfoGameObject>().setupCallback(getEmbodiedDrone);
-
         StartCoroutine(TDView());
         
     }
@@ -93,8 +90,8 @@ public class CameraMovement : MonoBehaviour
         // applz rotation to the camera with lerp
         cam.transform.Rotate(-Vector3.forward, rightStickHorizontal * Time.deltaTime * rotationSpeed);
 
-        float leftStickHorizontal = Input.GetAxis("JoystickRightVertical") * Time.deltaTime * 10;
-        cam.GetComponent<Camera>().orthographicSize = Mathf.Clamp(cam.GetComponent<Camera>().orthographicSize - leftStickHorizontal, swarmModel.desiredSeparation*2, swarmModel.desiredSeparation*10);
+       // float leftStickHorizontal = Input.GetAxis("JoystickRightVertical") * Time.deltaTime * 10;
+        //cam.GetComponent<Camera>().orthographicSize = Mathf.Clamp(cam.GetComponent<Camera>().orthographicSize - leftStickHorizontal, swarmModel.desiredSeparation*2, swarmModel.desiredSeparation*10);
     }
 
     void updateDroneView()

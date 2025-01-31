@@ -93,6 +93,8 @@ public class MigrationPointController : MonoBehaviour
                     selectedDrone = swarmModel.swarmHolder.transform.GetChild(lastSelectedChild).gameObject;
                 }
             }
+
+            this.GetComponent<HapticsTest>().VibrateController(0.3f, 0.3f, 0.1f); // selection vibration
         }
 
         // button 0
@@ -144,6 +146,7 @@ public class MigrationPointController : MonoBehaviour
         Transform body = null;
         Vector3 right = new Vector3(0, 0, 0);
         Vector3 forward = new Vector3(0, 0, 0);
+        Vector3 up = new Vector3(0, 0, 0);
 
         Vector3 final = new Vector3(0, 0, 0);
 
@@ -152,10 +155,13 @@ public class MigrationPointController : MonoBehaviour
             body = CameraMovement.cam.transform;
             right = body.right;
             forward = body.up;
+            up = -body.forward;
+
         }else{
             body = CameraMovement.embodiedDrone.transform;
             right = body.right;
             forward = body.forward;
+            up = body.up;
         }
 
         if(horizontal == 0 && vertical == 0 && heightControl == 0)
@@ -170,7 +176,7 @@ public class MigrationPointController : MonoBehaviour
         }else{
             firstTime = true;
             Vector3 centerOfSwarm = body.position;
-            final = vertical * forward + horizontal * right + heightControl * body.up;
+            final = vertical * forward + horizontal * right + heightControl * up;
             final.Normalize();
 
             float newR = Mathf.Sqrt(horizontal * horizontal + vertical * vertical + heightControl * heightControl);

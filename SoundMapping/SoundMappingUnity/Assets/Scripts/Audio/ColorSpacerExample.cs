@@ -117,3 +117,75 @@ public class ArmyShrinkInspector : Editor
     }
 }
 
+
+[CustomEditor(typeof(swarmDisconnection))]
+public class swarmDisconnectionInspector : Editor
+{
+    // Keep track of scroll position in the inspector
+    private Vector2 scrollPos;
+
+    public override void OnInspectorGUI()
+    {
+
+        // Draw default inspector fields
+        DrawDefaultInspector();
+
+        swarmDisconnection myScript = (swarmDisconnection)target;
+        EditorGUILayout.BeginVertical();
+
+        // Example buttons
+        EditorGUILayout.BeginHorizontal();
+        if (GUILayout.Button("Test Sound"))
+        {
+            myScript.PlaySound();
+        }
+        if (GUILayout.Button("Regenerate Drone Disconnection"))
+        {
+            myScript.RegenerateSwarm();
+        }
+        EditorGUILayout.EndHorizontal();
+
+        // Another button row
+        EditorGUILayout.BeginHorizontal();
+        if (GUILayout.Button("Randomize Drone Disconnection Test"))
+        {
+            myScript.RandomizeSwarm();
+        }
+        EditorGUILayout.EndHorizontal();
+
+        
+        // Make a selectable list of strings
+        EditorGUILayout.BeginHorizontal();
+        EditorGUILayout.LabelField("Select option for drone Isolation sound :");
+        scrollPos = EditorGUILayout.BeginScrollView(scrollPos, GUILayout.Height(100));
+        int selected = GUILayout.SelectionGrid(myScript.selectedOption, myScript.options.ToArray(), 1);
+        if (selected != -1)
+        {
+            myScript.selectedOption = selected;
+            
+            //call callback only if mouse is pressed
+            if (Event.current.type == EventType.Used)
+            {
+                Debug.Log(Event.GetEventCount());
+                Debug.Log("Selected option changed to: " + selected);
+                OnSelectionChanged(selected);
+            }
+        }
+        EditorGUILayout.EndScrollView();
+        EditorGUILayout.EndHorizontal();    
+
+        // Show the selected option
+        EditorGUILayout.LabelField("Selected Option:", myScript.options[myScript.selectedOption]);
+
+        EditorGUILayout.EndVertical();
+    }
+
+    private void OnSelectionChanged(int selected)
+    {
+        // Handle the selection change
+        Debug.Log("Selected option changed to: " + selected);
+        // Add any additional logic you need here
+        swarmDisconnection myScript = (swarmDisconnection)target;
+        myScript.StopAndPlaySound(selected);
+    }
+}

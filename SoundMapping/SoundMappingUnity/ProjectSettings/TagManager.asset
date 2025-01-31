@@ -13,6 +13,7 @@ TagManager:
   - Floor
   - StartCollider
   - EndCollider
+  - BodyMaterial
   layers:
   - Default
   - TransparentFX

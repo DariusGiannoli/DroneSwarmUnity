@@ -8,6 +8,7 @@ public class swarmModel : MonoBehaviour
     #region Parameters
 
     public bool saveData = false;
+    public bool needToSpawn = false;
     DataSave dataSave = new DataSave();
     public static GameObject swarmHolder;
     public GameObject dronePrefab;
@@ -115,7 +116,9 @@ public class swarmModel : MonoBehaviour
         refreshParameters();
         if (Input.GetKeyDown(KeyCode.R))
         {
+            fogWar.ResetMapAndFogRevealers();
             spawn();
+
             this.GetComponent<Timer>().Restart();
         }
 
@@ -186,9 +189,31 @@ public class swarmModel : MonoBehaviour
                 
     }
 
+    void spwanless()
+    {
+        drones.Clear();
+        int i = 0;
+        foreach (Transform drone in swarmHolder.transform)
+        {
+            fogWar.AddFogRevealer(drone, 1, true);
+            drone.GetComponent<DroneController>().droneFake = new DroneFake(drone.transform.position, Vector3.zero, false, i);
+            drones.Add(drone.GetComponent<DroneController>().droneFake);
+            i++;
+        }
+
+        this.GetComponent<HapticAudioManager>().Reset();
+
+        return;
+    }
+
     void spawn()
     {
-        fogWar.ResetMapAndFogRevealers();
+        desiredSeparation = 3f;
+        if(!needToSpawn)
+        {
+            spwanless();
+            return;
+        }
 
         GameObject[] dronesToDelete = GameObject.FindGameObjectsWithTag("Drone");
         //kill all drones
@@ -209,7 +234,7 @@ public class swarmModel : MonoBehaviour
 
             drone.GetComponent<DroneController>().droneFake = new DroneFake(spawnPosition, Vector3.zero, false, i);
 
-            fogWar.AddFogRevealer(drone.transform, 5, true);
+            fogWar.AddFogRevealer(drone.transform, 1, true);
 
             drones.Add(drone.GetComponent<DroneController>().droneFake);
 
@@ -235,6 +260,7 @@ public class swarmModel : MonoBehaviour
         if (swarmHolder.transform.childCount == 0)
         {
             this.GetComponent<Timer>().Restart();
+            fogWar.ResetMapAndFogRevealers();
             spawn();
         }
 

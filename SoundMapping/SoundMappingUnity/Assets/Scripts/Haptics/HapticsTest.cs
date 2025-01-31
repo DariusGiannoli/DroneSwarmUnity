@@ -22,7 +22,11 @@ public class HapticsTest : MonoBehaviour
     List<Actuators> actuatorsRange = new List<Actuators>();
 
     #endregion
-
+    public bool Haptics_Obstacle = false;
+    public bool Haptics_Network = false;
+    public bool Haptics_Forces = false;
+    public bool Haptics_Crash = false;
+    public bool Haptics_Controller = false;
     List<Actuators> actuatorsBelly = new List<Actuators>();
 
     List<Actuators> lastDefined = new List<Actuators>();
@@ -41,6 +45,15 @@ public class HapticsTest : MonoBehaviour
     Dictionary<AnimatedActuator, IEnumerator> animatedActuators = new Dictionary<AnimatedActuator, IEnumerator>();
 
 
+    public bool gamePadConnected {
+        get
+        {
+            return gamepad != null;
+        }
+    }
+
+    Coroutine gamnePadCoroutine;
+
     #region HapticsGamePad
 
     private Gamepad gamepad;
@@ -53,18 +66,21 @@ public class HapticsTest : MonoBehaviour
     // Update is called once per frame
     void Start()
     {
-        int[] mappingOlfati = {}; 
 
-        int[] angleMapping = {35,32,31,1,2,5, 34, 33, 30, 0,3,4};
-        angleMapping = new int[] {};
-        int [] velocityMapping = {};
+        //
+        int[] mappingOlfati = Haptics_Forces ? new int[] {35,32,31,1,2,5, 34, 33, 30, 0,3,4} : new int[] {}; 
+
+        
+        int [] velocityMapping = {}; //relative mvt of the swarm
+
         Dictionary<int, int> angleMappingDict = new Dictionary<int, int> {
-            {5, 30},
-            {4, 30},
-            {2, 90},
-            {3, 90},
-            {1, 150},
-            {0, 150},
+            {0, 30},
+            {1, 80},
+            {2, 130},
+            {3, 180},
+            {4, 230},
+            {5, 280},
+            {6, 350},
             {30, 210},
             {31, 210},
             {33, 270},
@@ -72,11 +88,21 @@ public class HapticsTest : MonoBehaviour
             {35, 330},
             {34, 330}
         };
-        int[] crashMapping = angleMapping;
+
+
+        //obstacle in Range mapping
+        int[] angleMapping =  Haptics_Obstacle ? new int[] {0,1,2,3,4,5,6}  : new int[] {};
+
+        //drone crash mapping
+        int[] crashMapping =  Haptics_Crash ? new int[] {0,1,2,3,4,5,6}  : new int[] {};;
+        
+        
         int[] networkMapping = {60, 61, 62, 63, 64, 65};
         networkMapping = new int[] {};
-        int[] movingPlaneMapping = {90, 91, 92, 93, 94, 95, 96, 97, 98, 99};
-        //movingPlaneMapping = new int[] {};
+        
+        //layers movement on arm mapping
+        int[] movingPlaneMapping =  Haptics_Network ? new int[] {90, 91, 92, 93, 94, 95, 96, 97, 98, 99} : new int[] {};
+
 
         for (int i = 0; i < networkMapping.Length; i++)
         {
@@ -140,17 +166,46 @@ public class HapticsTest : MonoBehaviour
         if (gamepad == null)
         {
             Debug.LogWarning("No gamepad connected.");
-            gamepad.SetMotorSpeeds(0, 0);
         }else {
             gamepad.SetMotorSpeeds(0.0f, 0.0f);
         }
     }
 
+ 
     void Disable()
     {
         hapticsThread.Abort();
         gamepad.SetMotorSpeeds(0, 0);
     }
+    
+    #region Gamepad Crash Prediction
+    
+    public void VibrateController(float leftMotor, float rightMotor, float duration)
+    {
+        if (gamePadConnected == false)
+        {
+            return;
+        }
+
+        if (gamnePadCoroutine != null)
+        {
+            StopCoroutine(gamnePadCoroutine);
+        }
+        gamnePadCoroutine = StartCoroutine(vibrateControllerForTime(leftMotor, rightMotor, duration));
+    }
+
+    public IEnumerator vibrateControllerForTime(float leftMotor, float rightMotor, float duration)
+    {
+        if(!Haptics_Controller)
+        {
+            yield break;
+        }
+        gamepad.SetMotorSpeeds(leftMotor, rightMotor);
+        yield return new WaitForSeconds(duration);
+        gamepad.SetMotorSpeeds(0, 0);
+    }
+
+
     public void HapticsPrediction(Prediction pred)
     {
         if (gamepad == null)
@@ -177,11 +232,15 @@ public class HapticsTest : MonoBehaviour
         }
 
         if(bestFractionOfPath < 1) {
-            gamepad.SetMotorSpeeds(bestFractionOfPath, bestFractionOfPath);
+            if(Haptics_Controller) {
+                gamepad.SetMotorSpeeds(bestFractionOfPath, bestFractionOfPath);
+            }
         }else {
             gamepad.SetMotorSpeeds(0, 0);
         }
     } 
+
+    #endregion
 
     IEnumerator HapticsCoroutine()
     {
@@ -554,7 +613,7 @@ public class HapticsTest : MonoBehaviour
         int resol = 10;
 
         score*=resol;
-        int angleToMove = Mathf.Abs(resol-(int)score);
+        int angleToMove = (int)score;
 
         if(score <= 0)
         {
@@ -568,6 +627,15 @@ public class HapticsTest : MonoBehaviour
             actuator.frequency = 1;
             return;
         }
+
+
+        if(score >= 10)
+        {
+            actuator.dutyIntensity = 5;
+            actuator.frequency = 1;
+            return;
+        }
+
 
         actuator.dutyIntensity = 0;
         actuator.frequency = 1;

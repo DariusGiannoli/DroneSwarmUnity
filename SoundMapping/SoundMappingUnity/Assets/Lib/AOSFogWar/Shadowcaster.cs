@@ -59,7 +59,15 @@ namespace FischlWorks_FogWar
             {
                 if (colors == null)
                 {
-                    colors = new Color[levelRow.Count * levelRow[0].Count()];
+                    if (levelRow.Count == 0)
+                    {
+                        Debug.LogErrorFormat("levelRow is empty");
+
+                        return null;
+                    }
+                    int colorCount = levelRow.Count * levelRow[0].Count();
+
+                    colors = new Color[colorCount];
                 }
 
                 for (int xIterator = 0; xIterator < levelRow[0].Count(); xIterator++)
@@ -68,7 +76,7 @@ namespace FischlWorks_FogWar
                     {
                         int visibility = (int)levelRow[yIterator][levelRow[0].Count() - 1 - xIterator];
 
-                        float tileOpacity = 1 - visibility;
+                        float tileOpacity = visibility;
 
                         if (fogWar.keepRevealedTiles == true && visibility == (int)LevelColumn.ETileVisibility.PreviouslyRevealed)
                         {

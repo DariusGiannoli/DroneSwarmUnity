@@ -18,6 +18,8 @@ Shader "FogWar/FogPlane"
         _MainTex("Texture", 2D) = "white" {}
         _Color("Color", Color) = (1, 1, 1, 1)
         _BlurOffset("BlurOffset", Range(0, 10)) = 1
+        _ZWrite("ZWrite", Float) = 0
+        _ZTest("ZTest", Float) = 8
     }
 
     CGINCLUDE
@@ -97,8 +99,8 @@ Shader "FogWar/FogPlane"
         }
         Blend SrcAlpha OneMinusSrcAlpha
         CULL BACK
-        ZWrite OFF
-        ZTest Always
+        ZWrite [_ZWrite]
+        ZTest [_ZTest]
         LOD 100
 
         Pass

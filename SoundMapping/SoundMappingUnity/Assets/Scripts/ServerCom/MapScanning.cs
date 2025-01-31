@@ -15,12 +15,6 @@ public class MapScanning : MonoBehaviour
 
     void Start()
     {
-        this.GetComponent<sendInfoGameObject>().setupCallback(getMapData);
-        this.GetComponent<sendInfoGameObject>().setupCallback(getCenterPosition);
-        this.GetComponent<sendInfoGameObject>().setupCallback(() =>
-        {
-            return new DataEntry("map_cell_size", cellSize.ToString());
-        });
     }
 
     private void update_center_position()

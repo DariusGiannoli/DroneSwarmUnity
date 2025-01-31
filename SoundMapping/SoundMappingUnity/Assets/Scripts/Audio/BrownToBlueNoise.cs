@@ -7,13 +7,41 @@ public class BrownToBlueNoise : MonoBehaviour
 {
     [Header("Blend = 0 → 100% Brown  |  1 → 100% Blue")]
     [Range(0f, 1f)]
-    public float blend = 0f;
+    public float blend = 0.5f;
+
 
     [Header("Moving range for Animation")]
     [Range(0f, 1f)]
     public float a = 0.1f;
 
     public float animationDuration = 1f;
+
+
+    
+    public float swarmBlend
+    {
+        get
+        {
+            return (swarmModel.desiredSeparation-1)/(10-1);
+        }
+    }
+
+    public bool isPlayed = false;
+
+    float realBlend 
+    {
+        get
+        {
+            if (isPlayed)
+            {
+                return swarmBlend;
+            }
+            else
+            {
+                return blend;
+            }
+        }
+    }
 
     // ----- Brown Noise State -----
     private float _brownSample = 0f;    
@@ -37,6 +65,11 @@ public class BrownToBlueNoise : MonoBehaviour
         this.GetComponent<AudioSource>().enabled = true;
     }
 
+
+    void Update()
+    {
+
+    }
     void OnApplicationQuit()
     {
         // Clean up our System.Random
@@ -96,12 +129,12 @@ public class BrownToBlueNoise : MonoBehaviour
 
     public void Shrink()
     {
-        StartCoroutine(startAnimation(blend, Mathf.Clamp(blend - a, 0f, 1f), animationDuration));
+        StartCoroutine(startAnimation(realBlend, Mathf.Clamp(blend - a, 0f, 1f), animationDuration));
     }
 
     public void Expand()
     {
-        StartCoroutine(startAnimation(blend, Mathf.Clamp(blend + a, 0f, 1f), animationDuration));
+        StartCoroutine(startAnimation(realBlend, Mathf.Clamp(blend + a, 0f, 1f), animationDuration));
     }
 
     IEnumerator startAnimation(float start, float end, float duration)
