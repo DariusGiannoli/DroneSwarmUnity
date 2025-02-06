@@ -33,6 +33,11 @@ public class CameraMovement : MonoBehaviour
 
     public bool minimapActive = false;
 
+
+    public static Vector3 forward = Vector3.forward;
+    public static Vector3 right = Vector3.right;
+    public static Vector3 up = Vector3.up;
+
     void Start()
     {
         cam = Camera.main;
@@ -91,7 +96,7 @@ public class CameraMovement : MonoBehaviour
         cam.transform.Rotate(-Vector3.forward, rightStickHorizontal * Time.deltaTime * rotationSpeed);
 
        // float leftStickHorizontal = Input.GetAxis("JoystickRightVertical") * Time.deltaTime * 10;
-        //cam.GetComponent<Camera>().orthographicSize = Mathf.Clamp(cam.GetComponent<Camera>().orthographicSize - leftStickHorizontal, swarmModel.desiredSeparation*2, swarmModel.desiredSeparation*10);
+        cam.GetComponent<Camera>().orthographicSize = Mathf.Lerp(cam.GetComponent<Camera>().orthographicSize, swarmModel.desiredSeparation * 3, Time.deltaTime * 2);
     }
 
     void updateDroneView()
@@ -105,7 +110,7 @@ public class CameraMovement : MonoBehaviour
 
         updateTDView();
 
-        camMinimap.GetComponent<Camera>().orthographicSize = Mathf.Clamp(camMinimap.GetComponent<Camera>().orthographicSize + heightChange, swarmModel.desiredSeparation*2, swarmModel.desiredSeparation*5);
+        camMinimap.GetComponent<Camera>().orthographicSize = swarmModel.desiredSeparation * 10;
         cam.transform.position = new Vector3(embodiedDrone.transform.position.x, heightCamera, embodiedDrone.transform.position.z);
     }
 
@@ -114,8 +119,6 @@ public class CameraMovement : MonoBehaviour
         state = "TDView";
         minimap.SetActive(false);
         yield return new WaitForSeconds(0.01f);
-       
-       // cam.GetComponent<Camera>().orthographicSize = heightCamera;
       
         while(CameraMovement.embodiedDrone == null)
         {
@@ -136,16 +139,23 @@ public class CameraMovement : MonoBehaviour
         {
             if(embodiedDrone == null)
             {
-                Vector3 forwardDroneC = lastEmbodiedDrone.transform.forward;
-                forwardDroneC.y = 0;
+                if(lastEmbodiedDrone != null)
+                {
+                    Vector3 forwardDroneC = lastEmbodiedDrone.transform.forward;
+                    forwardDroneC.y = 0;
 
-                print(forwardDroneC);
+                    print(forwardDroneC);
 
-                cam.transform.position = new Vector3(lastEmbodiedDrone.transform.position.x, heightCamera, lastEmbodiedDrone.transform.position.z);
-                cam.transform.up = forwardDroneC;
-                
-                StartCoroutine(TDView());
-                yield break;
+                    cam.transform.position = new Vector3(lastEmbodiedDrone.transform.position.x, heightCamera, lastEmbodiedDrone.transform.position.z);
+                    cam.transform.up = forwardDroneC;
+                    
+                    StartCoroutine(TDView());
+                    yield break;
+                }else // been a crash
+                {
+                    StartCoroutine(TDView());
+                    yield break;
+                }
             }
             
             

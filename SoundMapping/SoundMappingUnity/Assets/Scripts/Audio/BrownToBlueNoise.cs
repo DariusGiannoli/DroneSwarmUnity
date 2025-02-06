@@ -1,6 +1,7 @@
 using UnityEngine;
 using System;
 using System.Collections;
+using System.Data.Common;
 
 [RequireComponent(typeof(AudioSource))]
 public class BrownToBlueNoise : MonoBehaviour
@@ -16,29 +17,46 @@ public class BrownToBlueNoise : MonoBehaviour
 
     public float animationDuration = 1f;
 
+    Coroutine coroutine;
+
 
     
     public float swarmBlend
     {
         get
         {
-            return (swarmModel.desiredSeparation-1)/(10-1);
+            return (swarmModel.desiredSeparation-MigrationPointController.minSpreadness)/(MigrationPointController.maxSpreadness-MigrationPointController.minSpreadness);
         }
     }
 
     public bool isPlayed = false;
 
+    private bool isAnimating 
+    {
+        get
+        {
+            return coroutine != null;
+        }
+    }
+
+    private AudioSource _audioSource;
+
     float realBlend 
     {
         get
         {
+            if(isAnimating)
+            {
+                return blend;
+            }
+
             if (isPlayed)
             {
-                return swarmBlend;
+                return 1-swarmBlend;
             }
             else
             {
-                return blend;
+                return 1-blend;
             }
         }
     }
@@ -57,18 +75,57 @@ public class BrownToBlueNoise : MonoBehaviour
     private System.Random _rng;
 
     bool isPlaying = true;
+    public bool isShrinking = false;
+
+
+
+    private float _currentVolume = 0f;  // starts off silent
+    public float fadeSpeed = 3f;       // how fast to fade in/out
+    float targetAnimation = 0f;
 
     void Awake()
     {
         // Initialize our System.Random with a seed (optional)
         _rng = new System.Random(); // or specify a seed, e.g. (1234)
         this.GetComponent<AudioSource>().enabled = true;
-    }
 
+        _audioSource = GetComponent<AudioSource>();
+    }
 
     void Update()
     {
+        float axisValue = Mathf.Abs(Input.GetAxis("LR"));
+        float threshold = 0.01f;
 
+        // Decide on our target volume:
+        float targetVolume = (axisValue > threshold) ? 1f : 0f;
+        targetVolume = targetAnimation == 0 ? targetVolume : targetAnimation;
+
+        // Smoothly move currentVolume → targetVolume:
+        _currentVolume = Mathf.Lerp(_currentVolume, targetVolume, Time.deltaTime * fadeSpeed);
+
+        // Handle shrinking state
+        if (axisValue > threshold)
+        {
+            isShrinking = true;
+            StopCoroutine("ResetShrinking");
+            // stop any shrinking
+            if (coroutine != null)
+            {
+                StopCoroutine(coroutine);
+                targetAnimation = 0f;
+                coroutine = null;
+            }
+        }
+        else if (!IsInvoking("ResetShrinking"))
+        {
+            Invoke("ResetShrinking", 0.5f);
+        }
+    }
+
+    void ResetShrinking()
+    {
+        isShrinking = false;
     }
     void OnApplicationQuit()
     {
@@ -84,35 +141,33 @@ public class BrownToBlueNoise : MonoBehaviour
         for (int i = 0; i < data.Length; i += channels)
         {
             if (!isPlaying)
-            {
                 return;
-            }
-            // ----- 1) Generate a white noise sample -----
-            float white = NextFloat() * 2f - 1f; 
 
-            // ----- 2) Generate Brown Noise Sample (integration) -----
+            // 1) Generate white noise
+            float white = NextFloat() * 2f - 1f;
+
+            // 2) Brown noise (integrator)
             _brownSample += white * BrownStep;
             _brownSample = Mathf.Clamp(_brownSample, -BrownClamp, BrownClamp);
             float brown = _brownSample;
 
-            // ----- 3) Generate Blue Noise Sample (differentiation) -----
+            // 3) Blue noise (differentiator)
             float blue = (white - _lastWhite) * BlueGain;
             _lastWhite = white;
 
-            // ----- 4) Blend between Brown and Blue noise -----
-            float sample = Mathf.Lerp(brown, blue, blend);
+            // 4) Blend between Brown and Blue
+            float sample = Mathf.Lerp(brown, blue, realBlend);
 
-            // Write the same sample to each channel
+            // 5) Multiply by our smoothly changing volume
+            sample *= _currentVolume;
+
+            // Write the final sample to each channel
             for (int c = 0; c < channels; c++)
             {
                 data[i + c] = sample;
             }
         }
     }
-
-    /// <summary>
-    /// Returns a float in [0,1) using System.Random, then cast to float.
-    /// </summary>
     private float NextFloat()
     {
         try
@@ -129,18 +184,28 @@ public class BrownToBlueNoise : MonoBehaviour
 
     public void Shrink()
     {
-        StartCoroutine(startAnimation(realBlend, Mathf.Clamp(blend - a, 0f, 1f), animationDuration));
+        if (coroutine == null && !isShrinking)
+        {
+            coroutine = StartCoroutine(startAnimation(realBlend, Mathf.Clamp(realBlend + a, 0f, 1f), animationDuration));
+        }
     }
 
     public void Expand()
     {
-        StartCoroutine(startAnimation(realBlend, Mathf.Clamp(blend + a, 0f, 1f), animationDuration));
+        if (coroutine == null && !isShrinking)
+        {
+            coroutine = StartCoroutine(startAnimation(realBlend, Mathf.Clamp(realBlend - a, 0f, 1f), animationDuration));
+        }
     }
 
     IEnumerator startAnimation(float start, float end, float duration)
     {
+        targetAnimation = 1f;
+
+
         float startTime = Time.time;
         float endTime = startTime + duration;
+
         float t = 0f;
         while (Time.time < endTime)
         {
@@ -148,6 +213,19 @@ public class BrownToBlueNoise : MonoBehaviour
             blend = Mathf.Lerp(start, end, t);
             yield return null;
         }
-        blend = start;
+        yield return new WaitForSeconds(0.2f);
+        targetAnimation = 0f;
+        coroutine = null;
     }
+
+    public static void AnalyseShrinking(float average)
+    {
+      //  print("Average: " + average);
+        if(average > 0.75)
+        {
+            BrownToBlueNoise brownToBlueNoise = GameObject.FindObjectOfType<BrownToBlueNoise>();
+            brownToBlueNoise.Shrink();
+        }
+    }
+
 }

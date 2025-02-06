@@ -21,7 +21,7 @@ public class MigrationPointController : MonoBehaviour
     public Vector3 deltaMigration = new Vector3(0, 0, 0); 
     public static Vector3 alignementVector = new Vector3(0, 0, 0);
 
-    public static float maxSpreadness = 10f;
+    public static float maxSpreadness = 5f;
     public static float minSpreadness = 1f;
 
     bool firstTime = true;
@@ -94,7 +94,7 @@ public class MigrationPointController : MonoBehaviour
                 }
             }
 
-            this.GetComponent<HapticsTest>().VibrateController(0.3f, 0.3f, 0.1f); // selection vibration
+            this.GetComponent<HapticsTest>().VibrateController(0.3f, 0.3f, 0.2f); // selection vibration
         }
 
         // button 0
@@ -164,6 +164,10 @@ public class MigrationPointController : MonoBehaviour
             up = body.up;
         }
 
+        CameraMovement.forward = forward;
+        CameraMovement.right = right;
+        CameraMovement.up = up;
+
         if(horizontal == 0 && vertical == 0 && heightControl == 0)
         {
             if(firstTime)
@@ -193,4 +197,10 @@ public class MigrationPointController : MonoBehaviour
 
         Debug.DrawRay(body.position, alignementVector, Color.red, 0.01f);
     }
+
+
+    void checkInterAgentDistance()
+    {
+    }
+
 }

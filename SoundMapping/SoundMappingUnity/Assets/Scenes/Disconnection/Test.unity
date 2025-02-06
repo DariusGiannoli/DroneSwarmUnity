@@ -322,10 +322,17 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   numberOfDronesLost: 4
+  options:
+  - Bip
+  - White Noise
+  - Bap
+  - Bop
+  - Beep
   droneSounds:
   - {fileID: 8300000, guid: 059736f197da6ac439fbc9f1ec1673c9, type: 3}
   - {fileID: 8300000, guid: 7c04b98d480d6b947872ab9859ff5cab, type: 3}
   - {fileID: 8300000, guid: b526d5de9ddaaeb448a20d2b9d651f3a, type: 3}
+  selectedOption: 1
   radiusMin: 30
   radiusMax: 60
 --- !u!1660057539 &9223372036854775807

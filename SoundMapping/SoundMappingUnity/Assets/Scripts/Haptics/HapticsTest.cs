@@ -45,10 +45,10 @@ public class HapticsTest : MonoBehaviour
     Dictionary<AnimatedActuator, IEnumerator> animatedActuators = new Dictionary<AnimatedActuator, IEnumerator>();
 
 
-    public bool gamePadConnected {
+    public static bool gamePadConnected {
         get
         {
-            return gamepad != null;
+            return currentGamepad != null;
         }
     }
 
@@ -56,20 +56,20 @@ public class HapticsTest : MonoBehaviour
 
     #region HapticsGamePad
 
-    private Gamepad gamepad;
-
+    private static Gamepad currentGamepad;
 
 
     #endregion
     
     public int sendEvery = 1000;
     // Update is called once per frame
+
+
     void Start()
     {
 
         //
-        int[] mappingOlfati = Haptics_Forces ? new int[] {35,32,31,1,2,5, 34, 33, 30, 0,3,4} : new int[] {}; 
-
+        int[] mappingOlfati = Haptics_Forces ? new int[] {60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72} : new int[] {}; 
         
         int [] velocityMapping = {}; //relative mvt of the swarm
 
@@ -86,7 +86,20 @@ public class HapticsTest : MonoBehaviour
             {33, 270},
             {32, 270},
             {35, 330},
-            {34, 330}
+            {34, 330},
+            {60, 15},
+            {61, 45},
+            {62, 75},
+            {63, 100},
+            {64, 125},
+            {65, 150},
+            {66, 175},
+            {67, 200},
+            {68, 230},
+            {69, 255},
+            {70, 285},
+            {71, 315},
+            {72, 345},
         };
 
 
@@ -121,14 +134,14 @@ public class HapticsTest : MonoBehaviour
             int adresse = angleMapping[i];
             int angle = angleMappingDict[adresse];
             actuatorsRange.Add(new PIDActuator(adresse:adresse, angle:angle,
-                                                    kp:0, kd:150, referencevalue:distanceDetection, 
+                                                    kp:0, kd:150, referencevalue:0, 
                                                     refresh:CloseToWallrefresherFunction));
         }
 
         for (int i = 0; i < mappingOlfati.Length; i++)
         {
             int adresse = mappingOlfati[i];
-            actuatorsVariables.Add(new RefresherActuator(adresse:adresse, angle:310/10 * adresse, refresh:ForceActuator));
+            actuatorsVariables.Add(new RefresherActuator(adresse:adresse, angle:angleMappingDict[adresse], refresh:ForceActuator));
         }
 
         for (int i = 0; i < crashMapping.Length; i++)
@@ -162,12 +175,12 @@ public class HapticsTest : MonoBehaviour
 
         StartCoroutine(HapticsCoroutine());
 
-        gamepad = Gamepad.current;
-        if (gamepad == null)
+        currentGamepad = Gamepad.current;
+        if (currentGamepad == null)
         {
             Debug.LogWarning("No gamepad connected.");
         }else {
-            gamepad.SetMotorSpeeds(0.0f, 0.0f);
+            currentGamepad.SetMotorSpeeds(0.0f, 0.0f);
         }
     }
 
@@ -175,15 +188,50 @@ public class HapticsTest : MonoBehaviour
     void Disable()
     {
         hapticsThread.Abort();
-        gamepad.SetMotorSpeeds(0, 0);
+        currentGamepad.SetMotorSpeeds(0, 0);
     }
     
     #region Gamepad Crash Prediction
     
+    private void OnEnable()
+    {
+        InputSystem.onDeviceChange += OnDeviceChange;
+        currentGamepad = Gamepad.current; // Store the currently connected gamepad (if any)
+    }
+
+    private void OnDisable()
+    {
+        InputSystem.onDeviceChange -= OnDeviceChange;
+    }
+
+    private void OnDeviceChange(InputDevice device, InputDeviceChange change)
+    {
+        if (device is Gamepad gamepad)
+        {
+            switch (change)
+            {
+                case InputDeviceChange.Added:
+                    Debug.Log("Controller Connected: " + gamepad.name);
+                    currentGamepad = gamepad;
+                    break;
+
+                case InputDeviceChange.Removed:
+                    Debug.Log("Controller Disconnected!");
+                    
+                    // Check if the removed device was the active gamepad
+                    if (currentGamepad == gamepad)
+                    {
+                        currentGamepad = null;
+                    }
+                    break;
+            }
+        }
+    }
     public void VibrateController(float leftMotor, float rightMotor, float duration)
     {
         if (gamePadConnected == false)
         {
+            currentGamepad = Gamepad.current;
             return;
         }
 
@@ -200,15 +248,16 @@ public class HapticsTest : MonoBehaviour
         {
             yield break;
         }
-        gamepad.SetMotorSpeeds(leftMotor, rightMotor);
+        currentGamepad.SetMotorSpeeds(leftMotor, rightMotor);
         yield return new WaitForSeconds(duration);
-        gamepad.SetMotorSpeeds(0, 0);
+        currentGamepad.SetMotorSpeeds(0, 0);
+        gamnePadCoroutine = null;
     }
 
 
     public void HapticsPrediction(Prediction pred)
     {
-        if (gamepad == null)
+        if (currentGamepad == null)
         {
             return;
         }
@@ -233,10 +282,12 @@ public class HapticsTest : MonoBehaviour
 
         if(bestFractionOfPath < 1) {
             if(Haptics_Controller) {
-                gamepad.SetMotorSpeeds(bestFractionOfPath, bestFractionOfPath);
+                currentGamepad.SetMotorSpeeds(bestFractionOfPath, bestFractionOfPath);
             }
         }else {
-            gamepad.SetMotorSpeeds(0, 0);
+            if(gamnePadCoroutine == null) {
+                currentGamepad.SetMotorSpeeds(0, 0);
+            }
         }
     } 
 
@@ -423,27 +474,22 @@ public class HapticsTest : MonoBehaviour
     
     void ForceActuator(RefresherActuator actuator)
     {   
-        if(CameraMovement.embodiedDrone != null) { //carefull change only return the Vector3
-            DroneFake main = CameraMovement.embodiedDrone.GetComponent<DroneController>().droneFake;
-            Vector3 forcesDir  = main.getHapticVector();
-       
-            float angle = Vector3.SignedAngle(forcesDir, CameraMovement.embodiedDrone.transform.forward, Vector3.up);
+        
+        List<Vector3> forces = swarmModel.swarmOlfatiForces;
+        actuator.dutyIntensity = 0;
+        actuator.frequency = 1;
+        foreach(Vector3 forcesDir in forces) {
+            float angle = Vector3.SignedAngle(forcesDir, CameraMovement.forward, -CameraMovement.up)-180;
             if(angle < 0) {
                 angle += 360;
             }
             
             float diff = Math.Abs(actuator.Angle - angle);
-            if(diff < 20) {
-                actuator.dutyIntensity = (int)(forcesDir.magnitude / 2);
+            if(diff < 30) {
+                actuator.dutyIntensity = Mathf.Max(actuator.dutyIntensity, (int)(forcesDir.magnitude / 2));
                 actuator.frequency = 2;
-                return;
             }
         }
-
-
-        actuator.dutyIntensity = 0;
-        actuator.frequency = 1;
-
     }
 
     #endregion
@@ -451,23 +497,21 @@ public class HapticsTest : MonoBehaviour
     #region ObstacleInRange
     void CloseToWallrefresherFunction(PIDActuator actuator)
     {
-        if(CameraMovement.embodiedDrone == null) { 
-            actuator.UpdateValue(distanceDetection);
-            return;
-        }
+        List<Vector3> forces = swarmModel.swarmObstacleForces;
 
-        float angle = actuator.Angle;
-        //make a ray and check if it hits something at 4m
-        Vector3 direction = Quaternion.Euler(0, angle, 0) * CameraMovement.embodiedDrone.transform.forward;
-        RaycastHit hit;
+        actuator.dutyIntensity = 0;
+        actuator.frequency = 1;
 
-        if(Physics.Raycast(CameraMovement.embodiedDrone.transform.position, direction, out hit, distanceDetection + swarmModel.droneRadius)) {
-            if(hit.collider.gameObject.tag == "Obstacle") {
-                float distance = Vector3.Distance(CameraMovement.embodiedDrone.transform.position, hit.point) - swarmModel.droneRadius;
-                actuator.UpdateValue(distance);
+        foreach(Vector3 forcesDir in forces) {
+            float angle = Vector3.SignedAngle(forcesDir, CameraMovement.forward, -CameraMovement.up)-180;
+            if(angle < 0) {
+                angle += 360;
             }
-        }else {
-            actuator.UpdateValue(distanceDetection);
+            
+            float diff = Math.Abs(actuator.Angle - angle);
+            if(diff < 35) {
+                actuator.UpdateValue(forcesDir.magnitude);
+            }
         }
     }
 
@@ -559,7 +603,6 @@ public class HapticsTest : MonoBehaviour
 
     #region NetworkActuators
 
-
     IEnumerator hapticAnimation(int oldActIntensity, Actuators newAct)
     {
         int startIntensity = oldActIntensity;
@@ -623,7 +666,7 @@ public class HapticsTest : MonoBehaviour
         }
 
         if(actuator.Angle == angleToMove) {
-            actuator.dutyIntensity = 10;
+            actuator.dutyIntensity = (int)Mathf.Min(10, Mathf.Max(3, score));
             actuator.frequency = 1;
             return;
         }
@@ -631,7 +674,7 @@ public class HapticsTest : MonoBehaviour
 
         if(score >= 10)
         {
-            actuator.dutyIntensity = 5;
+            actuator.dutyIntensity = 8;
             actuator.frequency = 1;
             return;
         }
@@ -708,7 +751,7 @@ public class PIDActuator : Actuators // creae Ki
         float derivative = newValue - lastValue;
 
         lastValue = newValue;
-        dutyIntensity = (int)(Kp * error - Kd * derivative);
+        dutyIntensity = Mathf.Max((int)(Kp * error - Kd * derivative), dutyIntensity);
         frequency = 4;
     }
 
@@ -761,5 +804,35 @@ public class Actuators
     public virtual void update()
     {
         return;
+    }
+}
+
+
+public class GamepadMonitor : MonoBehaviour
+{
+    private void OnEnable()
+    {
+        InputSystem.onDeviceChange += OnDeviceChange;
+    }
+
+    private void OnDisable()
+    {
+        InputSystem.onDeviceChange -= OnDeviceChange;
+    }
+
+    private void OnDeviceChange(InputDevice device, InputDeviceChange change)
+    {
+        if (device is Gamepad)
+        {
+            switch (change)
+            {
+                case InputDeviceChange.Added:
+                    Debug.Log("Gamepad Connected: " + device.name);
+                    break;
+                case InputDeviceChange.Removed:
+                    Debug.Log("Gamepad Disconnected!");
+                    break;
+            }
+        }
     }
 }

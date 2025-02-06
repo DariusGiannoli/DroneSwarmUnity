@@ -107,18 +107,10 @@ public class DroneController : MonoBehaviour
     void UpdateNormal()
     {
         Vector3 positionDrome = droneFake.position;
-        //make a ray to check the height of the drone with the obstacle under it
-      //  Ray ray = new Ray(positionDrome, Vector3.down);
-       // RaycastHit hit;
-      //  if (Physics.Raycast(ray, out hit, 1000))
-      //  {
-     //       positionDrome.y = hit.point.y + distanceToHeigth;
-     //   }
 
-        //update the position of the drone
         transform.position = positionDrome;
         updateColor();
-        updateSound();
+       // updateSound();
         droneAnimate();
     }
 

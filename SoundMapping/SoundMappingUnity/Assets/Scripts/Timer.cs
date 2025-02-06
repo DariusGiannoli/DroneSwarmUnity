@@ -11,16 +11,17 @@ public class Timer : MonoBehaviour
     // Existing variables
     public TextMeshProUGUI timerText;
     public TextMeshProUGUI timerTextNetwork;
-    public TextMeshProUGUI droneDied;
     public TextMeshProUGUI leaderBoard;
     public Image TCPserver;
 
     public Image Bluetooth;
+
+    public Image Controller;
     public float elapsedTime = 0f;
     public float elapsedTimeNetwork = 0f;
     private Coroutine timerCoroutine;
     private Coroutine timerCoroutineNetwork;
-    public int numberDroneDied = 0;
+    public static int numberDroneDied = 0;
 
     public TMP_InputField nameInputField; // InputField for the player's name
 
@@ -70,6 +71,8 @@ public class Timer : MonoBehaviour
         elapsedTime = 0;
         elapsedTimeNetwork = 0;
         numberDroneDied = 0;
+
+
         UpdateTimerDisplay();
         UpdateTimerDisplayNetwork();
 
@@ -77,8 +80,6 @@ public class Timer : MonoBehaviour
         StopTimer();
 
         ShowLeaderboard();
-
-        droneDied.text = "Drone died : " + numberDroneDied.ToString();
     }
 
     public void StartTimer()
@@ -96,6 +97,7 @@ public class Timer : MonoBehaviour
         {
             TCPserver.color = TcpSender.tcpserveron ? Color.green : Color.red;
             Bluetooth.color = TcpSender.bluetoothon ? Color.green : Color.red;
+            Controller.color = HapticsTest.gamePadConnected ? Color.green : Color.red;
             yield return new WaitForSeconds(0.5f);
         }
     }
@@ -103,7 +105,6 @@ public class Timer : MonoBehaviour
     public void DroneDiedCallback()
     {
         numberDroneDied++;
-        droneDied.text = "Drone died : " + numberDroneDied.ToString();
         elapsedTime += 5;
     }
 

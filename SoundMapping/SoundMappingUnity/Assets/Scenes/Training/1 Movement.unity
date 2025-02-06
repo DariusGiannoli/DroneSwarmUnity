@@ -3655,6 +3655,11 @@ MonoBehaviour:
   dutyIntensity: 3
   frequencyInit: 1
   distanceDetection: 2
+  Haptics_Obstacle: 0
+  Haptics_Network: 0
+  Haptics_Forces: 0
+  Haptics_Crash: 0
+  Haptics_Controller: 0
   sendEvery: 200
 --- !u!114 &1487678753
 MonoBehaviour:
@@ -3715,6 +3720,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   saveData: 0
+  needToSpawn: 1
   dronePrefab: {fileID: 2904365767565868958, guid: 8665b86975cd58e49a996d130ca17994, type: 3}
   numDrones: 20
   spawnRadius: 3

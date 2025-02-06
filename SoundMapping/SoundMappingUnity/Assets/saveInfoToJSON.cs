@@ -119,3 +119,28 @@ public class DroneState
         network.Add(networkS);
     }
 }
+
+
+public class DataSave
+{
+    public List<Vector3> olfatiData = new List<Vector3>();
+    public List<Vector3> obstacleData = new List<Vector3>();
+
+    public List<Vector3> velocityData = new List<Vector3>();
+    public List<Vector3> positionData = new List<Vector3>();
+    public List<Vector3> forceData = new List<Vector3>();
+
+
+    public void saveData(DroneFake data)
+    {
+        if(data.embodied)
+        {
+            olfatiData.Add(data.lastOlfati);
+            obstacleData.Add(data.lastObstacle);
+            velocityData.Add(data.velocity);
+            positionData.Add(data.position);
+            forceData.Add(data.acceleration);
+        }
+    }
+}
+

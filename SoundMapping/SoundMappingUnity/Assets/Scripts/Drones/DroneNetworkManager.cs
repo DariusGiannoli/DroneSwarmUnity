@@ -100,26 +100,6 @@ public class DroneNetworkManager : MonoBehaviour
         this.GetComponent<Timer>().StopTimerNetwork();
     }
 
-    void OnDrawGizmos()
-    {
-        if (adjacencyList == null) return;
-
-        foreach (var drone in adjacencyList.Keys)
-        {
-            foreach (var neighbor in adjacencyList[drone])
-            {
-                if(CameraMovement.embodiedDrone == drone || CameraMovement.embodiedDrone == neighbor)
-                {
-                    Gizmos.color = Color.red;
-                }
-                else
-                {
-                    Gizmos.color = Color.green;
-                }
-                Gizmos.DrawLine(drone.transform.position, neighbor.transform.position);
-            }
-        }
-    }
 
     void BuildNetwork()
     {
