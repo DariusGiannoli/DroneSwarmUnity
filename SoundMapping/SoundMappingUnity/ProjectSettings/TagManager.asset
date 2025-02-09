@@ -14,6 +14,8 @@ TagManager:
   - StartCollider
   - EndCollider
   - BodyMaterial
+  - Config
+  - SpawnLess
   layers:
   - Default
   - TransparentFX

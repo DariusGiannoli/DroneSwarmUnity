@@ -118,7 +118,7 @@ public class ArmyShrinkInspector : Editor
 }
 
 
-[CustomEditor(typeof(swarmDisconnection))]
+[CustomEditor(typeof(SwarmDisconnection))]
 public class swarmDisconnectionInspector : Editor
 {
     // Keep track of scroll position in the inspector
@@ -130,7 +130,7 @@ public class swarmDisconnectionInspector : Editor
         // Draw default inspector fields
         DrawDefaultInspector();
 
-        swarmDisconnection myScript = (swarmDisconnection)target;
+        SwarmDisconnection myScript = (SwarmDisconnection)target;
         EditorGUILayout.BeginVertical();
 
         // Example buttons
@@ -185,7 +185,7 @@ public class swarmDisconnectionInspector : Editor
         // Handle the selection change
         Debug.Log("Selected option changed to: " + selected);
         // Add any additional logic you need here
-        swarmDisconnection myScript = (swarmDisconnection)target;
+        SwarmDisconnection myScript = (SwarmDisconnection)target;
         myScript.StopAndPlaySound(selected);
     }
 }

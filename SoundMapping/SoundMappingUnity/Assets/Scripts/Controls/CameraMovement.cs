@@ -31,12 +31,25 @@ public class CameraMovement : MonoBehaviour
 
     public float rotationSpeed = 80;
 
-    public bool minimapActive = false;
+    public bool minimapActive
+    {
+        get
+        {
+            return LevelConfiguration._MiniMap;
+        }
+    }
 
 
     public static Vector3 forward = Vector3.forward;
     public static Vector3 right = Vector3.right;
     public static Vector3 up = Vector3.up;
+    private bool control_rotation
+    {
+        get
+        {
+            return this.GetComponent<MigrationPointController>().control_rotation;
+        }
+    }
 
     void Start()
     {
@@ -91,18 +104,16 @@ public class CameraMovement : MonoBehaviour
         }
 
 
-        float rightStickHorizontal = Input.GetAxis("JoystickRightHorizontal");
+        float rightStickHorizontal = control_rotation ? Input.GetAxis("JoystickRightHorizontal") : 0;
         // applz rotation to the camera with lerp
         cam.transform.Rotate(-Vector3.forward, rightStickHorizontal * Time.deltaTime * rotationSpeed);
 
-       // float leftStickHorizontal = Input.GetAxis("JoystickRightVertical") * Time.deltaTime * 10;
-        cam.GetComponent<Camera>().orthographicSize = Mathf.Lerp(cam.GetComponent<Camera>().orthographicSize, swarmModel.desiredSeparation * 3, Time.deltaTime * 2);
+        cam.GetComponent<Camera>().orthographicSize = Mathf.Lerp(cam.GetComponent<Camera>().orthographicSize, Mathf.Max(swarmModel.desiredSeparation * 3, 5), Time.deltaTime * 2);
     }
 
     void updateDroneView()
     {
-        float rightStickHorizontal = Input.GetAxis("JoystickRightHorizontal");
-        float heightChange = Input.GetAxis("JoystickRightVertical") * Time.deltaTime * 10;
+        float rightStickHorizontal = control_rotation ? Input.GetAxis("JoystickRightHorizontal") : 0;
 
         // applz rotation to the embodied drone with lerp
         embodiedDrone.transform.Rotate(Vector3.up, rightStickHorizontal * Time.deltaTime * rotationSpeed);
@@ -110,7 +121,7 @@ public class CameraMovement : MonoBehaviour
 
         updateTDView();
 
-        camMinimap.GetComponent<Camera>().orthographicSize = swarmModel.desiredSeparation * 10;
+        camMinimap.GetComponent<Camera>().orthographicSize = swarmModel.desiredSeparation * 3;
         cam.transform.position = new Vector3(embodiedDrone.transform.position.x, heightCamera, embodiedDrone.transform.position.z);
     }
 

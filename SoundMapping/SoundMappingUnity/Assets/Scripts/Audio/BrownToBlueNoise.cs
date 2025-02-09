@@ -11,6 +11,7 @@ public class BrownToBlueNoise : MonoBehaviour
     public float blend = 0.5f;
 
 
+
     [Header("Moving range for Animation")]
     [Range(0f, 1f)]
     public float a = 0.1f;
@@ -18,6 +19,9 @@ public class BrownToBlueNoise : MonoBehaviour
     public float animationDuration = 1f;
 
     Coroutine coroutine;
+
+    public AudioClip audioClipShrink;
+    public AudioClip audioClipExpand;
 
 
     
@@ -40,6 +44,7 @@ public class BrownToBlueNoise : MonoBehaviour
     }
 
     private AudioSource _audioSource;
+    private AudioSource audioSourceShrink;
 
     float realBlend 
     {
@@ -83,6 +88,16 @@ public class BrownToBlueNoise : MonoBehaviour
     public float fadeSpeed = 3f;       // how fast to fade in/out
     float targetAnimation = 0f;
 
+    bool spreadness 
+    {
+        get
+        {
+            return gm.GetComponent<MigrationPointController>().control_spreadness;
+        }
+    }
+
+    private GameObject gm;
+
     void Awake()
     {
         // Initialize our System.Random with a seed (optional)
@@ -90,10 +105,29 @@ public class BrownToBlueNoise : MonoBehaviour
         this.GetComponent<AudioSource>().enabled = true;
 
         _audioSource = GetComponent<AudioSource>();
+        audioSourceShrink = this.transform.GetChild(0).GetComponent<AudioSource>();
+
+
+        //find with tag
+        gm = GameObject.FindGameObjectWithTag("GameManager");
+
     }
 
     void Update()
     {
+        if(!LevelConfiguration._Audio_spreadness && !SwarmDisconnection.hasChanged)
+        {
+            _audioSource.enabled = false;
+            audioSourceShrink.enabled = false;
+            return;
+        }
+
+        _audioSource.enabled = LevelConfiguration._Audio_spreadness;
+        audioSourceShrink.enabled = LevelConfiguration._Audio_spreadness;
+
+
+
+
         float axisValue = Mathf.Abs(Input.GetAxis("LR"));
         float threshold = 0.01f;
 
@@ -186,6 +220,11 @@ public class BrownToBlueNoise : MonoBehaviour
     {
         if (coroutine == null && !isShrinking)
         {
+            //check if close to fully shrunk
+            if (realBlend < 0.1f)
+            {
+                return;
+            }
             coroutine = StartCoroutine(startAnimation(realBlend, Mathf.Clamp(realBlend + a, 0f, 1f), animationDuration));
         }
     }
@@ -200,32 +239,52 @@ public class BrownToBlueNoise : MonoBehaviour
 
     IEnumerator startAnimation(float start, float end, float duration)
     {
-        targetAnimation = 1f;
+        audioSourceShrink.clip = audioClipShrink;
+        audioSourceShrink.loop = false;
+        audioSourceShrink.Play();
 
-
-        float startTime = Time.time;
-        float endTime = startTime + duration;
-
-        float t = 0f;
-        while (Time.time < endTime)
+        while (audioSourceShrink.isPlaying)
         {
-            t = (Time.time - startTime) / duration;
-            blend = Mathf.Lerp(start, end, t);
             yield return null;
         }
+
         yield return new WaitForSeconds(0.2f);
-        targetAnimation = 0f;
         coroutine = null;
+
+
+        // targetAnimation = 1f;
+
+
+        // float startTime = Time.time;
+        // float endTime = startTime + duration;
+
+        // float t = 0f;
+        // while (Time.time < endTime)
+        // {
+        //     t = (Time.time - startTime) / duration;
+        //     blend = Mathf.Lerp(start, end, t);
+        //     yield return null;
+        // }
+        // yield return new WaitForSeconds(0.2f);
+        // targetAnimation = 0f;
+        // coroutine = null;
     }
 
     public static void AnalyseShrinking(float average)
     {
-      //  print("Average: " + average);
-        if(average > 0.75)
+        if(average > 0.75 && !SwarmDisconnection.hasChanged)
         {
             BrownToBlueNoise brownToBlueNoise = GameObject.FindObjectOfType<BrownToBlueNoise>();
             brownToBlueNoise.Shrink();
         }
     }
 
+
+
+    void PlaySound(AudioClip audioClip)
+    {
+        _audioSource.clip = audioClip;
+        _audioSource.loop = false;
+        _audioSource.Play();
+    }
 }

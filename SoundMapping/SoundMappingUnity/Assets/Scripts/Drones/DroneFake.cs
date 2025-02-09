@@ -190,6 +190,10 @@ public class DroneFake
 
         // Constants
         float dRef = desiredSeparation;
+        if(this.layer >= 3)
+        {
+            dRef = Mathf.Max(desiredSeparation*(0.8f - 0.2f*((float)layer - 3f)), 1);
+        }
         float dRefObs = avoidanceRadius;
 
         float a = alpha;
@@ -214,14 +218,18 @@ public class DroneFake
 
         if (embodiedDrone != null)
         {
-            basePriority = 0; 
+            basePriority = 1; 
         }
 
-        basePriority = 0;
+        basePriority = 1;
+
+        float totalPriority = 0;
 
         foreach (DroneFake neighbour in neighbors)
         {
             float neighborPriority = getPriority(basePriority, neighbour);
+            totalPriority += neighborPriority;
+
 
             Vector3 posRelD = neighbour.position - position;
             float distD = posRelD.magnitude - 2*droneRadius;
@@ -231,9 +239,14 @@ public class DroneFake
             }
             accCoh += GetCohesionForce(distD, dRef, a, b, c, r0Coh, delta, posRelD) * neighborPriority;
 
-           accVel += cVm * (neighbour.velocity - velocity) / (neighbors.Count + neighborPriority -1) * neighborPriority;
+           accVel += (neighbour.velocity - velocity) * neighborPriority;
         }
-        accVel += cVm * (vRef - velocity) / 2;
+
+        accVel *= cVm / totalPriority; // accVel caused by the neighbors
+        if(this.layer <= 2)
+        {
+            accVel = (accVel + cVm * (vRef - velocity)) / 2; // 50% of the velocity matching force
+        }
 
         // Obstacle avoidance
         Vector3 accObs = Vector3.zero;
@@ -288,22 +301,17 @@ public class DroneFake
         float neighborPriority = basePriority;
         if (neighbour.layer == 1) // embodied drone
         {
-            neighborPriority = Mathf.Max((int)(PRIORITYWHENEMBODIED/3),5);
+            neighborPriority = Mathf.Max((int)(PRIORITYWHENEMBODIED/2),4);
             return neighborPriority;
         }
-        
-        if(neighbour.layer == 2) // neighbor to embodied
+        else if(neighbour.layer == 2) // neighbor to embodied
         {
-            neighborPriority = Mathf.Max((int)(PRIORITYWHENEMBODIED/10),3);
+            neighborPriority = Mathf.Max((int)(PRIORITYWHENEMBODIED/4),2);
         }else if(neighbour.layer == 3)
         {
-            neighborPriority = Mathf.Max((int)(PRIORITYWHENEMBODIED/20), 2);
-        }else if(neighbour.layer == 4)
-        {
-            neighborPriority = 1f;
-        }else if(neighbour.layer == 0) // disconnected drone from the network
-        {
-            neighborPriority = 1f;
+            neighborPriority = Mathf.Max((int)(PRIORITYWHENEMBODIED/8), 1);
+        }else {
+            neighborPriority = 0.5f;
         }
 
         return neighborPriority;

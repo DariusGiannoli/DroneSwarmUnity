@@ -22,11 +22,44 @@ public class HapticsTest : MonoBehaviour
     List<Actuators> actuatorsRange = new List<Actuators>();
 
     #endregion
-    public bool Haptics_Obstacle = false;
-    public bool Haptics_Network = false;
-    public bool Haptics_Forces = false;
-    public bool Haptics_Crash = false;
-    public bool Haptics_Controller = false;
+    public bool Haptics_Obstacle
+    {
+        get
+        {
+            return LevelConfiguration._Haptics_Obstacle;
+        }
+    }
+    public bool Haptics_Network
+    {
+        get
+        {
+            return LevelConfiguration._Haptics_Network;
+        }
+    }
+    public bool Haptics_Forces
+    {
+        get
+        {
+            return LevelConfiguration._Haptics_Forces;
+        }
+    }
+    public bool Haptics_Crash
+    {
+        get
+        {
+            return LevelConfiguration._Haptics_Crash;
+        }
+    }
+    public bool Haptics_Controller
+    {
+        get
+        {
+            return LevelConfiguration._Haptics_Controller;
+        }
+    }
+    
+    
+    
     List<Actuators> actuatorsBelly = new List<Actuators>();
 
     List<Actuators> lastDefined = new List<Actuators>();
@@ -110,24 +143,8 @@ public class HapticsTest : MonoBehaviour
         int[] crashMapping =  Haptics_Crash ? new int[] {0,1,2,3,4,5,6}  : new int[] {};;
         
         
-        int[] networkMapping = {60, 61, 62, 63, 64, 65};
-        networkMapping = new int[] {};
-        
         //layers movement on arm mapping
         int[] movingPlaneMapping =  Haptics_Network ? new int[] {90, 91, 92, 93, 94, 95, 96, 97, 98, 99} : new int[] {};
-
-
-        for (int i = 0; i < networkMapping.Length; i++)
-        {
-            int adresse = networkMapping[i];
-            int level = 0;
-            if(i < 2) {
-                level = 1;
-            }else if (i < 4) {
-                level = 2;
-            }
-            actuatorNetwork.Add(new RefresherActuator(adresse:adresse, level, refresh:getActuatorNetwork));
-        }
 
         for (int i = 0; i < angleMapping.Length; i++)
         {
@@ -375,7 +392,6 @@ public class HapticsTest : MonoBehaviour
         }
     }
 
-    
     void animationHandler(int start, AnimatedActuator actuator)
     {
         if(animatedActuators.ContainsKey(actuator)) {
@@ -389,65 +405,65 @@ public class HapticsTest : MonoBehaviour
     }
 
 
-    #region NetworkActuators
+    // #region NetworkActuators
     
-    void getActuatorNetwork(RefresherActuator actuator)
-    {
-        if(CameraMovement.embodiedDrone == null) {
-            actuator.dutyIntensity = 0;
-            actuator.frequency = 1;
-            return;
-        }
+    // void getActuatorNetwork(RefresherActuator actuator)
+    // {
+    //     if(CameraMovement.embodiedDrone == null) {
+    //         actuator.dutyIntensity = 0;
+    //         actuator.frequency = 1;
+    //         return;
+    //     }
 
-        Dictionary<int, int> neighbors = swarmModel.network.getLayersConfiguration();
+    //     Dictionary<int, int> neighbors = swarmModel.network.getLayersConfiguration();
 
-        int totalNeighbors = 0;
-        int firstOrder = 0;
-        foreach (KeyValuePair<int, int> neighbor in neighbors)
-        {
-            totalNeighbors += neighbor.Value;
-        }
+    //     int totalNeighbors = 0;
+    //     int firstOrder = 0;
+    //     foreach (KeyValuePair<int, int> neighbor in neighbors)
+    //     {
+    //         totalNeighbors += neighbor.Value;
+    //     }
 
-        // first order is the key = 1
-        if (neighbors.ContainsKey(2))
-        {
-            firstOrder = neighbors[2];
-        }
+    //     // first order is the key = 1
+    //     if (neighbors.ContainsKey(2))
+    //     {
+    //         firstOrder = neighbors[2];
+    //     }
 
-        float proportion = (float)firstOrder / (float)totalNeighbors;
+    //     float proportion = (float)firstOrder / (float)totalNeighbors;
 
-        if(actuator.Angle == 0)
-        {
-            if(proportion < 0.65f) { 
-                actuator.dutyIntensity = 5;
-                actuator.frequency = 1;
-                return;
-            }
-        }
-        else if(actuator.Angle == 1)
-        {
-            if(proportion < 0.4f) {
-                actuator.dutyIntensity = 5;
-                actuator.frequency = 1;
-                return;
-            }
-        }
-        else
-        {
-            if(proportion < 0.01f) {
-                actuator.dutyIntensity = 5;
-                actuator.frequency = 1;
-                return;
-            }
-        }
+    //     if(actuator.Angle == 0)
+    //     {
+    //         if(proportion < 0.65f) { 
+    //             actuator.dutyIntensity = 5;
+    //             actuator.frequency = 1;
+    //             return;
+    //         }
+    //     }
+    //     else if(actuator.Angle == 1)
+    //     {
+    //         if(proportion < 0.4f) {
+    //             actuator.dutyIntensity = 5;
+    //             actuator.frequency = 1;
+    //             return;
+    //         }
+    //     }
+    //     else
+    //     {
+    //         if(proportion < 0.01f) {
+    //             actuator.dutyIntensity = 5;
+    //             actuator.frequency = 1;
+    //             return;
+    //         }
+    //     }
 
-        actuator.dutyIntensity = 0;
-        actuator.frequency = 1;
+    //     actuator.dutyIntensity = 0;
+    //     actuator.frequency = 1;
 
 
-    }
+    // }
     
-    #endregion
+    // #endregion
 
     #region ForceActuators
 
@@ -623,9 +639,9 @@ public class HapticsTest : MonoBehaviour
 
     }
 
+    int delta = 3;
     IEnumerator hapticAnimation(Actuators newAct)
     {
-        print("Animation started on " + newAct.Adresse);
         int startIntensity = 0;
         int endIntensity = newAct.dutyIntensity;
 
@@ -633,26 +649,24 @@ public class HapticsTest : MonoBehaviour
 
         while(currentIntensity != endIntensity) {
             if(currentIntensity < endIntensity) {
-                currentIntensity++;
+                currentIntensity = currentIntensity + delta > endIntensity ? endIntensity : currentIntensity + delta;
             }else {
-                currentIntensity--;
+                currentIntensity = currentIntensity - delta < endIntensity ? endIntensity : currentIntensity - delta;
             }
-
             VibraForge.SendCommand(newAct.Adresse, (int)currentIntensity == 0 ? 0:1, (int)currentIntensity, (int)newAct.frequency);
             yield return new WaitForSeconds(0.1f);
         }
 
-        print("Animation ended on " + newAct.Adresse);
     }
     void movingPlaneRefresher(RefresherActuator actuator)
     {
-        if(CameraMovement.embodiedDrone == null) {
-            actuator.dutyIntensity = 0;
-            actuator.frequency = 1;
-            return;
-        }
+        // if(CameraMovement.embodiedDrone == null) {
+        //     actuator.dutyIntensity = 0;
+        //     actuator.frequency = 1;
+        //     return;
+        // }
 
-        float score = NetworkRepresentation.networkScore;
+        float score = swarmModel.swarmConnectionScore;
         int resol = 10;
 
         score*=resol;
@@ -666,18 +680,18 @@ public class HapticsTest : MonoBehaviour
         }
 
         if(actuator.Angle == angleToMove) {
-            actuator.dutyIntensity = (int)Mathf.Min(10, Mathf.Max(3, score));
-            actuator.frequency = 1;
+            actuator.dutyIntensity = (int)Mathf.Min(10, Mathf.Max(6, score));
+            actuator.frequency = 3;
             return;
         }
 
 
-        if(score >= 10)
-        {
-            actuator.dutyIntensity = 8;
-            actuator.frequency = 1;
-            return;
-        }
+        // if(score >= 10)
+        // {
+        //     actuator.dutyIntensity = 8;
+        //     actuator.frequency = 3;
+        //     return;
+        // }
 
 
         actuator.dutyIntensity = 0;

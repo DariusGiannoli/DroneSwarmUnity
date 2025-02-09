@@ -175,9 +175,9 @@ public class NetworkCreator
             int currentLayer = currentDrone.layer;
             if (adjacencyList.ContainsKey(currentDrone))
             {
-                foreach (var neighbor in adjacencyList[currentDrone])
+                foreach (DroneFake neighbor in adjacencyList[currentDrone])
                 {
-                    if (neighbor.layer == 0)
+                    if (neighbor.layer == 0) // unasigned drone 
                     {
                         neighbor.layer = currentLayer + 1;
                         queue.Enqueue(neighbor);
@@ -185,6 +185,7 @@ public class NetworkCreator
                 }
             }
         }
+
     }
 
     public Dictionary<int, int> getLayersConfiguration()

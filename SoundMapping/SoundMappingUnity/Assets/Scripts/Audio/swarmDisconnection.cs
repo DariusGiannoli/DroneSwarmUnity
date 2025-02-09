@@ -1,8 +1,9 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Video;
 
-public class swarmDisconnection : MonoBehaviour
+public class SwarmDisconnection : MonoBehaviour
 {
     // Start is called before the first frame update
     public int numberOfDronesLost = 4;
@@ -34,6 +35,16 @@ public class swarmDisconnection : MonoBehaviour
 
     private static GameObject gm;
 
+    public static bool hasChanged = false;
+
+    bool playSpreadness
+    {
+        get
+        {
+            return LevelConfiguration._Audio_spreadness;
+        }
+    }
+
 
     void Start()
     {
@@ -54,57 +65,100 @@ public class swarmDisconnection : MonoBehaviour
             }
         }
 
-        if(dronesIDAnalysis.Count > dronesID.Count) // if more drone than before retsrta animation
+        //chedck if every element of dronesIDAnalysis is in dronesID
+        bool changeOfList = false;
+        if(dronesIDAnalysis.Count != dronesID.Count)
         {
-            print("More drones disconnected");
-             gm.GetComponent<swarmDisconnection>().StopAndPlaySound(0);
+            changeOfList = true;
+        }
+        else
+        {
+            foreach (int id in dronesIDAnalysis)
+            {
+                if (!dronesID.Contains(id))
+                {
+                    changeOfList = true;
+                    break;
+                }
+            }
         }
         dronesID = dronesIDAnalysis;
+
+        if(changeOfList)
+        {
+            hasChanged = true;
+            gm.GetComponent<SwarmDisconnection>().CancelInvoke("ResetHasChanged");
+            gm.GetComponent<SwarmDisconnection>().Invoke("ResetHasChanged", 3f);
+            
+            
+            if(dronesIDAnalysis.Count == 0)
+            {
+                print("Stop sound");
+                gm.GetComponent<SwarmDisconnection>().StopSound();
+            }
+            else
+            {
+                print("Disconnection detected");
+                gm.GetComponent<SwarmDisconnection>().StopAndPlaySound(0);
+            }
+        }
         
+    }
+
+    public void ResetHasChanged()
+    {
+        hasChanged = false;
     }
 
     public void StopAndPlaySound(int clipIndex)
     {
         if (!playingSound) // if he wasnrt playing any sound and wa sjust waiting before relaunching the sound then stop the coroutine
         {
-            if (currentSoundCoroutine != null)
-            {
-                StopCoroutine(currentSoundCoroutine);
-            }
-            //restart the coroutine to force the sound to play
-            currentSoundCoroutine = StartCoroutine(disconnectionSound());
+            StopSound();
         }
     }
+
+    
 
     public IEnumerator disconnectionSound()
     {
         while (true)
         {
-            yield return StartCoroutine(PlayClip(0));
+            
+            playingSound = true;
+            foreach (GameObject drone in drones)
+            {
+                drone.GetComponent<AudioSource>().clip = droneSounds[0];
+                drone.GetComponent<AudioSource>().Play();
+                yield return new WaitForSeconds(0.4f);
+                drone.GetComponent<AudioSource>().Stop();
+                yield return new WaitForSeconds(0.1f);
+            }
+            yield return new WaitForSeconds(1f);
+            playingSound = false;
 
             yield return new WaitForSeconds(10);
         }
     }
 
-    private IEnumerator PlayClip(int clipIndex)
+    public void StopSound()
     {
-        if (dronesID.Count == 0)
+        if (currentSoundCoroutine != null)
         {
-            yield break;
+            StopCoroutine(currentSoundCoroutine);
         }
 
-        
-        playingSound = true;
         foreach (GameObject drone in drones)
         {
-            drone.GetComponent<AudioSource>().clip = droneSounds[clipIndex];
-            drone.GetComponent<AudioSource>().Play();
-            yield return new WaitForSeconds(0.4f);
-            drone.GetComponent<AudioSource>().Stop();
-            yield return new WaitForSeconds(0.1f);
+            if (drone.GetComponent<AudioSource>().isPlaying)
+            {
+                drone.GetComponent<AudioSource>().Stop();
+            }
         }
-        yield return new WaitForSeconds(1f);
+        
+
         playingSound = false;
+        currentSoundCoroutine =  StartCoroutine(disconnectionSound());
     }
 
     public void PlaySound()

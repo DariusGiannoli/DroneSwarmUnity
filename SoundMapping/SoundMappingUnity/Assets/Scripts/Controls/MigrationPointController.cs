@@ -20,11 +20,53 @@ public class MigrationPointController : MonoBehaviour
 
     public Vector3 deltaMigration = new Vector3(0, 0, 0); 
     public static Vector3 alignementVector = new Vector3(0, 0, 0);
+    public static Vector3 alignementVectorNonZero = new Vector3(0, 0, 0);
 
     public static float maxSpreadness = 5f;
     public static float minSpreadness = 1f;
 
     bool firstTime = true;
+
+    public bool control_movement
+    {
+        get{
+            return LevelConfiguration._control_movement;
+        }
+    }
+    public bool control_spreadness
+    {
+        get{
+            return LevelConfiguration._control_spreadness;
+        }
+    }
+    public bool control_embodiement
+    {
+        get{
+            return LevelConfiguration._control_embodiement;
+        }
+    }
+
+    public bool _control_desembodiement
+    {
+        get{
+            return LevelConfiguration._control_desembodiement;
+        }
+    }
+    public bool control_selection
+    {
+        get
+        {
+            return LevelConfiguration._control_selection;
+        }
+    }
+    public bool control_rotation
+    {
+        get
+        {
+            return LevelConfiguration._control_rotation;
+        }
+    }
+
 
     void Update()
     {
@@ -35,7 +77,7 @@ public class MigrationPointController : MonoBehaviour
 
     void SelectionUpdate()
     {        
-        if(Input.GetKeyDown("joystick button " + 5) || Input.GetKeyDown("joystick button " + 4)) 
+        if((Input.GetKeyDown("joystick button " + 5) || Input.GetKeyDown("joystick button " + 4)) && control_selection) //selection
         {
             if(selectedDrone == null)
             {
@@ -98,7 +140,7 @@ public class MigrationPointController : MonoBehaviour
         }
 
         // button 0
-        if(Input.GetKeyDown("joystick button " + 0))
+        if(Input.GetKeyDown("joystick button " + 0) && control_embodiement) //embodiement
         {
             if(CameraMovement.state == "animation")
             {
@@ -117,7 +159,7 @@ public class MigrationPointController : MonoBehaviour
             }
         }
 
-        if(Input.GetKeyDown("joystick button " + 1)) //desembodie
+        if(Input.GetKeyDown("joystick button " + 1) && _control_desembodiement) //desembodie
         {
             if(CameraMovement.embodiedDrone != null)
             {
@@ -130,7 +172,7 @@ public class MigrationPointController : MonoBehaviour
     void SpreadnessUpdate()
     {
         float spreadness = Input.GetAxis("LR");
-        if(spreadness != 0)
+        if(spreadness != 0 && control_spreadness)
         {
             swarmModel.desiredSeparation+= spreadness * Time.deltaTime * 1.3f;
             swarmModel.desiredSeparation = Mathf.Clamp(swarmModel.desiredSeparation, minSpreadness, maxSpreadness);
@@ -139,6 +181,12 @@ public class MigrationPointController : MonoBehaviour
 
     void UpdateMigrationPoint()
     {
+        if(!control_movement)
+        {
+            return;
+        }
+
+
         float horizontal = Input.GetAxis("Horizontal");
         float vertical = Input.GetAxis("Vertical");
 
@@ -192,15 +240,14 @@ public class MigrationPointController : MonoBehaviour
             migrationPoint = new Vector2(centerOfSwarm.x + final.x, centerOfSwarm.z + final.z);
             deltaMigration = new Vector3(finalAlignement.x, finalAlignement.y, finalAlignement.z);
         }
-
+        if( deltaMigration.magnitude > 0.1f)
+        {
+            alignementVectorNonZero = deltaMigration;
+        }
+        
         alignementVector = deltaMigration;
 
         Debug.DrawRay(body.position, alignementVector, Color.red, 0.01f);
-    }
-
-
-    void checkInterAgentDistance()
-    {
     }
 
 }

@@ -146,6 +146,13 @@ public class MakePrediction : MonoBehaviour
         // Fill positions in a single pass
         for (int i = 0; i < data.positions.Count; i++)
         {
+            Vector3 pos = data.positions[i];
+            if (!float.IsFinite(pos.x) || !float.IsFinite(pos.y) || !float.IsFinite(pos.z))
+            {
+                Debug.LogError($"Invalid position at index {i}: {pos}");
+                // Optionally, set a default value to prevent the error:
+                pos = Vector3.zero;
+            }
             hasCrashed = hasCrashed || data.crashed[i];
             line.SetPosition(i, data.positions[i]);
         }

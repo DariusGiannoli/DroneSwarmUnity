@@ -17,7 +17,7 @@ public class NetworkRepresentation : MonoBehaviour
     public static bool hasLeftBehind = false;
     
         // Start is called before the first frame update
-    public void UpdateNetworkRepresentation(Dictionary<int, int> neighbors)
+    public float UpdateNetworkRepresentation(Dictionary<int, int> neighbors)
     {
         // update the dictionary
 
@@ -81,6 +81,9 @@ public class NetworkRepresentation : MonoBehaviour
 
         hasLeftBehind = leftBehind > 0;
         networkScore = Mathf.Max(a2, b2);
+
+
+        return networkScore;
 
 
     }

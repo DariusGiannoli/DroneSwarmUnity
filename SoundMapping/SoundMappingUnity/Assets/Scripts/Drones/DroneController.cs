@@ -108,6 +108,19 @@ public class DroneController : MonoBehaviour
     {
         Vector3 positionDrome = droneFake.position;
 
+        //check if valid vector3 like nop Nan
+        if(float.IsNaN(positionDrome.x) || float.IsNaN(positionDrome.y) || float.IsNaN(positionDrome.z))
+        {
+            print("Nan++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
+            print("accelleration" + droneFake.acceleration);
+            print("velocity" + droneFake.velocity);
+            print("Allignment force" + droneFake.lastAllignement);
+            print("Cohesion force" + droneFake.lastOlfati);
+            print("Obstalce force " + droneFake.lastObstacle);
+
+            print("Nan+++++++++++++++++++++++++++++"+ this.droneFake.id+ "+++++++++++++++++++++++++++++");
+            return;
+        }
         transform.position = positionDrome;
         updateColor();
        // updateSound();

@@ -15,12 +15,21 @@ public class textInfo : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-
-        connexionText.text = "Connexion: " + getOneDecimal(swarmModel.swarmConnectionScore);
-        SpreadnessText.text = "Spreadness: " + getOneDecimal(swarmModel.desiredSeparation);
-        IsolationText.text = "Isolation : " + swarmModel.numberOfDroneDiscionnected.ToString();
-        DroneCrashText.text = "Drone Crash : " + swarmModel.numberOfDroneCrashed.ToString();
-        SpreadnessSwarmScore.text = "Swarm spreadness : " + getOneDecimal(swarmModel.swarmAskingSpreadness);
+        if(LevelConfiguration._ShowText)
+        {
+            connexionText.text = "Connexion: " + getOneDecimal(swarmModel.swarmConnectionScore);
+            SpreadnessText.text = "Spreadness: " + getOneDecimal(swarmModel.desiredSeparation);
+            IsolationText.text = "Isolation : " + swarmModel.numberOfDroneDiscionnected.ToString();
+            DroneCrashText.text = "Drone Crash : " + swarmModel.numberOfDroneCrashed.ToString();
+            SpreadnessSwarmScore.text = "Swarm spreadness : " + getOneDecimal(swarmModel.swarmAskingSpreadness);
+        }else
+        {
+            connexionText.text = "";
+            SpreadnessText.text = "";
+            IsolationText.text = "";
+            DroneCrashText.text = "";
+            SpreadnessSwarmScore.text = "";
+        }
     }
 
     string getOneDecimal(float value)
