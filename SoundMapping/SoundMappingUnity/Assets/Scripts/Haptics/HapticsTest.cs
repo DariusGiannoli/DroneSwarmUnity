@@ -14,7 +14,7 @@ public class HapticsTest : MonoBehaviour
     public int dutyIntensity = 4;
     public int frequencyInit = 1;
     public float distanceDetection = 3;
-    Thread hapticsThread;
+
     List<ObstacleInRange> obstacles = new List<ObstacleInRange>();
     Vector3 forwardVector = new Vector3(0, 0, 1);   
     Vector3 rightVector = new Vector3(1, 0, 0);
@@ -75,6 +75,8 @@ public class HapticsTest : MonoBehaviour
 
     List<Actuators> finalList = new List<Actuators>();
 
+    private Coroutine hapticsCoroutine = null;
+
     Dictionary<AnimatedActuator, IEnumerator> animatedActuators = new Dictionary<AnimatedActuator, IEnumerator>();
 
 
@@ -97,12 +99,28 @@ public class HapticsTest : MonoBehaviour
     public int sendEvery = 1000;
     // Update is called once per frame
 
+    public static void lateStart()
+    {
+        // launch start function
+        GameObject.FindGameObjectWithTag("GameManager").GetComponent<HapticsTest>().Start();
+    }
 
     void Start()
     {
+        print("HapticsTest Start");
+        finalList = new List<Actuators>();
+        actuatorsRange = new List<Actuators>();
+        actuatorsVariables = new List<Actuators>();
+        actuatorNetwork = new List<Actuators>();
+        actuatorsMovingPlane = new List<Actuators>();
+        crashActuators = new List<Actuators>();
+        lastDefined = new List<Actuators>();
+        animatedActuators = new Dictionary<AnimatedActuator, IEnumerator>();
+
+
 
         //
-        int[] mappingOlfati = Haptics_Forces ? new int[] {60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72} : new int[] {}; 
+        int[] mappingOlfati = Haptics_Forces ? new int[] {60, 61, 62, 64, 65, 66, 67, 68, 70, 71, 72, 73} : new int[] {}; 
         
         int [] velocityMapping = {}; //relative mvt of the swarm
 
@@ -123,33 +141,36 @@ public class HapticsTest : MonoBehaviour
             {60, 15},
             {61, 45},
             {62, 75},
-            {63, 100},
-            {64, 125},
-            {65, 150},
-            {66, 175},
-            {67, 200},
-            {68, 230},
-            {69, 255},
-            {70, 285},
-            {71, 315},
-            {72, 345},
+            {64, 105},
+            {65, 135},
+            {66, 165},
+            {67, 195},
+            {68, 225},
+            {70, 265},
+            {71, 295},
+            {72, 305},
+            {73, 345},
         };
 
 
         //obstacle in Range mapping
-        int[] angleMapping =  Haptics_Obstacle ? new int[] {0,1,2,3,4,5,6}  : new int[] {};
+        int[] angleMapping =  Haptics_Obstacle ? new int[] {0,1,2,3,4,5,6, 63, 69}  : new int[] {};
 
         //drone crash mapping
-        int[] crashMapping =  Haptics_Crash ? new int[] {0,1,2,3,4,5,6}  : new int[] {};;
+        int[] crashMapping =  Haptics_Crash ? new int[] {0,1,2,3,4,5,6, 63, 69}  : new int[] {};;
         
         
         //layers movement on arm mapping
-        int[] movingPlaneMapping =  Haptics_Network ? new int[] {90, 91, 92, 93, 94, 95, 96, 97, 98, 99} : new int[] {};
+        int[] movingPlaneMapping =  Haptics_Network ? new int[] {90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 121, 122, 123, 124, 125, 126, 127, 128, 129} : new int[] {};
 
         for (int i = 0; i < angleMapping.Length; i++)
         {
             int adresse = angleMapping[i];
-            int angle = angleMappingDict[adresse];
+            int angle = -1;
+            if(adresse < 60)
+            {
+                angle = angleMappingDict[adresse];
+            }
             actuatorsRange.Add(new PIDActuator(adresse:adresse, angle:angle,
                                                     kp:0, kd:150, referencevalue:0, 
                                                     refresh:CloseToWallrefresherFunction));
@@ -180,17 +201,18 @@ public class HapticsTest : MonoBehaviour
         }
 
         finalList.AddRange(actuatorsRange);
-       // finalList.AddRange(actuatorsBelly);
-       // finalList.AddRange(actuatorsVariables);
         finalList.AddRange(crashActuators);
         finalList.AddRange(actuatorNetwork);
 
         finalList.AddRange(actuatorsVariables);
         finalList.AddRange(actuatorsMovingPlane);
 
+        if(hapticsCoroutine != null) {
+            StopCoroutine(hapticsCoroutine);
+        }
 
 
-        StartCoroutine(HapticsCoroutine());
+        hapticsCoroutine = StartCoroutine(HapticsCoroutine());
 
         currentGamepad = Gamepad.current;
         if (currentGamepad == null)
@@ -204,7 +226,7 @@ public class HapticsTest : MonoBehaviour
  
     void Disable()
     {
-        hapticsThread.Abort();
+       // hapticsThread.Abort();
         currentGamepad.SetMotorSpeeds(0, 0);
     }
     
@@ -312,6 +334,8 @@ public class HapticsTest : MonoBehaviour
 
     IEnumerator HapticsCoroutine()
     {
+        print("HapticsCoroutine");
+        print("FinalList: " + finalList.Count);
         while (true)
         {
             foreach(Actuators actuator in finalList) {
@@ -405,66 +429,6 @@ public class HapticsTest : MonoBehaviour
     }
 
 
-    // #region NetworkActuators
-    
-    // void getActuatorNetwork(RefresherActuator actuator)
-    // {
-    //     if(CameraMovement.embodiedDrone == null) {
-    //         actuator.dutyIntensity = 0;
-    //         actuator.frequency = 1;
-    //         return;
-    //     }
-
-    //     Dictionary<int, int> neighbors = swarmModel.network.getLayersConfiguration();
-
-    //     int totalNeighbors = 0;
-    //     int firstOrder = 0;
-    //     foreach (KeyValuePair<int, int> neighbor in neighbors)
-    //     {
-    //         totalNeighbors += neighbor.Value;
-    //     }
-
-    //     // first order is the key = 1
-    //     if (neighbors.ContainsKey(2))
-    //     {
-    //         firstOrder = neighbors[2];
-    //     }
-
-    //     float proportion = (float)firstOrder / (float)totalNeighbors;
-
-    //     if(actuator.Angle == 0)
-    //     {
-    //         if(proportion < 0.65f) { 
-    //             actuator.dutyIntensity = 5;
-    //             actuator.frequency = 1;
-    //             return;
-    //         }
-    //     }
-    //     else if(actuator.Angle == 1)
-    //     {
-    //         if(proportion < 0.4f) {
-    //             actuator.dutyIntensity = 5;
-    //             actuator.frequency = 1;
-    //             return;
-    //         }
-    //     }
-    //     else
-    //     {
-    //         if(proportion < 0.01f) {
-    //             actuator.dutyIntensity = 5;
-    //             actuator.frequency = 1;
-    //             return;
-    //         }
-    //     }
-
-    //     actuator.dutyIntensity = 0;
-    //     actuator.frequency = 1;
-
-
-    // }
-    
-    // #endregion
-
     #region ForceActuators
 
     Actuators getDirectionActuator(Vector3 direction, List<Actuators> actuatorList)
@@ -519,14 +483,22 @@ public class HapticsTest : MonoBehaviour
         actuator.frequency = 1;
 
         foreach(Vector3 forcesDir in forces) {
-            float angle = Vector3.SignedAngle(forcesDir, CameraMovement.forward, -CameraMovement.up)-180;
-            if(angle < 0) {
-                angle += 360;
-            }
-            
-            float diff = Math.Abs(actuator.Angle - angle);
-            if(diff < 35) {
-                actuator.UpdateValue(forcesDir.magnitude);
+            if(actuator.Angle >= 0){
+                float angle = Vector3.SignedAngle(forcesDir, CameraMovement.forward, -CameraMovement.up)-180;
+                if(angle < 0) {
+                    angle += 360;
+                }
+                
+                float diff = Math.Abs(actuator.Angle - angle);
+                if(diff < 35) {
+                    actuator.UpdateValue(forcesDir.magnitude);
+                }
+            }else{
+                //gte the y component
+                float y = forcesDir.y;
+                if(Mathf.Abs(y) > 0) {
+                    actuator.UpdateValue(y);
+                }
             }
         }
     }
@@ -619,6 +591,8 @@ public class HapticsTest : MonoBehaviour
 
     #region NetworkActuators
 
+
+    int step = 4;
     IEnumerator hapticAnimation(int oldActIntensity, Actuators newAct)
     {
         int startIntensity = oldActIntensity;
@@ -628,9 +602,9 @@ public class HapticsTest : MonoBehaviour
 
         while(currentIntensity != endIntensity) {
             if(currentIntensity < endIntensity) {
-                currentIntensity++;
+                currentIntensity = currentIntensity + step > endIntensity ? endIntensity : currentIntensity + step;
             }else {
-                currentIntensity--;
+                currentIntensity = currentIntensity - step < endIntensity ? endIntensity : currentIntensity - step;
             }
 
             VibraForge.SendCommand(newAct.Adresse, (int)currentIntensity == 0 ? 0:1, (int)currentIntensity, (int)newAct.frequency);
@@ -639,7 +613,6 @@ public class HapticsTest : MonoBehaviour
 
     }
 
-    int delta = 3;
     IEnumerator hapticAnimation(Actuators newAct)
     {
         int startIntensity = 0;
@@ -649,9 +622,9 @@ public class HapticsTest : MonoBehaviour
 
         while(currentIntensity != endIntensity) {
             if(currentIntensity < endIntensity) {
-                currentIntensity = currentIntensity + delta > endIntensity ? endIntensity : currentIntensity + delta;
+                currentIntensity = currentIntensity + step > endIntensity ? endIntensity : currentIntensity + step;
             }else {
-                currentIntensity = currentIntensity - delta < endIntensity ? endIntensity : currentIntensity - delta;
+                currentIntensity = currentIntensity - step < endIntensity ? endIntensity : currentIntensity - step;
             }
             VibraForge.SendCommand(newAct.Adresse, (int)currentIntensity == 0 ? 0:1, (int)currentIntensity, (int)newAct.frequency);
             yield return new WaitForSeconds(0.1f);
@@ -660,11 +633,6 @@ public class HapticsTest : MonoBehaviour
     }
     void movingPlaneRefresher(RefresherActuator actuator)
     {
-        // if(CameraMovement.embodiedDrone == null) {
-        //     actuator.dutyIntensity = 0;
-        //     actuator.frequency = 1;
-        //     return;
-        // }
 
         float score = swarmModel.swarmConnectionScore;
         int resol = 10;

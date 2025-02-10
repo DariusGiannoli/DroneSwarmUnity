@@ -75,7 +75,7 @@ public class LevelConfiguration : MonoBehaviour
 
     void OnValidate()
     {
-        if (Time.timeSinceLevelLoad < 5f && SoftStart)
+        if (Time.timeSinceLevelLoad < 2.9f && SoftStart)
         {
             return;
         }
@@ -140,7 +140,13 @@ public class LevelConfiguration : MonoBehaviour
         _ShowText = showText;
 
         //call the onvalidate 3 seconds later
-        Invoke("OnValidate", 3f);
+        Invoke("lateStart", 3f);
+    }
+
+    void lateStart()
+    {
+        OnValidate();
+        HapticsTest.lateStart();
     }
 
     void Awake()

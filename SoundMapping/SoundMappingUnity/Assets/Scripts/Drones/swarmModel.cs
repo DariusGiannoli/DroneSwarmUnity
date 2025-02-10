@@ -153,7 +153,7 @@ public class swarmModel : MonoBehaviour
         if (swarmHolder == null)
         {
             print("No swarm holder found");
-            return;
+            swarmHolder = new GameObject("Swarm");
         }
         spawn();
 
@@ -182,6 +182,10 @@ public class swarmModel : MonoBehaviour
 
     void FixedUpdate()
     {
+        if (Input.GetKeyDown(KeyCode.R))
+        {
+            restartFunction();
+        }
 
         refreshSwarm();
 
@@ -206,17 +210,22 @@ public class swarmModel : MonoBehaviour
         swarmAskingShrink();
     }
 
+    public static void restart()
+    {
+        GameObject.FindGameObjectWithTag("GameManager").GetComponent<swarmModel>().restartFunction();
+    }
+
+    void restartFunction()
+    {
+        Start();
+        fogWar.ResetMapAndFogRevealers();
+        this.GetComponent<Timer>().Restart();
+    }
+
 
     void refreshSwarm()
     {
         refreshParameters();
-        if (Input.GetKeyDown(KeyCode.R))
-        {
-            fogWar.ResetMapAndFogRevealers();
-            spawn();
-
-            this.GetComponent<Timer>().Restart();
-        }
 
         network = new NetworkCreator(drones);
         network.refreshNetwork();
@@ -544,6 +553,10 @@ public class swarmModel : MonoBehaviour
 
     void swarmSeparation(int numberOfCut)
     {
+        
+            // Get average position and velocity of each group
+        if(CameraMovement.embodiedDrone == null)
+        {
             List<DroneFake> dronesInDirection = network.drones.OrderBy(d => Vector3.Dot(d.position, MigrationPointController.alignementVectorNonZero.normalized)).ToList();
 
             // Split the drones into the specified number of groups
@@ -555,41 +568,38 @@ public class swarmModel : MonoBehaviour
                 int count = (i == numberOfCut - 1) ? dronesInDirection.Count - start : groupSize;
                 droneGroups.Add(dronesInDirection.GetRange(start, count));
             }
-
-            // Get average position and velocity of each group
-            if(CameraMovement.embodiedDrone == null)
+            List<(Vector3 position, Vector3 velocity)> averages = new List<(Vector3 position, Vector3 velocity)>();
+            foreach (var group in droneGroups)
             {
-                List<(Vector3 position, Vector3 velocity)> averages = new List<(Vector3 position, Vector3 velocity)>();
-                foreach (var group in droneGroups)
-                {
-                    var avg = group.Aggregate((Vector3.zero, Vector3.zero), (acc, d) => (acc.Item1 + d.position / group.Count, acc.Item2 + d.velocity / group.Count));
-                    averages.Add(avg);
-                }
-
-                // Draw Gizmos for each group
-                List<float> scores = new List<float>();
-                for (int i = 0; i < averages.Count; i++)
-                {
-                    float diffPos = (i < averages.Count - 1) ? Vector3.Dot(averages[i+1].position, MigrationPointController.alignementVectorNonZero.normalized) - Vector3.Dot(averages[i].position, MigrationPointController.alignementVectorNonZero.normalized) : 0;   
-                    
-                    float score = 2f*diffPos/desiredSeparation - 1;
-                    scores.Add(score);
-
-                    if(showNetworkConnexionVulnerability)
-                    {
-                        Gizmos.color = (i < averages.Count - 1) ? Color.Lerp(Color.green, Color.red,  score) : Color.green;
-                        Gizmos.DrawSphere(averages[i].position, 0.5f);
-                    }
-                }
-
-                swarmConnectionScore = Mathf.Max(Mathf.Min(scores.Max(), 1f), 0f);
-
-                // i want if the score is 0.3 then put to 0 and then linear scale to 1
-                swarmConnectionScore = Mathf.Max((swarmConnectionScore - 0.3f) / (1f - 0.3f),0f);
-
-            }else{ // embodied drone only looking at the 1st order neighnbor
-                swarmConnectionScore = this.GetComponent<NetworkRepresentation>().UpdateNetworkRepresentation(network.getLayersConfiguration());
+                var avg = group.Aggregate((Vector3.zero, Vector3.zero), (acc, d) => (acc.Item1 + d.position / group.Count, acc.Item2 + d.velocity / group.Count));
+                averages.Add(avg);
             }
+
+            // Draw Gizmos for each group
+            List<float> scores = new List<float>();
+            for (int i = 0; i < averages.Count; i++)
+            {
+                float diffPos = (i < averages.Count - 1) ? Vector3.Dot(averages[i+1].position, MigrationPointController.alignementVectorNonZero.normalized) - Vector3.Dot(averages[i].position, MigrationPointController.alignementVectorNonZero.normalized) : 0;   
+                
+
+                float fakeDesiredSeparation = desiredSeparation;
+                if (desiredSeparation < 2.5)
+                {
+                    fakeDesiredSeparation = 1/3 * (desiredSeparation-1) + 2;
+                }
+                float score = 2f*diffPos/fakeDesiredSeparation - 1;
+                scores.Add(score);
+
+            }
+
+            float scoreFinal = Mathf.Max(Mathf.Min(scores.Max(), 1f), 0f);
+            scoreFinal = Mathf.Max((scoreFinal - 0.3f) / (1f - 0.3f),0f);
+
+            swarmConnectionScore = scoreFinal;
+
+        }else{ // embodied drone only looking at the 1st order neighnbor
+            swarmConnectionScore = this.GetComponent<NetworkRepresentation>().UpdateNetworkRepresentation(network.getLayersConfiguration());
+        }
 
     }
 

@@ -4,5 +4,35 @@
 EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
-  m_Scenes: []
+  m_Scenes:
+  - enabled: 1
+    path: Assets/Scenes/Setup.unity
+    guid: 18a0d57b7e809b444969e58e0ecddd1c
+  - enabled: 1
+    path: Assets/Scenes/Scene Selector.unity
+    guid: c77175f23713e314cb6cdd510f9dae02
+  - enabled: 1
+    path: Assets/Scenes/Collectibles.unity
+    guid: 2cbebe0aeda77464b8cb0fad115b9baa
+  - enabled: 1
+    path: Assets/Scenes/Training/1 Movement.unity
+    guid: 9841a78cf22cae64d8f82bdb8b97d32f
+  - enabled: 1
+    path: Assets/Scenes/Training/2 Spreadness.unity
+    guid: bba1a85e1a3f1d947b7309c93fbb2841
+  - enabled: 1
+    path: Assets/Scenes/Training/3 Swarm Swap.unity
+    guid: c095cef70f8ed37438a6133ea26d2321
+  - enabled: 1
+    path: Assets/Scenes/Training/4 Embodiement.unity
+    guid: 15dff72985f7bcb4886f3efba0974e91
+  - enabled: 1
+    path: Assets/Scenes/Training/5 Line.unity
+    guid: 99823b939674d8e45b7659513066651e
+  - enabled: 1
+    path: Assets/Scenes/Training/6 Maze.unity
+    guid: 91a7feea85f35744084e8187b7a097d5
+  - enabled: 1
+    path: Assets/Scenes/Training/7 SwicthView.unity
+    guid: e698a6f032a39cd46823f0fce7a402f7
   m_configObjects: {}

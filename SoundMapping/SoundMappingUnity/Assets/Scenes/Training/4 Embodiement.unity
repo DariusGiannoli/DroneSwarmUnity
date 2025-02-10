@@ -169,6 +169,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   targetTag: Drone
+  useUnityEvent: 1
+  isStart: 1
   onTriggerEnter:
     m_PersistentCalls:
       m_Calls:
@@ -554,6 +556,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   targetTag: Drone
+  useUnityEvent: 1
+  isStart: 0
   onTriggerEnter:
     m_PersistentCalls:
       m_Calls:
@@ -888,9 +892,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7c30caea2538ad247aec7804d967f17f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  SoftStart: 1
   controlMovement: 1
   controlSpreadness: 0
   controlEmbodiement: 0
+  controlDesembodiement: 0
   controlSelection: 0
   controlRotation: 1
   hapticsObstacle: 1
@@ -905,7 +911,10 @@ MonoBehaviour:
   needToSpawn: 1
   numDrones: 1
   spawnRadius: 0
+  startSperation: 1
   saveData: 0
+  miniMap: 0
+  showText: 0
 --- !u!4 &713206407
 Transform:
   m_ObjectHideFlags: 0

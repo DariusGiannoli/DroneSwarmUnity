@@ -8,13 +8,41 @@ public class TriggerHandlerWithCallback : MonoBehaviour
     [TagSelector] // Custom attribute for tag selection
     public string targetTag; // Tag to filter the objects
 
+    [SerializeField] bool useUnityEvent = true;
+    [SerializeField] bool isStart = true;
+
     public UnityEvent onTriggerEnter; // Callback to assign in the Inspector
+
+    private GameObject gm;
+
+    void Start()
+    {
+        if (useUnityEvent)
+        {
+            gm = GameObject.FindGameObjectWithTag("GameManager");
+        }
+    }
 
     private void OnTriggerEnter(Collider other)
     {
         if (other.CompareTag(targetTag))
         {
-            onTriggerEnter?.Invoke(); // Call the assigned callback
+            if (useUnityEvent)
+            {
+                if (isStart)
+                {
+                    gm.GetComponent<Timer>().StartTimer();
+                }
+                else
+                {
+                    gm.GetComponent<Timer>().StopTimer();
+                }
+            }
+            else
+            {
+                onTriggerEnter?.Invoke(); // Call the assigned callback
+            }
+            
         }
     }
 }
