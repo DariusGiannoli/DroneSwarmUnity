@@ -142,6 +142,32 @@ public class swarmModel : MonoBehaviour
     public static List<Vector3> swarmObstacleForces = new List<Vector3>();
     public static List<Vector3> swarmOlfatiForces = new List<Vector3>();
 
+    private Thread scorePlottingThread;
+    private bool isThreadRunning = false;
+    private float printInterval = 1f; // Print every second
+    private object scoreLock = new object();
+
+    private class NetworkScores
+    {
+        public float connectionScore;
+        public float spreadnessScore;
+        public int disconnectedCount;
+        public int crashedCount;
+        public float minDistance;
+
+        public float relativeConnectivity;
+        public float cohesionRadius;
+
+        public float normalizeConnectionScore;
+
+        public float velocityMissmatch;
+
+        public List<DroneFake> dronesSnapshot = new List<DroneFake>();
+        public Vector3 alignmentVector;
+    }
+
+    private NetworkScores currentScores = new NetworkScores();
+    private object networkLock = new object();
 
     void Start()
     {
@@ -161,6 +187,11 @@ public class swarmModel : MonoBehaviour
         spawn();
 
         desiredSeparation = LevelConfiguration._StartSperation;
+
+        // Initialize and start the score plotting thread
+        isThreadRunning = true;
+        scorePlottingThread = new Thread(PlotNetworkScores);
+        scorePlottingThread.Start();
     }
 
 
@@ -203,6 +234,15 @@ public class swarmModel : MonoBehaviour
         }
 
         swarmAskingShrink();
+
+        UpdateCurrentScores();
+
+        // Instead of calculating scores here, just update the drones snapshot
+        lock (networkLock)
+        {
+            currentScores.dronesSnapshot = new List<DroneFake>(drones);
+            currentScores.alignmentVector = MigrationPointController.alignementVectorNonZero;
+        }
     }
 
     public static void restart()
@@ -637,8 +677,60 @@ public class swarmModel : MonoBehaviour
 
     }
 
+    private void UpdateCurrentScores()
+    {
+        lock (scoreLock)
+        {
+            currentScores.connectionScore = swarmConnectionScore;
+            currentScores.spreadnessScore = swarmAskingSpreadness;
+            currentScores.disconnectedCount = numberOfDroneDiscionnected;
+            currentScores.crashedCount = numberOfDroneCrashed;
+            currentScores.minDistance = minDistance;
+        }
+    }
+
+    private void PlotNetworkScores()
+    {
+        while (isThreadRunning)
+        {
+            NetworkScores scores;
+            List<DroneFake> currentDrones;
+            Vector3 currentAlignmentVector;
+
+            lock (networkLock)
+            {
+                currentDrones = new List<DroneFake>(currentScores.dronesSnapshot);
+                currentAlignmentVector = currentScores.alignmentVector;
+            }
+
+            NetworkCreator networkToCompute = new NetworkCreator(currentDrones.FindAll(d => d.isMovable));
+
+            // Calculate all scores in the thread
+            float velMissmatch = networkToCompute.ComputeNormalizedVelocityMismatch();
+            float energyDev = networkToCompute.ComputeNormalizedDeviationEnergy();
+            float relativeConnectivity = networkToCompute.ComputeRelativeConnectivity();
+            float cohesionRadius = networkToCompute.ComputeCohesionRadius();
+
+
+
+            Debug.Log($"Velocity Missmatch: {velMissmatch}" +
+                      $"  Energy Deviation: {energyDev}" +
+                      $"  Relative Connectivity: {relativeConnectivity}" +
+                      $"  Cohesion Radius: {cohesionRadius}");
+
+
+            Thread.Sleep((int)(printInterval * 1000));
+        }
+    }
+
     void OnApplicationQuit()
     {   
+        isThreadRunning = false;
+        if (scorePlottingThread != null && scorePlottingThread.IsAlive)
+        {
+            scorePlottingThread.Join(100); // Wait up to 100ms for thread to finish
+        }
+
         if (saveData)
         {
             this.GetComponent<saveInfoToJSON>().exportData(true);

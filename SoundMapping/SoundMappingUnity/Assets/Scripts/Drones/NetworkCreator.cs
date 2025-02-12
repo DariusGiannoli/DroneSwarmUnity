@@ -1,9 +1,8 @@
-
 using System.Collections.Generic;
 using UnityEngine;
+using System.Collections;
+using System.Linq;
 using System.Threading;
-
-
 
 public class NetworkCreator
 {
@@ -101,20 +100,8 @@ public class NetworkCreator
         int maxCount = 0;
         foreach (HashSet<DroneFake> component in components)
         {
-            bool containsEmbodied = false;
-            bool containsSelected = false;
-            foreach (DroneFake drone in component)
-            {
-                if (drone.embodied)
-                {
-                    containsEmbodied = true;
-                    break;
-                }
-                if (drone.selected)
-                {
-                    containsSelected = true;
-                }
-            }
+            bool containsEmbodied = component.Any(d => d.embodied);
+            bool containsSelected = component.Any(d => d.selected);
             if (containsEmbodied || containsSelected)
             {
                 largestComponent = component;
@@ -177,7 +164,7 @@ public class NetworkCreator
             {
                 foreach (DroneFake neighbor in adjacencyList[currentDrone])
                 {
-                    if (neighbor.layer == 0) // unasigned drone 
+                    if (neighbor.layer == 0) // unassigned drone 
                     {
                         neighbor.layer = currentLayer + 1;
                         queue.Enqueue(neighbor);
@@ -185,7 +172,6 @@ public class NetworkCreator
                 }
             }
         }
-
     }
 
     public Dictionary<int, int> getLayersConfiguration()
@@ -216,296 +202,143 @@ public class NetworkCreator
         return layers;
     }
 
-}
+    // --- NEW: Formation / Cohesion Metrics Methods ---
 
-
-
-
-public static class ForceClusterer
-{
-    // Existing fields for obstacle and single-cluster olfati
-    public static List<Vector3> lastObstacleClusteredForces = new List<Vector3>();
-    private static Thread Obstaclethread;
-
-    private static List<Vector3> lastOlfatiClusteredForces = new List<Vector3>();
-    private static Thread Olfatithread;
-
-    // -------------------------------------------
-    // NEW: Fields for multi-cluster Olfati forces
-    private static List<Cluster> lastOlfatiMultiClusters = new List<Cluster>();
-    private static Thread OlfatiMultiThread;
-
-    // -------------------------------------------
-    // Existing public functions
-
-    public static List<Vector3> getOlfatiForces(List<Vector3> forces, float angleThreshold = 20f, int minSamples = 1, float minForceThreshold = 1f)
+    // 1. Count the number of connected components in the network.
+    public int CountConnectedComponents()
     {
-        if (!(Olfatithread != null && Olfatithread.IsAlive))
+        HashSet<DroneFake> visited = new HashSet<DroneFake>();
+        int components = 0;
+        foreach (DroneFake drone in drones)
         {
-            Olfatithread = new Thread(() => ClusterForces(forces, angleThreshold, minSamples, minForceThreshold, out lastOlfatiClusteredForces));
-            Olfatithread.Start();
-        }
-
-        return lastOlfatiClusteredForces;
-    }
-
-    public static List<Vector3> getForcesObstacle(List<Vector3> forces, float angleThreshold = 20f, int minSamples = 1, float minForceThreshold = 1f)
-    {
-        if (!(Obstaclethread != null && Obstaclethread.IsAlive))
-        {         
-            Obstaclethread = new Thread(() => ClusterForces(forces, angleThreshold, minSamples, minForceThreshold, out lastObstacleClusteredForces));
-            Obstaclethread.Start();
-        }
-
-        return lastObstacleClusteredForces;
-    }   
-
-    // -------------------------------------------
-    // Existing DBSCAN-based clustering method
-    public static void ClusterForces(List<Vector3> forces, float angleThreshold, int minSamples, float minForceThreshold, 
-        out List<Vector3> lastClusteredForces) 
-    {
-        int n = forces.Count;
-        // Compute the normalized directions for each force.
-        // These directions are used for clustering even though the averaging is done on the original forces.
-        List<Vector3> directions = new List<Vector3>(n);
-        for (int i = 0; i < n; i++)
-        {
-            // If the force is zero, we store Vector3.zero (it will likely be ignored in the cluster average if below threshold)
-            if (forces[i] == Vector3.zero)
-                directions.Add(Vector3.zero);
-            else
-                directions.Add(forces[i].normalized);
-        }
-
-        // DBSCAN clustering: each point gets a cluster label.
-        // 0: not yet assigned, -1: noise, positive integers: cluster IDs.
-        int[] clusterLabels = new int[n];
-        for (int i = 0; i < n; i++)
-            clusterLabels[i] = 0;
-
-        bool[] visited = new bool[n];
-        int clusterId = 0;
-
-        for (int i = 0; i < n; i++)
-        {
-            if (visited[i])
-                continue;
-
-            visited[i] = true;
-            List<int> neighborIndices = RegionQuery(directions, i, angleThreshold);
-
-            if (neighborIndices.Count < minSamples)
+            if (!visited.Contains(drone))
             {
-                // Mark as noise.
-                clusterLabels[i] = -1;
-            }
-            else
-            {
-                clusterId++; // Start a new cluster.
-                ExpandCluster(directions, clusterLabels, visited, i, neighborIndices, clusterId, angleThreshold, minSamples);
-            }
-        }
-
-        // Organize indices by cluster.
-        Dictionary<int, List<int>> clusters = new Dictionary<int, List<int>>();
-        for (int i = 0; i < n; i++)
-        {
-            // Only consider points assigned to a cluster (ignore noise).
-            if (clusterLabels[i] > 0)
-            {
-                if (!clusters.ContainsKey(clusterLabels[i]))
-                    clusters[clusterLabels[i]] = new List<int>();
-                clusters[clusterLabels[i]].Add(i);
-            }
-        }
-
-        // For each cluster, compute the average force.
-        List<Vector3> averageForces = new List<Vector3>();
-        foreach (var cluster in clusters)
-        {
-            Vector3 sum = Vector3.zero;
-            int count = 0;
-            foreach (int index in cluster.Value)
-            {
-                // Only include forces that are above the minimum threshold.
-                if (forces[index].magnitude >= minForceThreshold)
+                components++;
+                Queue<DroneFake> queue = new Queue<DroneFake>();
+                queue.Enqueue(drone);
+                visited.Add(drone);
+                while (queue.Count > 0)
                 {
-                    sum += forces[index];
-                    count++;
-                }
-            }
-            if (count > 0)
-            {
-                averageForces.Add(sum / count);
-            }
-        }
-
-        lastClusteredForces = averageForces;
-    }
-
-    private static void ExpandCluster(List<Vector3> directions, int[] clusterLabels, bool[] visited, int pointIndex,
-                                      List<int> neighborIndices, int clusterId, float angleThreshold, int minSamples)
-    {
-        // Assign the starting point to the cluster.
-        clusterLabels[pointIndex] = clusterId;
-
-        // Use a queue for breadth-first expansion.
-        Queue<int> neighborsQueue = new Queue<int>(neighborIndices);
-
-        while (neighborsQueue.Count > 0)
-        {
-            int currentIndex = neighborsQueue.Dequeue();
-
-            if (!visited[currentIndex])
-            {
-                visited[currentIndex] = true;
-                List<int> currentNeighbors = RegionQuery(directions, currentIndex, angleThreshold);
-
-                if (currentNeighbors.Count >= minSamples)
-                {
-                    // Enqueue any new neighbors.
-                    foreach (int ni in currentNeighbors)
+                    DroneFake current = queue.Dequeue();
+                    foreach (DroneFake neighbor in adjacencyList[current])
                     {
-                        if (!neighborsQueue.Contains(ni))
+                        if (!visited.Contains(neighbor))
                         {
-                            neighborsQueue.Enqueue(ni);
+                            visited.Add(neighbor);
+                            queue.Enqueue(neighbor);
                         }
                     }
                 }
             }
-
-            // If the point is not yet assigned to any cluster, assign it.
-            if (clusterLabels[currentIndex] == 0)
-            {
-                clusterLabels[currentIndex] = clusterId;
-            }
         }
+        return components;
     }
 
-    private static List<int> RegionQuery(List<Vector3> directions, int pointIndex, float angleThreshold)
+    // 2. Relative Connectivity (C(t)):
+    //    For n drones and k connected components, we have:
+    //    rank(L) = n - k, so that C(t) = (n - k) / (n - 1).
+    public float ComputeRelativeConnectivity()
     {
-        List<int> neighbors = new List<int>();
-        Vector3 currentDirection = directions[pointIndex];
-
-        for (int i = 0; i < directions.Count; i++)
-        {
-            if (i == pointIndex)
-                continue;
-
-            if (Vector3.Angle(currentDirection, directions[i]) <= angleThreshold)
-            {
-                neighbors.Add(i);
-            }
-        }
-
-        return neighbors;
+        int n = drones.Count;
+        if (n <= 1) return 1f;  // A single agent is “fully connected.”
+        int components = CountConnectedComponents();
+        int rank = n - components;
+        return (float)rank / (n - 1);
     }
 
-    // -------------------------------------------
-    // NEW: A helper class for the greedy multi-cluster algorithm.
-    // Each Cluster holds a running sum (to later compute the average) and a count.
-    private class Cluster
+    // 3. Cohesion Radius (R(t)):
+    //    Compute the centroid of all drones and return the maximum distance from any drone to that centroid.
+    public float ComputeCohesionRadius()
     {
-        public Vector3 Sum;
-        public int Count;
-
-        public Cluster(Vector3 initialForce)
+        if (drones.Count == 0) return 0;
+        Vector3 centroid = Vector3.zero;
+        foreach (DroneFake drone in drones)
         {
-            Sum = initialForce;
-            Count = 1;
+            centroid += drone.position;
         }
-
-        /// <summary>
-        /// Returns the average force vector (which indicates both tendency and magnitude).
-        /// </summary>
-        public Vector3 Average => Sum / Count;
-
-        /// <summary>
-        /// Returns the normalized average direction.
-        /// </summary>
-        public Vector3 AverageDirection
+        centroid /= drones.Count;
+        float maxDist = 0;
+        foreach (DroneFake drone in drones)
         {
-            get
-            {
-                Vector3 avg = Average;
-                return avg != Vector3.zero ? avg.normalized : Vector3.zero;
-            }
+            float dist = (drone.position - centroid).magnitude;
+            if (dist > maxDist) maxDist = dist;
         }
-
-        /// <summary>
-        /// Adds a new force vector into the cluster.
-        /// </summary>
-        public void Add(Vector3 force)
-        {
-            Sum += force;
-            Count++;
-        }
+        return maxDist;
     }
 
-    // -------------------------------------------
-    // NEW: Greedy clustering for Olfati forces with multiple clusters.
-    // This function does not require a "minSamples" parameter since each force that does not
-    // match an existing cluster creates a new one.
-    // Only forces with magnitude above minForceThreshold are considered.
-    private static List<Cluster> ClusterMultiForces(List<Vector3> forces, float angleThreshold, float minForceThreshold)
+    // 4. Normalized Deviation Energy (~E(q)):
+    //    Here we use a simple proxy: for every unique pair of drones, compare the actual distance with the desired separation.
+    //    We average the squared error and then normalize by desiredSeparation^2.
+    public float ComputeNormalizedDeviationEnergy()
     {
-        List<Cluster> clusters = new List<Cluster>();
-
-        foreach (Vector3 force in forces)
+        int n = drones.Count;
+        if (n < 2) return 0;
+        float sumSquaredError = 0;
+        int pairCount = 0;
+        for (int i = 0; i < n; i++)
         {
-            if (force.magnitude < minForceThreshold)
-                continue;
-
-            Vector3 forceDir = force.normalized;
-            bool assigned = false;
-
-            // Try to add the force to an existing cluster.
-            foreach (Cluster cluster in clusters)
+            for (int j = i + 1; j < n; j++)
             {
-                // Compare the force direction with the cluster's current average direction.
-                if (Vector3.Angle(forceDir, cluster.AverageDirection) <= angleThreshold)
-                {
-                    cluster.Add(force);
-                    assigned = true;
-                    break;
-                }
-            }
-
-            // If no suitable cluster was found, create a new one.
-            if (!assigned)
-            {
-                clusters.Add(new Cluster(force));
+                float distance = Vector3.Distance(drones[i].position, drones[j].position);
+                float error = distance - DroneFake.desiredSeparation;
+                sumSquaredError += error * error;
+                pairCount++;
             }
         }
-
-        return clusters;
+        if (pairCount == 0) return 0;
+        float avgSquaredError = sumSquaredError / pairCount;
+        return Mathf.Clamp01(avgSquaredError / (DroneFake.desiredSeparation * DroneFake.desiredSeparation));
     }
 
-    /// <summary>
-    /// Returns the averaged forces for each discovered cluster using the greedy multi-cluster algorithm.
-    /// This gives you multiple averaged forces (each with its own norm and direction) that indicate the tendency.
-    /// </summary>
-    public static List<Vector3> getOlfatiMultiClusterAveragedForces(List<Vector3> forces, float angleThreshold = 20f, float minForceThreshold = 1f)
+    // 5. Normalized Velocity Mismatch (~K(v)):
+    //    Compute the average deviation (squared) of each drone’s velocity from the group’s average velocity,
+    //    and then normalize by maxSpeed^2.
+    public float ComputeNormalizedVelocityMismatch()
     {
-        if (!(OlfatiMultiThread != null && OlfatiMultiThread.IsAlive))
+        if (drones.Count == 0) return 0;
+        Vector3 avgVelocity = Vector3.zero;
+        foreach (DroneFake drone in drones)
         {
-            OlfatiMultiThread = new Thread(() =>
-            {
-                lastOlfatiMultiClusters = ClusterMultiForces(forces, angleThreshold, minForceThreshold);
-            });
-            OlfatiMultiThread.Start();
+            avgVelocity += drone.velocity;
         }
-
-        // Optionally wait for the thread to finish (or if you are in a real-time system you might simply return the last result).
-        // For example, you could use OlfatiMultiThread.Join() if you want to block until clustering is finished.
-
-        // Return the average force (tendency) for each cluster.
-        List<Vector3> averagedForces = new List<Vector3>();
-        foreach (Cluster cluster in lastOlfatiMultiClusters)
+        avgVelocity /= drones.Count;
+        float sumSquaredVelocityError = 0;
+        foreach (DroneFake drone in drones)
         {
-            averagedForces.Add(cluster.Average);
+            Vector3 diff = drone.velocity - avgVelocity;
+            sumSquaredVelocityError += diff.sqrMagnitude;
         }
-        return averagedForces;
+        float avgVelocityError = sumSquaredVelocityError / drones.Count;
+        return Mathf.Clamp01(avgVelocityError / (DroneFake.maxSpeed * DroneFake.maxSpeed));
+    }
+
+    // 6. Overall Cohesion Score:
+    //    We now combine the four metrics. We define “error” measures so that 0 means perfect cohesion.
+    //    For example, connectivityError = 1 - C(t).
+    //    We also normalize the cohesion radius (e.g. dividing by neighborRadius).
+    //    Finally, we take an average so that the overall score is scaled in [0,1], where 0 is fully cohesive.
+    public float ComputeOverallCohesionScore()
+    {
+        int n = drones.Count;
+        if (n <= 1) return 0;
+        
+        // Connectivity error: 0 if fully connected.
+        float relativeConnectivity = ComputeRelativeConnectivity();
+        float connectivityError = 1f - relativeConnectivity;
+
+        // Cohesion error: we normalize the maximum distance from the centroid by the neighbor radius.
+        float cohesionRadius = ComputeCohesionRadius();
+        float cohesionError = Mathf.Clamp01(cohesionRadius / DroneFake.neighborRadius);
+
+        // Deviation energy error: already normalized.
+        float deviationEnergyError = ComputeNormalizedDeviationEnergy();
+
+        // Velocity mismatch error: already normalized.
+        float velocityMismatchError = ComputeNormalizedVelocityMismatch();
+
+        // Average the errors (or use different weights if desired).
+        float overallScore = (connectivityError + cohesionError + deviationEnergyError + velocityMismatchError) / 4f;
+        return overallScore;
     }
 }
+
