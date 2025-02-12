@@ -15,7 +15,7 @@ public class swarmModel : MonoBehaviour
     {
         get
         {
-            return LevelConfiguration._NeedToSpawn;
+            return LevelConfiguration._SaveData;
         }
     }
     public bool needToSpawn
@@ -25,7 +25,6 @@ public class swarmModel : MonoBehaviour
             return LevelConfiguration._NeedToSpawn;
         }
     }
-    DataSave dataSave = new DataSave();
     public static GameObject swarmHolder;
     public GameObject dronePrefab;
     public int numDrones 
@@ -146,10 +145,14 @@ public class swarmModel : MonoBehaviour
 
     void Start()
     {
+
+        TriggerHandlerWithCallback.setGM(this.gameObject);
+
         Application.targetFrameRate = 30; // Set the target frame rate to 30 FPS
 
         PRIORITYWHENEMBODIED = (int)(numDrones/3.5f);
         swarmHolder = needToSpawn ? GameObject.FindGameObjectWithTag("Swarm") : LevelConfiguration.swarmHolder;
+
         if (swarmHolder == null)
         {
             print("No swarm holder found");
@@ -189,14 +192,6 @@ public class swarmModel : MonoBehaviour
 
         refreshSwarm();
 
-        if(CameraMovement.embodiedDrone != null)
-        {
-            if (saveData)
-            {
-                dataSave.saveData(CameraMovement.embodiedDrone.GetComponent<DroneController>().droneFake);
-            }
-        }
-
         UpdateSwarmForces();
         UpdateSwarmInfos();
 
@@ -217,11 +212,11 @@ public class swarmModel : MonoBehaviour
 
     void restartFunction()
     {
-        Start();
-        fogWar.ResetMapAndFogRevealers();
-        this.GetComponent<Timer>().Restart();
+        SceneSelectorScript.reset();
+        // Start();
+        // fogWar.ResetMapAndFogRevealers();
+        // this.GetComponent<Timer>().Restart();
     }
-
 
     void refreshSwarm()
     {
@@ -235,7 +230,7 @@ public class swarmModel : MonoBehaviour
 
         ClosestPointCalculator.selectObstacle(drones); // update list of obstacle 
 
-        foreach (DroneFake drone in drones)
+        foreach (DroneFake drone in drones.FindAll(d => d.isMovable))
         {
             drone.ComputeForces(MigrationPointController.alignementVector, network);
             drone.score = network.IsInMainNetwork(drone) ? 1.0f : 0.0f;
@@ -243,7 +238,7 @@ public class swarmModel : MonoBehaviour
 
         foreach (Transform drone in swarmHolder.transform)
         {
-            drone.GetComponent<DroneController>().droneFake.UpdatePositionPrediction(1);
+            drone.GetComponent<DroneController>().droneFake.UpdatePosition();
             if (drone.GetComponent<DroneController>().droneFake.hasCrashed)
             {
                 drone.GetComponent<DroneController>().crash();
@@ -252,7 +247,7 @@ public class swarmModel : MonoBehaviour
 
     }
 
-    void spwanless()
+    void spawnless()
     {
         drones.Clear();
         int i = 0;
@@ -275,6 +270,17 @@ public class swarmModel : MonoBehaviour
             i++;
         }
 
+        //select the first drone as the selected drone
+        if (LevelConfiguration._droneID < drones.Count && LevelConfiguration._droneID != -1)
+        {
+            MigrationPointController.selectedDrone = swarmHolder.transform.GetChild(LevelConfiguration._droneID).gameObject;
+        }else
+        {
+            print("Drone ID not found");
+        }
+
+        getDummies();
+
 
 
 
@@ -283,12 +289,24 @@ public class swarmModel : MonoBehaviour
         return;
     }
 
+    void getDummies()
+    {
+        //get all the tag dummies
+        GameObject[] dummies = GameObject.FindGameObjectsWithTag("Dummy");
+        //add it to the drones list
+        foreach (GameObject dummy in dummies)
+        {
+            dummy.GetComponent<DroneController>().droneFake = new DroneFake(dummy.transform.position, Vector3.zero, false, drones.Count, isMovable: false);
+            drones.Add(dummy.GetComponent<DroneController>().droneFake);
+        }
+    }
+
     void spawn()
     {
         desiredSeparation = 3f;
         if(!needToSpawn)
         {
-            spwanless();
+            spawnless();
             return;
         }
 
@@ -328,8 +346,8 @@ public class swarmModel : MonoBehaviour
             }
         }
 
-        //this.GetComponent<HapticAudioManager>().Reset();
-       // this.GetComponent<DroneNetworkManager>().Reset();
+        getDummies();
+    
     }
 
     public void RemoveDrone(GameObject drone)
@@ -369,17 +387,25 @@ public class swarmModel : MonoBehaviour
                 allForcesOlfati.Add(drone.lastOlfati);
             }
 
-            swarmObstacleForces = ForceClusterer.getForcesObstacle(allForcesObstacle, 40f, (int)drones.Count/3, 2);
-            swarmOlfatiForces = ForceClusterer.getOlfatiForces(allForcesOlfati, 35f, (int)drones.Count/5, 1);
+            swarmObstacleForces = ForceClusterer.getForcesObstacle(allForcesObstacle, 40f, (int)network.largestComponent.Count/3, 2);
+            swarmOlfatiForces = ForceClusterer.getOlfatiForces(allForcesOlfati, 35f, (int)network.largestComponent.Count/5, 1);
         }else{
+            
             //get embodied drone infos
             swarmOlfatiForces.Add(CameraMovement.embodiedDrone.GetComponent<DroneController>().droneFake.lastOlfati);
-            swarmObstacleForces = CameraMovement.embodiedDrone.GetComponent<DroneController>().droneFake.lastObstacleForces;
+            (List<Vector3> forces, bool hasCrashed) = CameraMovement.embodiedDrone.GetComponent<DroneController>().droneFake.getObstacleForces(2f,2f,1f);
+            swarmObstacleForces = forces;
         }
     }
     
     public void UpdateSwarmInfos()
     {
+        //check if there is still a drone in the swarm
+        if (swarmHolder.transform.childCount == 0)
+        {
+            SceneSelectorScript.reset();
+            return;
+        }
         
         swarmVelocityAvg = Vector3.zero;
         foreach (DroneFake drone in dronesInMainNetwork)
@@ -388,8 +414,10 @@ public class swarmModel : MonoBehaviour
         }
         swarmVelocityAvg /= dronesInMainNetwork.Count;
 
-
-        saveInfoToJSON.saveDataPoint();
+        if (saveData)
+        {
+            saveInfoToJSON.saveDataPoint();
+        }
 
         float minDistance = float.MaxValue;
 
@@ -523,6 +551,12 @@ public class swarmModel : MonoBehaviour
             {
                 number = neighbors.Count;
             }
+
+            if(number == 0)
+            {
+                continue;
+            }
+
             List<DroneFake> mostVulnerable = neighbors.GetRange(0, number);
 
             float ratioAverageDistance = mostVulnerable.Average(d => Vector3.Distance(d.position, drone.position))/desiredSeparation;
@@ -557,7 +591,7 @@ public class swarmModel : MonoBehaviour
             // Get average position and velocity of each group
         if(CameraMovement.embodiedDrone == null)
         {
-            List<DroneFake> dronesInDirection = network.drones.OrderBy(d => Vector3.Dot(d.position, MigrationPointController.alignementVectorNonZero.normalized)).ToList();
+            List<DroneFake> dronesInDirection = network.largestComponent.OrderBy(d => Vector3.Dot(d.position, MigrationPointController.alignementVectorNonZero.normalized)).ToList();
 
             // Split the drones into the specified number of groups
             List<List<DroneFake>> droneGroups = new List<List<DroneFake>>();
@@ -592,8 +626,8 @@ public class swarmModel : MonoBehaviour
 
             }
 
-            float scoreFinal = Mathf.Max(Mathf.Min(scores.Max(), 1f), 0f);
-            scoreFinal = Mathf.Max((scoreFinal - 0.3f) / (1f - 0.3f),0f);
+            float scoreFinal = Mathf.Max(Mathf.Min(scores.Max(), 1.5f), 0f);
+            scoreFinal = Mathf.Max((scoreFinal - 0.3f) / (1.5f - 0.3f),0f);
 
             swarmConnectionScore = scoreFinal;
 
@@ -607,12 +641,7 @@ public class swarmModel : MonoBehaviour
     {   
         if (saveData)
         {
-
-            print("Saving data");
-            //convert dataSave into JSON
-            string json = JsonUtility.ToJson(dataSave);
-            string fileName = System.DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss") + ".json";
-            System.IO.File.WriteAllText("./Assets/Data/"+fileName, json);
+            this.GetComponent<saveInfoToJSON>().exportData(true);
         }
 
     }

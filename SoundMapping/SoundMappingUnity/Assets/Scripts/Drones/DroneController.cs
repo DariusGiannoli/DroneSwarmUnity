@@ -7,7 +7,6 @@ public class DroneController : MonoBehaviour
 {
 
 #region Parameters
-    private swarmModel swarm;
 
     public GameObject droneModel;
 
@@ -29,11 +28,19 @@ public class DroneController : MonoBehaviour
     const float distanceToHeigth = 3f;
 
 
-    private GameObject gm;
+    private GameObject gm
+    {
+        get
+        {
+            return GameObject.FindGameObjectWithTag("GameManager");
+        }
+    }
     private float timeSeparated = 0;
     public GameObject fireworkParticle;
 
     public DroneFake droneFake;
+
+    public bool dummy = false;
 
     float realScore
     {
@@ -60,20 +67,28 @@ public class DroneController : MonoBehaviour
             CameraMovement.nextEmbodiedDrone = null;
             this.droneFake.embodied = false;
             this.droneFake.selected = false;
-            MigrationPointController.selectedDrone = null;   
-        }
-        gm.GetComponent<swarmModel>().RemoveDrone(this.gameObject);
+            MigrationPointController.selectedDrone = null;
 
-        gm.GetComponent<HapticsTest>().crash(CameraMovement.embodiedDrone == this.gameObject);
+            if(LevelConfiguration._startEmbodied)
+            {
+                CameraMovement.setNextEmbodiedDrone();
+            }
+        }
+
+
+        gm.GetComponent<swarmModel>().RemoveDrone(this.gameObject);
+        gm.GetComponent<HapticsTest>().crash(true);
 
         GameObject firework = Instantiate(fireworkParticle, transform.position, Quaternion.identity);
         firework.transform.position = transform.position;
+
+
         Destroy(firework, 0.5f);
     }
 
     void FixedUpdate()
     {
-        if (!prediction)
+        if (!prediction && !dummy)
         {
             UpdateNormal();
         }
@@ -83,10 +98,6 @@ public class DroneController : MonoBehaviour
     #region NormalMode
     void StartNormal()
     {
-        gm = GameObject.FindGameObjectWithTag("GameManager");
-
-        swarm = gm.GetComponent<swarmModel>();
-
         //iterate threw all the children and all the children of the children ect and check if tag BodyPart
         checkChildren(this.gameObject);
     
@@ -106,25 +117,36 @@ public class DroneController : MonoBehaviour
 
     void UpdateNormal()
     {
-        Vector3 positionDrome = droneFake.position;
-
-        //check if valid vector3 like nop Nan
-        if(float.IsNaN(positionDrome.x) || float.IsNaN(positionDrome.y) || float.IsNaN(positionDrome.z))
+        try
         {
-            print("Nan++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
-            print("accelleration" + droneFake.acceleration);
-            print("velocity" + droneFake.velocity);
-            print("Allignment force" + droneFake.lastAllignement);
-            print("Cohesion force" + droneFake.lastOlfati);
-            print("Obstalce force " + droneFake.lastObstacle);
+            Vector3 positionDrome = droneFake.position;
 
-            print("Nan+++++++++++++++++++++++++++++"+ this.droneFake.id+ "+++++++++++++++++++++++++++++");
-            return;
+            //check if valid vector3 like nop Nan
+            if(float.IsNaN(positionDrome.x) || float.IsNaN(positionDrome.y) || float.IsNaN(positionDrome.z))
+            {
+                print("Nan++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
+                print("accelleration" + droneFake.acceleration);
+                print("velocity" + droneFake.velocity);
+                print("Allignment force" + droneFake.lastAllignement);
+                print("Cohesion force" + droneFake.lastOlfati);
+                print("Obstalce force " + droneFake.lastObstacle);
+
+                print("Nan+++++++++++++++++++++++++++++"+ this.droneFake.id+ "+++++++++++++++++++++++++++++");
+                return;
+            }
+            
+
+            transform.position = positionDrome;
+            updateColor();
+        // updateSound();
+            droneAnimate();
         }
-        transform.position = positionDrome;
-        updateColor();
-       // updateSound();
-        droneAnimate();
+        catch (Exception e)
+        {
+            print(this.gameObject.name);
+            print("Error in drone update");
+            print(e);
+        }
     }
 
     #endregion

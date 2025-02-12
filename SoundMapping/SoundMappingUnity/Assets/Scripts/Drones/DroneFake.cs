@@ -6,6 +6,7 @@ using UnityEngine;
 public class DroneFake
 {
     #region Paramters Classes
+    public bool isMovable = true;
     public Vector3 position;
     public Vector3 acceleration;
     public Vector3 velocity;
@@ -65,13 +66,15 @@ public class DroneFake
 
     #endregion
 
-    public DroneFake(Vector3 position, Vector3 velocity, bool embodied, int id)
+    public DroneFake(Vector3 position, Vector3 velocity, bool embodied, int id, bool isMovable = true)
     {
+
         this.position = position;
         this.velocity = velocity;
         this.embodied = embodied;
         this.id = id;
         this.idS = id.ToString();
+        this.isMovable = isMovable;
     }
     public List<DroneFake> GetNeighbors(List<DroneFake> allDrones)
     {
@@ -92,7 +95,9 @@ public class DroneFake
         return neighbors;
     }
 
-    public (List<Vector3> forces, bool hasCrashed) getObstacleForces(float cPmObs = 10f)
+    #region forcesFunction
+
+    public (List<Vector3> forces, bool hasCrashed) getObstacleForces(float avoidanceRadius, float distanceObs, float cPmObs = 10f)
     {
         List<Vector3> forces = new List<Vector3>();
         float c = (beta - alpha) / (2 * Mathf.Sqrt(alpha * beta));
@@ -110,8 +115,8 @@ public class DroneFake
             }
 
             // Apply forces similar to your original logic
-            Vector3 force = cPmObs * (GetNeighbourWeight(dist, desiredSeparationObs, delta) *
-                        GetCohesionForce(dist, desiredSeparationObs, alpha, beta, c, avoidanceRadius, delta, obsPos - position)
+            Vector3 force = cPmObs * (GetNeighbourWeight(dist, distanceObs, delta) *
+                        GetCohesionForce(dist, distanceObs, alpha, beta, c, avoidanceRadius, delta, obsPos - position)
                         );
 
             forces.Add(force);
@@ -120,14 +125,10 @@ public class DroneFake
         return (forces, hasCrashed);
     }
 
-
     public void startPrediction(Vector3 alignementVector, NetworkCreator network)
     {
         ComputeForces(alignementVector, network);
     }
-
-    #region forcesFunction
-
     private float GetCohesionIntensity(float r, float dRef, float a, float b, float c)
     {
         float diff = r - dRef;
@@ -190,10 +191,10 @@ public class DroneFake
 
         // Constants
         float dRef = desiredSeparation;
-        if(this.layer >= 3)
-        {
-            dRef = Mathf.Max(desiredSeparation*(0.8f - 0.2f*((float)layer - 3f)), 1);
-        }
+        // if(this.layer >= 3)
+        // {
+        //     dRef = Mathf.Max(desiredSeparation*(0.8f - 0.2f*((float)layer - 3f)), 1);
+        // }
         float dRefObs = avoidanceRadius;
 
         float a = alpha;
@@ -237,15 +238,28 @@ public class DroneFake
             {
                 this.hasCrashed = true;
             }
+            if(neighbour.isMovable == false)
+            {
+                if(distD < 0.5f)
+                {
+                    this.hasCrashed = true;                
+                }
+            }
             accCoh += GetCohesionForce(distD, dRef, a, b, c, r0Coh, delta, posRelD) * neighborPriority;
 
            accVel += (neighbour.velocity - velocity) * neighborPriority;
         }
 
-        accVel *= cVm / totalPriority; // accVel caused by the neighbors
-        if(this.layer <= 2)
-        {
-            accVel = (accVel + cVm * (vRef - velocity)) / 2; // 50% of the velocity matching force
+        if(totalPriority == 0){
+            if(this.layer <= 2)
+            {
+                accVel = cVm * (vRef - velocity); // 50% of the velocity matching force
+            }
+        }else{
+            if(this.layer <= 2)
+            {
+                accVel = (accVel + cVm * (vRef - velocity)) / 2; // 50% of the velocity matching force
+            }
         }
 
         // Obstacle avoidance
@@ -254,9 +268,9 @@ public class DroneFake
 
 
         // get obstacle forces
-        (List<Vector3> obstacleForces, bool hasCrashed) = getObstacleForces(cPmObs);
+        (List<Vector3> obstacleForces, bool hasCrashed) = getObstacleForces(avoidanceRadius, dRefObs, cPmObs);
 
-        this.hasCrashed = hasCrashed;
+        this.hasCrashed = hasCrashed || this.hasCrashed;
         this.lastObstacleForces = obstacleForces;
 
         foreach (Vector3 force in obstacleForces)
@@ -434,6 +448,11 @@ public class DroneFake
         }
 
         acceleration = Vector3.zero;
+    }
+
+    public void UpdatePosition()
+    {
+        UpdatePositionPrediction(1);
     }
 
 }

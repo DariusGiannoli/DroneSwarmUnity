@@ -16,6 +16,8 @@ TagManager:
   - BodyMaterial
   - Config
   - SpawnLess
+  - Dummy
+  - Collectibles
   layers:
   - Default
   - TransparentFX

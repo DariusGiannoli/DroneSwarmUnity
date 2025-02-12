@@ -12,27 +12,66 @@ EditorBuildSettings:
     path: Assets/Scenes/Scene Selector.unity
     guid: c77175f23713e314cb6cdd510f9dae02
   - enabled: 1
-    path: Assets/Scenes/Collectibles.unity
+    path: Assets/Scenes/CollectiblesTDV.unity
     guid: 2cbebe0aeda77464b8cb0fad115b9baa
+  - enabled: 0
+    path: Assets/Scenes/Useless/Training/2 Spreadness.unity
+    guid: bba1a85e1a3f1d947b7309c93fbb2841
+  - enabled: 0
+    path: Assets/Scenes/Useless/Training/3 Swarm Swap.unity
+    guid: c095cef70f8ed37438a6133ea26d2321
+  - enabled: 0
+    path: Assets/Scenes/Useless/Training/4 Embodiement.unity
+    guid: 15dff72985f7bcb4886f3efba0974e91
+  - enabled: 0
+    path: Assets/Scenes/Useless/Training/5 Line.unity
+    guid: 99823b939674d8e45b7659513066651e
+  - enabled: 0
+    path: Assets/Scenes/Useless/Training/6 Maze.unity
+    guid: 91a7feea85f35744084e8187b7a097d5
+  - enabled: 0
+    path: Assets/Scenes/Useless/Training/7 SwicthView.unity
+    guid: e698a6f032a39cd46823f0fce7a402f7
   - enabled: 1
-    path: Assets/Scenes/Training/1 Movement.unity
+    path: Assets/Scenes/DemoTDV.unity
+    guid: 4497d5166e82f5d44bbc5c4c40bba8d6
+  - enabled: 1
+    path: Assets/Scenes/Useless/Training/1 Movement.unity
     guid: 9841a78cf22cae64d8f82bdb8b97d32f
   - enabled: 1
-    path: Assets/Scenes/Training/2 Spreadness.unity
-    guid: bba1a85e1a3f1d947b7309c93fbb2841
+    path: Assets/Scenes/CollectiblesFPV.unity
+    guid: 75dd737bdce000543926d90d479c47fc
   - enabled: 1
-    path: Assets/Scenes/Training/3 Swarm Swap.unity
-    guid: c095cef70f8ed37438a6133ea26d2321
+    path: Assets/Scenes/DemoFPV.unity
+    guid: d4e5207ba5ffd4d46bb8d1ebe0983b9c
   - enabled: 1
-    path: Assets/Scenes/Training/4 Embodiement.unity
-    guid: 15dff72985f7bcb4886f3efba0974e91
+    path: Assets/Scenes/TrainingFinal/3 Swarm SensationTDV.unity
+    guid: b9e10f8fe61737c4a8d9657c53d5ad55
   - enabled: 1
-    path: Assets/Scenes/Training/5 Line.unity
-    guid: 99823b939674d8e45b7659513066651e
+    path: Assets/Scenes/TrainingFinal/1 Single Drone TDV.unity
+    guid: 7fd1455c7bf5f5a49ab61027830765e0
   - enabled: 1
-    path: Assets/Scenes/Training/6 Maze.unity
-    guid: 91a7feea85f35744084e8187b7a097d5
+    path: Assets/Scenes/TrainingFinal/2 Single Drone FPV.unity
+    guid: ff29c634b007cfb41ad25276bdabf66b
   - enabled: 1
-    path: Assets/Scenes/Training/7 SwicthView.unity
-    guid: e698a6f032a39cd46823f0fce7a402f7
+    path: Assets/Scenes/TrainingFinal/4 Swarm Sensation FPV.unity
+    guid: a742a9321f3eac544af1b07207f21ee2
+  - enabled: 0
+    path: Assets/Scenes/TrainingFinal/4 Swarm Sensation FPV1 1.unity
+    guid: ca57f8f79cbfa004aacf8776c8a63b8f
+  - enabled: 1
+    path: Assets/Scenes/TrainingFinal/5 Swicth View TDV.unity
+    guid: d1bc48418bc615b4a9890b3d24ca5353
+  - enabled: 1
+    path: Assets/Scenes/TrainingFinal/6 Swicth View FPV.unity
+    guid: b5ae467b55a8caa4f83d8fd056b33253
+  - enabled: 1
+    path: Assets/Scenes/TrainingFinal/7 Spreadness TDV.unity
+    guid: cdf73ffe26b61874c89983e0f90207e0
+  - enabled: 1
+    path: Assets/Scenes/TrainingFinal/8 Spreadness TDV.unity
+    guid: 0ba0f625fd1d790469778d976a468195
+  - enabled: 1
+    path: Assets/Scenes/TrainingFinal/9 Drone Network.unity
+    guid: 64266b8580489594a8552e9548870c75
   m_configObjects: {}

@@ -172,7 +172,7 @@ public class HapticsTest : MonoBehaviour
                 angle = angleMappingDict[adresse];
             }
             actuatorsRange.Add(new PIDActuator(adresse:adresse, angle:angle,
-                                                    kp:0, kd:150, referencevalue:0, 
+                                                    kp:0, kd:100, referencevalue:0, 
                                                     refresh:CloseToWallrefresherFunction));
         }
 
@@ -334,8 +334,6 @@ public class HapticsTest : MonoBehaviour
 
     IEnumerator HapticsCoroutine()
     {
-        print("HapticsCoroutine");
-        print("FinalList: " + finalList.Count);
         while (true)
         {
             foreach(Actuators actuator in finalList) {
@@ -488,8 +486,11 @@ public class HapticsTest : MonoBehaviour
                 if(angle < 0) {
                     angle += 360;
                 }
+
+
                 
                 float diff = Math.Abs(actuator.Angle - angle);
+
                 if(diff < 35) {
                     actuator.UpdateValue(forcesDir.magnitude);
                 }
@@ -729,12 +730,13 @@ public class PIDActuator : Actuators // creae Ki
 
     public void UpdateValue(float newValue)
     {
-        float error = referenceValue - newValue;
+        float error = newValue - referenceValue;
         float derivative = newValue - lastValue;
 
         lastValue = newValue;
-        dutyIntensity = Mathf.Max((int)(Kp * error - Kd * derivative), dutyIntensity);
-        frequency = 4;
+        dutyIntensity = Mathf.Max((int)(Kp * error + Kd * derivative), dutyIntensity);
+
+        frequency = 2;
     }
 
     override public void update()

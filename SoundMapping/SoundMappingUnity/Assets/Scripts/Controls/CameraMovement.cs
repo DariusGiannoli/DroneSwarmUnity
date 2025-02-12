@@ -64,6 +64,51 @@ public class CameraMovement : MonoBehaviour
         
     }
 
+    public static void setNextEmbodiedDrone()
+    {
+        Transform swarmHolder = swarmModel.swarmHolder.transform;
+        nextEmbodiedDrone = null;
+
+        if (swarmHolder.childCount > 0)
+        {
+            // Create a list of indices for the drones
+            List<int> indices = new List<int>();
+            for (int i = 0; i < swarmHolder.childCount; i++)
+            {
+                indices.Add(i);
+            }
+
+            // Iterate over the list in random order
+            while (indices.Count > 0)
+            {
+                // Pick a random index from the list
+                int randomListIndex = UnityEngine.Random.Range(0, indices.Count);
+                int droneIndex = indices[randomListIndex];
+                // Remove the index from the list so it isn’t tried again
+                indices.RemoveAt(randomListIndex);
+
+                GameObject drone = swarmHolder.GetChild(droneIndex).gameObject;
+                DroneController droneController = drone.GetComponent<DroneController>();
+
+                if (droneController != null && !droneController.droneFake.hasCrashed)
+                {
+                    // Mark the drone as embodied and set the camera
+                    droneController.droneFake.embodied = true;
+                    CameraMovement.embodiedDrone = drone;
+                    CameraMovement.nextEmbodiedDrone = drone;
+                    return;
+                }
+            }
+        }
+
+        Debug.LogError("No drones to embody. Restart the simulation.");
+        // Optionally restart the simulation here:
+         swarmModel.restart();
+    }
+
+
+
+
     public void resetFogExplorers()
     {
         fogWarManager.GetComponent<csFogWar>().fogRevealers.Clear();
@@ -146,6 +191,7 @@ public class CameraMovement : MonoBehaviour
         float elapsedTime = 0;
         //position of the active camera
         Vector3 startingPos = cam.transform.position;
+
         while (elapsedTime < _animationTime)
         {
             if(embodiedDrone == null)
@@ -154,8 +200,6 @@ public class CameraMovement : MonoBehaviour
                 {
                     Vector3 forwardDroneC = lastEmbodiedDrone.transform.forward;
                     forwardDroneC.y = 0;
-
-                    print(forwardDroneC);
 
                     cam.transform.position = new Vector3(lastEmbodiedDrone.transform.position.x, heightCamera, lastEmbodiedDrone.transform.position.z);
                     cam.transform.up = forwardDroneC;
@@ -193,7 +237,13 @@ public class CameraMovement : MonoBehaviour
         float elapsedTime = 0;
         float initialFOV = embodiedDrone.GetComponent<Camera>().fieldOfView;
 
-        lastEmbodiedDrone.GetComponent<DroneController>().droneFake.embodied = false;
+        print("DroneAnimation staart of " + embodiedDrone.name + " " + embodiedDrone.GetComponent<DroneController>().droneFake.embodied);
+
+        if(lastEmbodiedDrone != embodiedDrone)
+        {
+            lastEmbodiedDrone.GetComponent<DroneController>().droneFake.embodied = false;
+        }
+
         
         while (elapsedTime < _animationTime)
         {           
@@ -211,11 +261,16 @@ public class CameraMovement : MonoBehaviour
         Vector3 forwardDrone = new Vector3(lastEmbodiedDrone.transform.forward.x, 0, lastEmbodiedDrone.transform.forward.z);
         embodiedDrone.transform.forward = forwardDrone;
 
+        
+        print("DroneAnimation end of " + embodiedDrone.name + " " + embodiedDrone.GetComponent<DroneController>().droneFake.embodied);
+
         StartCoroutine(droneView());
     }
 
     public IEnumerator droneView()
     {
+
+        print("DroneView of " + embodiedDrone.name + " " + embodiedDrone.GetComponent<DroneController>().droneFake.embodied);
         state = "droneView";
         Vector3 lastPosition = embodiedDrone.transform.position;
         minimap.SetActive(minimapActive);
@@ -228,7 +283,16 @@ public class CameraMovement : MonoBehaviour
                 lastEmbodiedDrone = embodiedDrone;
 
                 setEmbodiedDrone(nextEmbodiedDrone);
-                StartCoroutine(goAnimationDoneToDrone(animationTime));
+                
+                if(lastEmbodiedDrone == embodiedDrone)
+                {
+                    print("Crash but no worries" + lastEmbodiedDrone.GetComponent<DroneController>().droneFake.embodied + " " + embodiedDrone.name);
+                    StartCoroutine(goAnimationDoneToDrone(0.01f));
+                }
+                else
+                {
+                    StartCoroutine(goAnimationDoneToDrone(animationTime));
+                }
                 yield break;
             }
             yield return new WaitForSeconds(0.01f);

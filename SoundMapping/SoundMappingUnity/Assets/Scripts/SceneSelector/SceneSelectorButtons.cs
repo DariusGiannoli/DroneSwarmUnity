@@ -14,10 +14,10 @@ public class SceneSelectorScriptEditor : Editor
         SceneSelectorScript myScript = (SceneSelectorScript)target;
 
         // Label for clarity
-        EditorGUILayout.LabelField("Dynamic Scenes from 'Assets/Scenes/Training':", EditorStyles.boldLabel);
+        EditorGUILayout.LabelField("Dynamic Scenes from "+myScript.assetPathTraining+  ":", EditorStyles.boldLabel);
 
         // Find all scenes in "Assets/Scenes/Training"
-        string[] sceneGuids = AssetDatabase.FindAssets("t:Scene", new[] { "Assets/Scenes/Training" });
+        string[] sceneGuids = AssetDatabase.FindAssets("t:Scene", new[] { myScript.assetPathTraining });
         
         // Create a button for each scene found
         foreach (string guid in sceneGuids)
@@ -29,8 +29,47 @@ public class SceneSelectorScriptEditor : Editor
             if (GUILayout.Button(sceneName))
             {
                 // Tell our script to load this scene (unload the previous one if any)
-                myScript.SelectTraining(sceneName);
+                myScript.SelectTrainingFromButton(sceneName);
             }
         }
+
+
+        //start vertical layout
+        EditorGUILayout.BeginVertical();
+        //make a tick box stating Haptics 
+        bool newHapticsValue = EditorGUILayout.Toggle("Haptics enabled", myScript.haptics);
+        if (newHapticsValue != myScript.haptics)
+        {
+            myScript.haptics = newHapticsValue;
+            myScript.OnHapticsChanged();
+        }
+
+        EditorGUILayout.BeginHorizontal();
+
+        //make a button for Demo Scene
+        if (GUILayout.Button("Obstacles"))
+        {
+            // Tell our script to load this scene (unload the previous one if any)
+            myScript.SelectTrainingFromButton("DemoFPV");
+        }
+
+        if (GUILayout.Button("Collectibles"))
+        {
+            // Tell our script to load this scene (unload the previous one if any)
+            myScript.SelectTrainingFromButton("CollectiblesFPV");
+        }
+
+        EditorGUILayout.EndHorizontal();
+
+        //button unload all scenes
+
+        //end vertical layout
+        EditorGUILayout.EndVertical();
+
+
+
+        //
+
+
     }
 }

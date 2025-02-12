@@ -8,20 +8,35 @@ public class TriggerHandlerWithCallback : MonoBehaviour
     [TagSelector] // Custom attribute for tag selection
     public string targetTag; // Tag to filter the objects
 
+    public bool allCollectiblesCollected
+    {
+        get
+        {
+            try
+            {
+                return GameObject.FindGameObjectsWithTag("Collectibles").Length == 0;
+            }
+            catch (Exception e)
+            {
+                return true;
+            }
+            //return GameObject.FindGameObjectsWithTag("Collectibles").Length == 0;
+        }
+    }
+
     [SerializeField] bool useUnityEvent = true;
     [SerializeField] bool isStart = true;
 
     public UnityEvent onTriggerEnter; // Callback to assign in the Inspector
 
-    private GameObject gm;
+    private static GameObject gm;
 
-    void Start()
+
+    public static void setGM(GameObject gameManager)
     {
-        if (useUnityEvent)
-        {
-            gm = GameObject.FindGameObjectWithTag("GameManager");
-        }
+        gm = gameManager;
     }
+
 
     private void OnTriggerEnter(Collider other)
     {
@@ -31,11 +46,16 @@ public class TriggerHandlerWithCallback : MonoBehaviour
             {
                 if (isStart)
                 {
+                    print(gm.name);
                     gm.GetComponent<Timer>().StartTimer();
                 }
                 else
                 {
-                    gm.GetComponent<Timer>().StopTimer();
+                    if (allCollectiblesCollected)
+                    {
+                        ExperimentSetupS.levelFinished();
+                        gm.GetComponent<Timer>().StopTimer();
+                    }
                 }
             }
             else

@@ -32,7 +32,6 @@ public class SimpleCollectibleScript : MonoBehaviour {
 
 	void OnTriggerEnter(Collider other)
 	{
-		print(other.tag);
 		if (other.tag == "Drone") {
 			Collect ();
 		}
@@ -41,7 +40,7 @@ public class SimpleCollectibleScript : MonoBehaviour {
 	public void Collect()
 	{
 		if(collectSound)
-			AudioSource.PlayClipAtPoint(collectSound, transform.position);
+			AudioSource.PlayClipAtPoint(collectSound, transform.position, 0.3f);
 		if(collectEffect)
 			Instantiate(collectEffect, transform.position, Quaternion.identity);
 

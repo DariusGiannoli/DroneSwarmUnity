@@ -1,46 +1,184 @@
-using System;
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
 public class SceneSelectorScript : MonoBehaviour
 {
-    // Track which scene is currently loaded (by name)
     private string lastLoadedScene = null;
+    public static int experimentNumber = 0;
+
+    public bool isLoading = false;
+    
+    public List<string> scenes = new List<string>();
+    public List<string> scenesPlayed = new List<string>();
+
+    [HideInInspector]
+    public bool haptics = false;
+    public static bool _haptics = false;
 
     private string setupScene = "Setup";
+    private string ObstacleFPV = "DemoFPV";
+    private string ObstacleTPV = "DemoTDV";
+    private string CollectibleFPV = "CollectiblesFPV";
+    private string CollectibleTPV = "CollectiblesTDV";
+
+    public string assetPathTraining = "Assets/Scenes/TrainingFinal";
 
 
-    /// <summary>
-    /// Loads the specified scene (by name) additively, 
-    /// and unloads any previously loaded scene.
-    /// </summary>
-    /// <param name="sceneName">Name of the scene to load (without .unity)</param>
+    public static string pid = "default";
+    public static bool hapticsEnabled = false;
+    public static bool order = false;
+
+    void Start()
+    {
+        // For initial cleanup.
+        StartCoroutine(UnloadAllScenesExcept("Scene Selector"));
+
+        // If using the UnityEditor to populate scenes:
+        #if UNITY_EDITOR
+        string[] sceneGuids = UnityEditor.AssetDatabase.FindAssets("t:Scene", new[] { assetPathTraining });
+        foreach (string guid in sceneGuids)
+        {
+            string scenePath = UnityEditor.AssetDatabase.GUIDToAssetPath(guid);
+            string sceneName = System.IO.Path.GetFileNameWithoutExtension(scenePath);
+            scenes.Add(sceneName);
+        }
+        #endif
+    }
+
+    public void OnHapticsChanged()
+    {
+    }
+
+    IEnumerator UnloadAllScenesExcept(string sceneToKeep)
+    {
+        isLoading = true;
+        List<Scene> loadedScenes = new List<Scene>();
+        print(SceneManager.sceneCount);
+        for (int i = 0; i < SceneManager.sceneCount; i++)
+        {
+            loadedScenes.Add(SceneManager.GetSceneAt(i));
+        }
+
+        foreach (Scene scene in loadedScenes)
+        {
+            if (scene.name != sceneToKeep)
+            {
+                AsyncOperation op = SceneManager.UnloadSceneAsync(scene);
+                if (op != null)
+                {
+                    yield return new WaitUntil(() => op.isDone);
+                    Debug.Log($"Unloaded scene: {scene.name}");
+                }
+                else
+                {
+                    Debug.LogWarning($"UnloadSceneAsync returned null for scene {scene.name}");
+                }
+            }
+        }
+        isLoading = false;
+    }
+
+    IEnumerator LoadTrainingScene(string sceneName)
+    {
+        if (isLoading)
+        {
+            Debug.LogWarning("Scene loading already in progress.");
+            yield break;
+        }
+        // Unload all scenes except the persistent one.
+        yield return StartCoroutine(UnloadAllScenesExcept("Scene Selector"));
+
+        // Load the new training scene additively.
+        AsyncOperation loadOp = SceneManager.LoadSceneAsync(sceneName, LoadSceneMode.Additive);
+        yield return new WaitUntil(() => loadOp.isDone);
+        lastLoadedScene = sceneName;
+        Debug.Log($"Loaded training scene: {sceneName}");
+
+        
+        // Load the setup scene additively.
+        AsyncOperation setupLoadOp = SceneManager.LoadSceneAsync(setupScene, LoadSceneMode.Additive);
+        yield return new WaitUntil(() => setupLoadOp.isDone);
+        Debug.Log($"Loaded setup scene: {setupScene}");
+    }
+
     public void SelectTraining(string sceneName)
     {
-        // If a scene is already loaded, unload it
-        if (!string.IsNullOrEmpty(lastLoadedScene))
+        StartCoroutine(LoadTrainingScene(sceneName));
+    }
+
+    public void SelectTrainingFromButton(string sceneName)
+    {
+        this.GetComponent<ExperimentSetupS>().GUIIDisable();
+        scenesPlayed = new List<string> { sceneName };
+
+        SelectTraining(sceneName);
+    }
+
+    public void StartTraining(bool Haptics, bool Order, string PID)
+    {
+        pid = PID;
+        hapticsEnabled = Haptics;
+        _haptics = Haptics;
+        order = Order;
+
+        // Set up your experiment order.
+        scenesPlayed = new List<string>(scenes);
+        haptics = Haptics;
+
+        if (Order)
         {
-            SceneManager.UnloadSceneAsync(lastLoadedScene);
+            scenesPlayed.Add(ObstacleFPV);
+            scenesPlayed.Add(ObstacleFPV);
+            scenesPlayed.Add(ObstacleTPV);
+            scenesPlayed.Add(ObstacleTPV);
+            scenesPlayed.Add(CollectibleFPV);
+            scenesPlayed.Add(CollectibleFPV);
+            scenesPlayed.Add(CollectibleTPV);
+            scenesPlayed.Add(CollectibleTPV);
+        }
+        else
+        {
+            scenesPlayed.Add(ObstacleTPV);
+            scenesPlayed.Add(ObstacleTPV);
+            scenesPlayed.Add(ObstacleFPV);
+            scenesPlayed.Add(ObstacleFPV);
+            scenesPlayed.Add(CollectibleTPV);
+            scenesPlayed.Add(CollectibleTPV);
+            scenesPlayed.Add(CollectibleFPV);
+            scenesPlayed.Add(CollectibleFPV);
         }
 
-        // unload the setup scene if it is loaded
-        if (SceneManager.GetSceneByName(setupScene).isLoaded)
+        experimentNumber = -1;
+        print("Haptics: " + Haptics + " Order: " + Order + " PID: " + PID);
+        NextScene();
+    }
+
+    public void NextScene()
+    {
+        experimentNumber++;
+        if (experimentNumber >= scenesPlayed.Count)
         {
-            SceneManager.UnloadSceneAsync(setupScene);
+            // End of experiment; unload all non-persistent scenes.
+            StartCoroutine(UnloadAllScenesExcept("Scene Selector"));
+            return;
         }
 
-        // Load the new scene additively
-        SceneManager.LoadScene(sceneName, LoadSceneMode.Additive);
+        SelectTraining(scenesPlayed[experimentNumber]);
+    }
 
-        // Remember the new scene
-        lastLoadedScene = sceneName;
+    public void ResetScene()
+    {
+        if (experimentNumber >= 0 && experimentNumber < scenesPlayed.Count)
+        {
+            // Reload the current scene.
+            SelectTraining(scenesPlayed[experimentNumber]);
+        }
+    }
 
-        Debug.Log($"Loaded scene: {sceneName}, unloaded scene: {lastLoadedScene}");
-
-
-        //swarmModel.restart();
-
-        //load the setup scene
-        SceneManager.LoadScene(setupScene, LoadSceneMode.Additive);
+    public static void reset()
+    {
+        GameObject.FindObjectOfType<SceneSelectorScript>().ResetScene();
     }
 }

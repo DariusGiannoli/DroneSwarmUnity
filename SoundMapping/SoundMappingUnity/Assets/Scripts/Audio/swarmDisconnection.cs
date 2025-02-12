@@ -53,6 +53,10 @@ public class SwarmDisconnection : MonoBehaviour
 
     public static void CheckDisconnection()
     {
+        if(!LevelConfiguration._Audio_isolation)
+        {
+            return; 
+        }
         List<int> dronesIDAnalysis = new List<int>();
         
         NetworkCreator network = swarmModel.network;

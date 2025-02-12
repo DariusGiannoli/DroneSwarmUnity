@@ -47,13 +47,17 @@ public class VibraForge : MonoBehaviour
     //on quit
     void OnApplicationQuit()
     {
-        for(int i = 0; i < 120; i++)
+        for(int i = 0; i < 180; i++)
         {
             SendCommand(i, 0, 0, 0);
+            if(i % 20 == 0)
+            {
+                System.Threading.Thread.Sleep(100);
+            }
         }
         
         //wait for 1 second
-        System.Threading.Thread.Sleep(1000);
+   //     System.Threading.Thread.Sleep(1000);
 
         }
 }

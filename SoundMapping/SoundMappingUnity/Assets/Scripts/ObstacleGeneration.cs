@@ -211,7 +211,6 @@ public class ObstacleGeneration : MonoBehaviour
     
     void AddObstacles()
     {
-        print("Adding obstacles");
         GameObject[] obstacleObjects = GameObject.FindGameObjectsWithTag("Obstacle");
         List<Obstacle> obstacles = new List<Obstacle>();
 
@@ -246,7 +245,6 @@ public class ObstacleGeneration : MonoBehaviour
         ClosestPointCalculator.obstacles = obstacles;
         ClosestPointCalculator.obstaclesInRange = obstacles;
 
-        print("Obstacles: " + obstacles.Count);
     }
 
 }

@@ -17,7 +17,7 @@ public class Timer : MonoBehaviour
     public Image Bluetooth;
 
     public Image Controller;
-    public float elapsedTime = 0f;
+    public static float elapsedTime = 0f;
     public float elapsedTimeNetwork = 0f;
     private Coroutine timerCoroutine;
     private Coroutine timerCoroutineNetwork;
@@ -63,7 +63,7 @@ public class Timer : MonoBehaviour
     void ShowLeaderboard()
     {
         UpdateLeaderboardDisplay();
-        nameInputField.enabled = true;
+        nameInputField.enabled = false;
     }
 
     public void Restart()
@@ -112,6 +112,7 @@ public class Timer : MonoBehaviour
     {
         if (timerCoroutine != null)
         {
+            this.GetComponent<saveInfoToJSON>().exportData(false);
             StopCoroutine(timerCoroutine);
             timerCoroutine = null;
             SaveScore();
