@@ -137,7 +137,7 @@ public class CameraMovement : MonoBehaviour
         // applz rotation to the camera with lerp
         cam.transform.Rotate(-Vector3.forward, rightStickHorizontal * Time.deltaTime * rotationSpeed);
 
-        cam.GetComponent<Camera>().orthographicSize = Mathf.Lerp(cam.GetComponent<Camera>().orthographicSize, Mathf.Max(swarmModel.desiredSeparation * 3, 5), Time.deltaTime * 2);
+        cam.GetComponent<Camera>().orthographicSize = Mathf.Lerp(cam.GetComponent<Camera>().orthographicSize, Mathf.Max(swarmModel.desiredSeparation * 3, 6), Time.deltaTime * 2);
     }
 
     void updateDroneView()

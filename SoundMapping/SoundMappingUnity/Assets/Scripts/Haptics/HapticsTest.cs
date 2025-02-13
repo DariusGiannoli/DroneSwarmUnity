@@ -126,12 +126,12 @@ public class HapticsTest : MonoBehaviour
 
         Dictionary<int, int> angleMappingDict = new Dictionary<int, int> {
             {0, 30},
-            {1, 80},
+            {1, 90},
             {2, 130},
             {3, 180},
-            {4, 230},
+            {4, 270},
             {5, 280},
-            {6, 350},
+            {6, 0},
             {30, 210},
             {31, 210},
             {33, 270},
@@ -154,10 +154,10 @@ public class HapticsTest : MonoBehaviour
 
 
         //obstacle in Range mapping
-        int[] angleMapping =  Haptics_Obstacle ? new int[] {0,1,2,3,4,5,6, 63, 69}  : new int[] {};
+        int[] angleMapping =  Haptics_Obstacle ? new int[] {1,3,4,6, 63, 69}  : new int[] {};
 
         //drone crash mapping
-        int[] crashMapping =  Haptics_Crash ? new int[] {0,1,2,3,4,5,6, 63, 69}  : new int[] {};;
+        int[] crashMapping =  Haptics_Crash ? new int[] {1,3,4,6}  : new int[] {};;
         
         
         //layers movement on arm mapping
@@ -340,7 +340,7 @@ public class HapticsTest : MonoBehaviour
                 actuator.update();
             }
 
-            sendCommands();
+          //  sendCommands();
 
             yield return new WaitForSeconds(sendEvery / 1000);
         }
@@ -518,8 +518,9 @@ public class HapticsTest : MonoBehaviour
             foreach(Actuators actuator in crashActuators) {
                 actuator.dutyIntensity = 0;
                 actuator.frequency = 1;
+
+                actuator.sendValue();
             }
-            sendCommands();
         }
 
         
@@ -532,6 +533,7 @@ public class HapticsTest : MonoBehaviour
         foreach(Actuators actuator in crashActuators) {
             actuator.dutyIntensity = 10;
             actuator.frequency = 1;
+            actuator.sendValue();
         }
 
         yield return new WaitForSeconds(1);
@@ -539,6 +541,7 @@ public class HapticsTest : MonoBehaviour
         foreach(Actuators actuator in crashActuators) {
             actuator.dutyIntensity = 0;
             actuator.frequency = 1;
+            actuator.sendValue();
         }
     }
     
@@ -705,6 +708,7 @@ public class RefresherActuator: Actuators
     public override void update()
     {
         refresherFunction(this);
+        sendValue();
     }
 }
 
@@ -742,6 +746,7 @@ public class PIDActuator : Actuators // creae Ki
     override public void update()
     {
         refresherFunction(this);
+        sendValue();
     }
 }
 
@@ -752,6 +757,9 @@ public class Actuators
 
     public int dutyIntensity = 0;
     public int frequency = 1;
+
+    public int lastSendDuty = 0;
+    public int lastSendFrequency = 0;
 
 
     public int duty
@@ -787,8 +795,20 @@ public class Actuators
 
     public virtual void update()
     {
+        sendValue();
         return;
     }
+
+    public virtual void sendValue()
+    {
+        if( lastSendFrequency != frequency || lastSendDuty != duty) {
+            VibraForge.SendCommand(Adresse, (int)duty == 0 ? 0:1, (int)duty, (int)frequency);
+            lastSendDuty = duty;
+            lastSendFrequency = frequency;
+        }
+    }
+
+
 }
 
 

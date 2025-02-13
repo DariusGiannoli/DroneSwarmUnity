@@ -450,7 +450,7 @@ public class swarmModel : MonoBehaviour
                 allForcesOlfati.Add(drone.lastOlfati);
             }
 
-            swarmObstacleForces = ForceClusterer.getForcesObstacle(allForcesObstacle, 40f, (int)network.largestComponent.Count / 3, 2);
+            swarmObstacleForces = ForceClusterer.getForcesObstacle(allForcesObstacle, 90f, (int)network.largestComponent.Count / 4, 2);
             swarmOlfatiForces = ForceClusterer.getOlfatiForces(allForcesOlfati, 35f, (int)network.largestComponent.Count / 5, 1);
         }
         else

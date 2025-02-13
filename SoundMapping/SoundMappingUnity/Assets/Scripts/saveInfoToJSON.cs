@@ -1,11 +1,32 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using Unity.VisualScripting;
 using UnityEngine;
 
 public class saveInfoToJSON : MonoBehaviour
 {
     public static SwarmState swarmData = new SwarmState();
+    public int saveEvery = 100; // in ms
+
+    public IEnumerator saveDataPointCoroutine()
+    {
+        while (true)
+        {
+            saveDataPoint();
+            yield return new WaitForSecondsRealtime(saveEvery/1000);
+        }
+    }
+
+    public void Start()
+    {
+        swarmData = new SwarmState();
+        if (LevelConfiguration._SaveData)
+        {
+            StartCoroutine(saveDataPointCoroutine());
+        }
+    }
+
 
     // Call this method whenever you want to record a new data point
     public static void saveDataPoint()
@@ -79,6 +100,8 @@ public class SwarmState
 
     public List<float> time = new List<float>();
 
+
+
     // Constants or static fields do not get serialized by default by JsonUtility
     // If you need them in the JSON, make them non-static. 
     public float maxSpeed = DroneFake.maxSpeed; 
@@ -111,7 +134,15 @@ public class SwarmState
             }
 
             // Append data to that DroneState
-            entry.droneState.add(drone, network.adjacencyList[drone]);
+            List<DroneFake> net = new List<DroneFake>();
+            if( network != null)
+            {
+                if( network.adjacencyList.ContainsKey(drone))
+                {
+                    net = network.adjacencyList[drone];
+                }
+            }
+            entry.droneState.add(drone, net);
         }
 
         desiredSeparation.Add(DroneFake.desiredSeparation);

@@ -43,6 +43,10 @@ public class Timer : MonoBehaviour
 
     void Start()
     {
+        numberDroneDied = 0;
+        elapsedTime = 0;
+        elapsedTimeNetwork = 0;
+        
         // Load leaderboard from file
         LoadLeaderboardFromFile();
         UpdateLeaderboardDisplay();

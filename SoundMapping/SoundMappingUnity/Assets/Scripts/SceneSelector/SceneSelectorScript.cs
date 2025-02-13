@@ -127,16 +127,18 @@ public class SceneSelectorScript : MonoBehaviour
         scenesPlayed = new List<string>(scenes);
         haptics = Haptics;
 
+       // scenesPlayed.Clear();
+
         if (Order)
         {
             scenesPlayed.Add(ObstacleFPV);
             scenesPlayed.Add(ObstacleFPV);
             scenesPlayed.Add(ObstacleTPV);
-            scenesPlayed.Add(ObstacleTPV);
+         //   scenesPlayed.Add(ObstacleTPV);
             scenesPlayed.Add(CollectibleFPV);
-            scenesPlayed.Add(CollectibleFPV);
+        //    scenesPlayed.Add(CollectibleFPV);
             scenesPlayed.Add(CollectibleTPV);
-            scenesPlayed.Add(CollectibleTPV);
+        //    scenesPlayed.Add(CollectibleTPV);
         }
         else
         {
@@ -149,6 +151,7 @@ public class SceneSelectorScript : MonoBehaviour
             scenesPlayed.Add(CollectibleFPV);
             scenesPlayed.Add(CollectibleFPV);
         }
+
 
         experimentNumber = -1;
         print("Haptics: " + Haptics + " Order: " + Order + " PID: " + PID);
