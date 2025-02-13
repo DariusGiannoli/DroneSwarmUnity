@@ -11,8 +11,15 @@ public class textInfo : MonoBehaviour
     public TextMeshProUGUI IsolationText;
     public TextMeshProUGUI DroneCrashText;
     public TextMeshProUGUI SpreadnessSwarmScore;
+
+    public TextMeshProUGUI CollectibleText;
     // Start is called before the first frame update
     // Update is called once per frame
+
+    void Start()
+    {
+
+    }
     void Update()
     {
         if(LevelConfiguration._ShowText)
@@ -29,6 +36,16 @@ public class textInfo : MonoBehaviour
             IsolationText.text = "";
             DroneCrashText.text = "";
             SpreadnessSwarmScore.text = "";
+        }
+        
+        if(LevelConfiguration._CollectibleNumber > 0)
+        {
+            CollectibleText.text = "Collectible: " + (LevelConfiguration._CollectibleNumber - GameObject.FindGameObjectsWithTag("Collectibles").Length).ToString() + 
+                                                    "/" + LevelConfiguration._CollectibleNumber.ToString();
+        }
+        else
+        {
+            CollectibleText.text = "";
         }
     }
 

@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using FischlWorks_FogWar;
+//using FischlWorks_FogWar;
 using Unity.VisualScripting;
 using UnityEngine;
 
@@ -27,14 +27,14 @@ public class swarmModel : MonoBehaviour
     }
     public static GameObject swarmHolder;
     public GameObject dronePrefab;
-    public int numDrones 
+    public int numDrones
     {
         get
         {
             return LevelConfiguration._NumDrones;
         }
     }
-    public float spawnRadius 
+    public float spawnRadius
     {
         get
         {
@@ -71,7 +71,7 @@ public class swarmModel : MonoBehaviour
     public static float droneRadius = 0.17f;      // Radius of the drone
     public LayerMask obstacleLayer;        // Layer mask for obstacles
 
-    public csFogWar fogWar;
+    //public csFogWar fogWar;
 
     public int PRIORITYWHENEMBODIED = 15;
     public float dampingFactor = 0.98f;
@@ -118,22 +118,22 @@ public class swarmModel : MonoBehaviour
         }
     }
     public static float swarmAskingSpreadness = 0f;
-    
+
     public static List<DroneFake> drones = new List<DroneFake>();
 
-        [Header("Gizmos")]
-        public bool showObstacleGizmos = false;
-        public bool showNetworkGizmos = false;
-        public bool showNetworkConnexionVulnerability = false;
-        public bool showNetworkConnectivity = false;
-        public bool showDroneObstacleForces = false;
-        public bool showDroneOlfatiForces = false;
-        public bool showDroneAllignementForces = false;
+    [Header("Gizmos")]
+    public bool showObstacleGizmos = false;
+    public bool showNetworkGizmos = false;
+    public bool showNetworkConnexionVulnerability = false;
+    public bool showNetworkConnectivity = false;
+    public bool showDroneObstacleForces = false;
+    public bool showDroneOlfatiForces = false;
+    public bool showDroneAllignementForces = false;
 
 
 
-        public bool showSwarmObstacleForces = false;
-        public bool showSwarmOlfati = false;
+    public bool showSwarmObstacleForces = false;
+    public bool showSwarmOlfati = false;
 
 
     #endregion
@@ -144,7 +144,7 @@ public class swarmModel : MonoBehaviour
 
     private Thread scorePlottingThread;
     private bool isThreadRunning = false;
-    private float printInterval = 1f; // Print every second
+    private float printInterval = 0.2f; // Print every second
     private object scoreLock = new object();
 
     private class NetworkScores
@@ -176,7 +176,7 @@ public class swarmModel : MonoBehaviour
 
         Application.targetFrameRate = 30; // Set the target frame rate to 30 FPS
 
-        PRIORITYWHENEMBODIED = (int)(numDrones/3.5f);
+        PRIORITYWHENEMBODIED = (int)(numDrones / 3.5f);
         swarmHolder = needToSpawn ? GameObject.FindGameObjectWithTag("Swarm") : LevelConfiguration.swarmHolder;
 
         if (swarmHolder == null)
@@ -190,9 +190,11 @@ public class swarmModel : MonoBehaviour
 
         // Initialize and start the score plotting thread
         isThreadRunning = true;
-        scorePlottingThread = new Thread(PlotNetworkScores);
-        scorePlottingThread.Start();
+       // scorePlottingThread = new Thread(PlotNetworkScores);
+       // scorePlottingThread.Start();
     }
+
+    public static bool dummyForcesApplied = true;
 
 
     void refreshParameters()
@@ -224,11 +226,13 @@ public class swarmModel : MonoBehaviour
         refreshSwarm();
 
         UpdateSwarmForces();
-        UpdateSwarmInfos();
 
-        swarmSeparation(3); // swarm connexion score
-        
-        if(!showNetworkConnexionVulnerability)
+        getSwarmConnexion(); // swarm connexion score
+        //swarmSeparation(3); // swarm connexion score
+
+
+
+        if (!showNetworkConnexionVulnerability)
         {
             SwarmDisconnection.CheckDisconnection();
         }
@@ -243,6 +247,24 @@ public class swarmModel : MonoBehaviour
             currentScores.dronesSnapshot = new List<DroneFake>(drones);
             currentScores.alignmentVector = MigrationPointController.alignementVectorNonZero;
         }
+    }
+
+    void getSwarmConnexion()
+    {
+
+            List<DroneFake> connectedDrone = network.largestComponent.ToList();
+
+            NetworkCreator networkToCompute = new NetworkCreator(connectedDrone);
+            networkToCompute.refreshNetwork();
+
+           // float velMissmatch = networkToCompute.ComputeNormalizedVelocityMismatch();
+            float energyDev = networkToCompute.ComputeNormalizedDeviationEnergy();
+         ////   float relativeConnectivity = networkToCompute.ComputeRelativeConnectivity();
+          //  float cohesionRadius = networkToCompute.ComputeCohesionRadius();
+
+          swarmConnectionScore = energyDev;
+
+        //  swarmConnectionScore = this.GetComponent<NetworkRepresentation>().UpdateNetworkRepresentation(network.getLayersConfiguration());
     }
 
     public static void restart()
@@ -297,11 +319,11 @@ public class swarmModel : MonoBehaviour
 
         foreach (Transform drone in swarmHolder.transform)
         {
-            fogWar.AddFogRevealer(drone, 1, true);
+        //    fogWar.AddFogRevealer(drone, 1, true);
             drone.GetComponent<DroneController>().droneFake = new DroneFake(drone.transform.position, Vector3.zero, false, i);
             drones.Add(drone.GetComponent<DroneController>().droneFake);
 
-            if(startEmbodied && i == droneID)
+            if (startEmbodied && i == droneID)
             {
                 CameraMovement.embodiedDrone = drone.gameObject;
                 CameraMovement.embodiedDrone.GetComponent<DroneController>().droneFake.embodied = true;
@@ -314,7 +336,8 @@ public class swarmModel : MonoBehaviour
         if (LevelConfiguration._droneID < drones.Count && LevelConfiguration._droneID != -1)
         {
             MigrationPointController.selectedDrone = swarmHolder.transform.GetChild(LevelConfiguration._droneID).gameObject;
-        }else
+        }
+        else
         {
             print("Drone ID not found");
         }
@@ -324,7 +347,7 @@ public class swarmModel : MonoBehaviour
 
 
 
-     //   this.GetComponent<HapticAudioManager>().Reset();
+        //   this.GetComponent<HapticAudioManager>().Reset();
 
         return;
     }
@@ -344,7 +367,7 @@ public class swarmModel : MonoBehaviour
     void spawn()
     {
         desiredSeparation = 3f;
-        if(!needToSpawn)
+        if (!needToSpawn)
         {
             spawnless();
             return;
@@ -367,19 +390,19 @@ public class swarmModel : MonoBehaviour
         {
             //spawn on a circle
             Vector3 spawnPosition = new Vector3(spawnRadius * Mathf.Cos(i * 2 * Mathf.PI / numDrones), spawnHeight + UnityEngine.Random.Range(-0.5f, 0.5f), spawnRadius * Mathf.Sin(i * 2 * Mathf.PI / numDrones));
-            
+
             GameObject drone = Instantiate(dronePrefab, spawnPosition, Quaternion.identity);
 
             drone.GetComponent<DroneController>().droneFake = new DroneFake(spawnPosition, Vector3.zero, false, i);
 
-            fogWar.AddFogRevealer(drone.transform, 1, true);
+         //   fogWar.AddFogRevealer(drone.transform, 1, true);
 
             drones.Add(drone.GetComponent<DroneController>().droneFake);
 
             drone.transform.parent = swarmHolder.transform;
-            drone.name = "Drone"+i.ToString();
+            drone.name = "Drone" + i.ToString();
 
-            if(startEmbodied && i == droneID)
+            if (startEmbodied && i == droneID)
             {
                 CameraMovement.embodiedDrone = drone.gameObject;
                 CameraMovement.embodiedDrone.GetComponent<DroneController>().droneFake.embodied = true;
@@ -387,7 +410,7 @@ public class swarmModel : MonoBehaviour
         }
 
         getDummies();
-    
+
     }
 
     public void RemoveDrone(GameObject drone)
@@ -404,7 +427,7 @@ public class swarmModel : MonoBehaviour
         if (swarmHolder.transform.childCount == 0)
         {
             this.GetComponent<Timer>().Restart();
-            fogWar.ResetMapAndFogRevealers();
+           // fogWar.ResetMapAndFogRevealers();
             spawn();
         }
 
@@ -419,7 +442,7 @@ public class swarmModel : MonoBehaviour
         swarmObstacleForces.Clear();
         swarmOlfatiForces.Clear();
 
-        if(CameraMovement.embodiedDrone == null)
+        if (CameraMovement.embodiedDrone == null)
         {
             foreach (DroneFake drone in network.drones)
             {
@@ -427,57 +450,17 @@ public class swarmModel : MonoBehaviour
                 allForcesOlfati.Add(drone.lastOlfati);
             }
 
-            swarmObstacleForces = ForceClusterer.getForcesObstacle(allForcesObstacle, 40f, (int)network.largestComponent.Count/3, 2);
-            swarmOlfatiForces = ForceClusterer.getOlfatiForces(allForcesOlfati, 35f, (int)network.largestComponent.Count/5, 1);
-        }else{
-            
+            swarmObstacleForces = ForceClusterer.getForcesObstacle(allForcesObstacle, 40f, (int)network.largestComponent.Count / 3, 2);
+            swarmOlfatiForces = ForceClusterer.getOlfatiForces(allForcesOlfati, 35f, (int)network.largestComponent.Count / 5, 1);
+        }
+        else
+        {
+
             //get embodied drone infos
             swarmOlfatiForces.Add(CameraMovement.embodiedDrone.GetComponent<DroneController>().droneFake.lastOlfati);
-            (List<Vector3> forces, bool hasCrashed) = CameraMovement.embodiedDrone.GetComponent<DroneController>().droneFake.getObstacleForces(2f,2f,1f);
+            (List<Vector3> forces, bool hasCrashed) = CameraMovement.embodiedDrone.GetComponent<DroneController>().droneFake.getObstacleForces(2f, 2f, 1f);
             swarmObstacleForces = forces;
         }
-    }
-    
-    public void UpdateSwarmInfos()
-    {
-        //check if there is still a drone in the swarm
-        if (swarmHolder.transform.childCount == 0)
-        {
-            SceneSelectorScript.reset();
-            return;
-        }
-        
-        swarmVelocityAvg = Vector3.zero;
-        foreach (DroneFake drone in dronesInMainNetwork)
-        {
-            swarmVelocityAvg += drone.velocity;
-        }
-        swarmVelocityAvg /= dronesInMainNetwork.Count;
-
-        if (saveData)
-        {
-            saveInfoToJSON.saveDataPoint();
-        }
-
-        float minDistance = float.MaxValue;
-
-        // Loop through each drone and its neighbors
-        foreach (DroneFake drone in dronesInMainNetwork)
-        {
-            foreach (DroneFake neighbour in network.GetNeighbors(drone))
-            {
-                // Calculate distance once to avoid repeated calls
-                float distance = Vector3.Distance(drone.position, neighbour.position);
-
-                // Update global minimum distance if we find a smaller one
-                if (distance < minDistance)
-                {
-                    minDistance = distance;
-                }
-            }
-        }
-        // Update the global minimum distance
-        swarmModel.minDistance = minDistance;
     }
     //void on Guizmos
     void OnDrawGizmos()
@@ -499,7 +482,7 @@ public class swarmModel : MonoBehaviour
             }
         }
 
-        if(showNetworkConnexionVulnerability)
+        if (showNetworkConnexionVulnerability)
         {
             SwarmDisconnection.CheckDisconnection();
         }
@@ -517,7 +500,7 @@ public class swarmModel : MonoBehaviour
             {
                 foreach (DroneFake neighbour in network.GetNeighbors(drone))
                 {
-                    int minLayer = Mathf.Min(drone.layer, neighbour.layer); 
+                    int minLayer = Mathf.Min(drone.layer, neighbour.layer);
                     if (minLayer == 0)
                     {
                         Gizmos.color = Color.black;
@@ -533,35 +516,43 @@ public class swarmModel : MonoBehaviour
                     else if (minLayer == 3)
                     {
                         Gizmos.color = Color.blue;
-                    }else if (minLayer == 4){
+                    }
+                    else if (minLayer == 4)
+                    {
                         Gizmos.color = Color.cyan;
-                    }else if (minLayer == 5){
+                    }
+                    else if (minLayer == 5)
+                    {
                         Gizmos.color = Color.blue;
-                    }else if (minLayer == 6){
+                    }
+                    else if (minLayer == 6)
+                    {
                         Gizmos.color = Color.grey;
                     }
                     Gizmos.DrawLine(drone.position, neighbour.position);
                 }
-                
+
             }
         }
 
 
-        if(CameraMovement.embodiedDrone == null)
+        if (CameraMovement.embodiedDrone == null)
         {
-            if(showSwarmObstacleForces){
-                foreach(Vector3 force in swarmObstacleForces)
+            if (showSwarmObstacleForces)
+            {
+                foreach (Vector3 force in swarmObstacleForces)
                 {
-                        Gizmos.color = Color.blue;
-                        Gizmos.DrawLine(Camera.main.transform.position, Camera.main.transform.position + force * 10);
+                    Gizmos.color = Color.blue;
+                    Gizmos.DrawLine(Camera.main.transform.position, Camera.main.transform.position + force * 10);
                 }
             }
 
-            if(showSwarmOlfati){
-                foreach(Vector3 force in swarmOlfatiForces)
+            if (showSwarmOlfati)
+            {
+                foreach (Vector3 force in swarmOlfatiForces)
                 {
-                        Gizmos.color = Color.cyan;
-                        Gizmos.DrawLine(Camera.main.transform.position, Camera.main.transform.position + force * 10);
+                    Gizmos.color = Color.cyan;
+                    Gizmos.DrawLine(Camera.main.transform.position, Camera.main.transform.position + force * 10);
                 }
             }
         }
@@ -573,7 +564,7 @@ public class swarmModel : MonoBehaviour
         List<float> scores = new List<float>();
         foreach (DroneFake drone in network.drones)
         {
-            if(!network.IsInMainNetwork(drone))
+            if (!network.IsInMainNetwork(drone))
             {
                 continue;
             }
@@ -592,14 +583,14 @@ public class swarmModel : MonoBehaviour
                 number = neighbors.Count;
             }
 
-            if(number == 0)
+            if (number == 0)
             {
                 continue;
             }
 
             List<DroneFake> mostVulnerable = neighbors.GetRange(0, number);
 
-            float ratioAverageDistance = mostVulnerable.Average(d => Vector3.Distance(d.position, drone.position))/desiredSeparation;
+            float ratioAverageDistance = mostVulnerable.Average(d => Vector3.Distance(d.position, drone.position)) / desiredSeparation;
 
             float score = ratioAverageDistance;
 
@@ -619,7 +610,7 @@ public class swarmModel : MonoBehaviour
 
         finalScore = (finalScore - 0.55f) / (0.75f - 0.55f);
         finalScore = Mathf.Min(finalScore, 1f);
-        finalScore = 1-Mathf.Max(finalScore, 0f);
+        finalScore = 1 - Mathf.Max(finalScore, 0f);
 
         BrownToBlueNoise.AnalyseShrinking(finalScore);
         swarmAskingSpreadness = finalScore;
@@ -627,9 +618,9 @@ public class swarmModel : MonoBehaviour
 
     void swarmSeparation(int numberOfCut)
     {
-        
-            // Get average position and velocity of each group
-        if(CameraMovement.embodiedDrone == null)
+
+        // Get average position and velocity of each group
+        if (CameraMovement.embodiedDrone == null)
         {
             List<DroneFake> dronesInDirection = network.largestComponent.OrderBy(d => Vector3.Dot(d.position, MigrationPointController.alignementVectorNonZero.normalized)).ToList();
 
@@ -653,25 +644,27 @@ public class swarmModel : MonoBehaviour
             List<float> scores = new List<float>();
             for (int i = 0; i < averages.Count; i++)
             {
-                float diffPos = (i < averages.Count - 1) ? Vector3.Dot(averages[i+1].position, MigrationPointController.alignementVectorNonZero.normalized) - Vector3.Dot(averages[i].position, MigrationPointController.alignementVectorNonZero.normalized) : 0;   
-                
+                float diffPos = (i < averages.Count - 1) ? Vector3.Dot(averages[i + 1].position, MigrationPointController.alignementVectorNonZero.normalized) - Vector3.Dot(averages[i].position, MigrationPointController.alignementVectorNonZero.normalized) : 0;
+
 
                 float fakeDesiredSeparation = desiredSeparation;
                 if (desiredSeparation < 2.5)
                 {
-                    fakeDesiredSeparation = 1/3 * (desiredSeparation-1) + 2;
+                    fakeDesiredSeparation = 1 / 3 * (desiredSeparation - 1) + 2;
                 }
-                float score = 2f*diffPos/fakeDesiredSeparation - 1;
+                float score = 2f * diffPos / fakeDesiredSeparation - 1;
                 scores.Add(score);
 
             }
 
             float scoreFinal = Mathf.Max(Mathf.Min(scores.Max(), 1.5f), 0f);
-            scoreFinal = Mathf.Max((scoreFinal - 0.3f) / (1.5f - 0.3f),0f);
+            scoreFinal = Mathf.Max((scoreFinal - 0.3f) / (1.5f - 0.3f), 0f);
 
             swarmConnectionScore = scoreFinal;
 
-        }else{ // embodied drone only looking at the 1st order neighnbor
+        }
+        else
+        { // embodied drone only looking at the 1st order neighnbor
             swarmConnectionScore = this.GetComponent<NetworkRepresentation>().UpdateNetworkRepresentation(network.getLayersConfiguration());
         }
 
@@ -703,7 +696,23 @@ public class swarmModel : MonoBehaviour
                 currentAlignmentVector = currentScores.alignmentVector;
             }
 
-            NetworkCreator networkToCompute = new NetworkCreator(currentDrones.FindAll(d => d.isMovable));
+            NetworkCreator networkToComputeFirst = new NetworkCreator(currentDrones);
+            networkToComputeFirst.refreshNetwork();
+
+
+
+
+            List<DroneFake> movableDrone = networkToComputeFirst.drones.FindAll(d => d.isMovable);
+            List<DroneFake> connectedDrone = networkToComputeFirst.drones.FindAll(d => networkToComputeFirst.IsInMainNetwork(d)); // including the dummy drones
+                                                                                                                                  //merge the 2 without doublons
+
+            List<DroneFake> connectedMovableDrone = connectedDrone.Union(movableDrone).ToList();
+
+            NetworkCreator networkToCompute = new NetworkCreator(connectedDrone);
+            networkToCompute.refreshNetwork();
+
+            //          Debug.Log("Computing scores for " + connectedMovableDrone.Count + " drones");
+
 
             // Calculate all scores in the thread
             float velMissmatch = networkToCompute.ComputeNormalizedVelocityMismatch();
@@ -716,7 +725,10 @@ public class swarmModel : MonoBehaviour
             Debug.Log($"Velocity Missmatch: {velMissmatch}" +
                       $"  Energy Deviation: {energyDev}" +
                       $"  Relative Connectivity: {relativeConnectivity}" +
-                      $"  Cohesion Radius: {cohesionRadius}");
+                      $"  Cohesion Radius: {cohesionRadius}" +
+                      $"   Computing scores for " + networkToCompute.drones.Count);
+            //drones number
+
 
 
             Thread.Sleep((int)(printInterval * 1000));
@@ -724,7 +736,7 @@ public class swarmModel : MonoBehaviour
     }
 
     void OnApplicationQuit()
-    {   
+    {
         isThreadRunning = false;
         if (scorePlottingThread != null && scorePlottingThread.IsAlive)
         {

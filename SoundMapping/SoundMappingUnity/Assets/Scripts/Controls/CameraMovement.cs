@@ -2,7 +2,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Data.Common;
-using FischlWorks_FogWar;
 using Unity.VisualScripting;
 using UnityEngine;
 
@@ -15,8 +14,6 @@ public class CameraMovement : MonoBehaviour
     private int FOVDrones = 5;
 
     public float heightCamera = 20;
-
-    public GameObject fogWarManager;
 
     public static string state = "TDView";
     // Start is called before the first frame update
@@ -106,19 +103,6 @@ public class CameraMovement : MonoBehaviour
          swarmModel.restart();
     }
 
-
-
-
-    public void resetFogExplorers()
-    {
-        fogWarManager.GetComponent<csFogWar>().fogRevealers.Clear();
-        
-        for (int i = 0; i < swarmHolder.childCount; i++)
-        {
-            fogWarManager.GetComponent<csFogWar>().AddFogRevealer(swarmHolder.GetChild(i).gameObject.transform, FOVDrones, true);
-        }
-
-    }
 
     public Vector3 getCameraPosition()
     {

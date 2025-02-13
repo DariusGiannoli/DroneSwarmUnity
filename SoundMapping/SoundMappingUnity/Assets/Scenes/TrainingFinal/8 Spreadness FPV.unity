@@ -2461,8 +2461,12 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: You can embody the drone in FPV by looking at the drone you want to embody
-    and then pressing A in the controller
+  m_text: 'By pressing R2 and L2, you can spread or shrink the swarm even in FPV.
+
+
+    Drones
+    that are too close to you allow for better control but can lead to inter-agent
+    crashes. Try it!'
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -2489,12 +2493,12 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 15
+  m_fontSize: 20
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1
   m_fontSizeMin: 6
-  m_fontSizeMax: 15
+  m_fontSizeMax: 20
   m_fontStyle: 1
   m_HorizontalAlignment: 1
   m_VerticalAlignment: 256
@@ -5162,7 +5166,7 @@ MonoBehaviour:
   audioIsolation: 1
   audioSpreadness: 1
   needToSpawn: 1
-  numDrones: 20
+  numDrones: 15
   spawnRadius: 3
   startSperation: 3
   saveData: 0

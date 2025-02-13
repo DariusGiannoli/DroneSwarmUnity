@@ -40,7 +40,13 @@ public class SimpleCollectibleScript : MonoBehaviour {
 	public void Collect()
 	{
 		if(collectSound)
-			AudioSource.PlayClipAtPoint(collectSound, transform.position, 0.3f);
+		{
+			AudioSource audioSource = gameObject.AddComponent<AudioSource>();
+			audioSource.clip = collectSound;
+			audioSource.volume = 0.3f;
+			audioSource.Play();
+			Destroy(audioSource, collectSound.length);
+		}
 		if(collectEffect)
 			Instantiate(collectEffect, transform.position, Quaternion.identity);
 

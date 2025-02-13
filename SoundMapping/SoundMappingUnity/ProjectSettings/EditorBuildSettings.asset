@@ -69,9 +69,12 @@ EditorBuildSettings:
     path: Assets/Scenes/TrainingFinal/7 Spreadness TDV.unity
     guid: cdf73ffe26b61874c89983e0f90207e0
   - enabled: 1
-    path: Assets/Scenes/TrainingFinal/8 Spreadness TDV.unity
+    path: Assets/Scenes/TrainingFinal/8 Spreadness FPV.unity
     guid: 0ba0f625fd1d790469778d976a468195
   - enabled: 1
-    path: Assets/Scenes/TrainingFinal/9 Drone Network.unity
+    path: Assets/Scenes/TrainingFinal/9 Drone Network TDV.unity
     guid: 64266b8580489594a8552e9548870c75
+  - enabled: 1
+    path: Assets/Scenes/TrainingFinal/10 Drone Network FPV.unity
+    guid: a82c89dfc882f1a4893e5105d7613899
   m_configObjects: {}

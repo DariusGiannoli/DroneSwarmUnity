@@ -312,6 +312,10 @@ public class DroneFake
 
     float getPriority(float basePriority, DroneFake neighbour)
     {
+        if(!neighbour.isMovable && !swarmModel.dummyForcesApplied)
+        {
+            return 0;
+        }
         float neighborPriority = basePriority;
         if (neighbour.layer == 1) // embodied drone
         {

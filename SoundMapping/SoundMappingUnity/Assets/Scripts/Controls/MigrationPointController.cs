@@ -76,7 +76,13 @@ public class MigrationPointController : MonoBehaviour
     }
 
     void SelectionUpdate()
-    {        
+    { 
+        if(Input.GetKeyDown("joystick button " + 3))
+        {
+            
+            swarmModel.dummyForcesApplied = !swarmModel.dummyForcesApplied;
+        }       
+
         if((Input.GetKeyDown("joystick button " + 5) || Input.GetKeyDown("joystick button " + 4)) && control_selection) //selection
         {
             if(selectedDrone == null)

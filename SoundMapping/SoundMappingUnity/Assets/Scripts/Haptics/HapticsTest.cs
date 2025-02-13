@@ -465,7 +465,7 @@ public class HapticsTest : MonoBehaviour
             float diff = Math.Abs(actuator.Angle - angle);
             if(diff < 30) {
                 actuator.dutyIntensity = Mathf.Max(actuator.dutyIntensity, (int)(forcesDir.magnitude / 2));
-                actuator.frequency = 2;
+                actuator.frequency = 1;
             }
         }
     }

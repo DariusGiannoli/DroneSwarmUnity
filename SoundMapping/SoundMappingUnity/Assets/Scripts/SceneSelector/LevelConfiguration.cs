@@ -4,6 +4,8 @@ public class LevelConfiguration : MonoBehaviour
 {
     public bool SoftStart = true;
 
+    public static int _CollectibleNumber = 0;
+
 
     [Header("Control Settings")]
     [SerializeField] private bool controlMovement = true;
@@ -155,6 +157,8 @@ public class LevelConfiguration : MonoBehaviour
 
     void Awake()
     {
+        _CollectibleNumber = GameObject.FindGameObjectsWithTag("Collectibles").Length;
+        
         if(!SceneSelectorScript._haptics)
         {
             print("Haptics is off");
@@ -170,11 +174,11 @@ public class LevelConfiguration : MonoBehaviour
             showText = true;
         }
 
-
         if(SoftStart)
         {
             SoftStartFunc();
-        }else
+        }
+        else
         {
             OnValidate();
         }

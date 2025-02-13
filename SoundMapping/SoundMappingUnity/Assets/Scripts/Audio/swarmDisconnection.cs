@@ -138,10 +138,10 @@ public class SwarmDisconnection : MonoBehaviour
                 drone.GetComponent<AudioSource>().Stop();
                 yield return new WaitForSeconds(0.1f);
             }
-            yield return new WaitForSeconds(1f);
+            yield return new WaitForSeconds(0.01f);
             playingSound = false;
 
-            yield return new WaitForSeconds(10);
+            yield return new WaitForSeconds(5f);
         }
     }
 

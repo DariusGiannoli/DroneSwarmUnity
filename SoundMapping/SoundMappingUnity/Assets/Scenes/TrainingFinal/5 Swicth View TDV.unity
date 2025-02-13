@@ -1431,7 +1431,7 @@ MonoBehaviour:
   hapticsController: 1
   startEmbodied: 0
   droneID: 0
-  audioIsolation: 0
+  audioIsolation: 1
   audioSpreadness: 0
   needToSpawn: 0
   numDrones: 1
@@ -1711,8 +1711,13 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: You can switch the drone you are controlling by pressing L1 and R1. It
+  m_text: 'You can switch the drone you are controlling by pressing L1 and R1. It
     changes to a green color showing the drone you are controlling.
+
+
+    If you
+    are careful also you can hear a Bip. The spatial audio sopund represents isolated
+    drones that are out of your reach.'
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -1739,12 +1744,12 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 15
+  m_fontSize: 20
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1
   m_fontSizeMin: 6
-  m_fontSizeMax: 15
+  m_fontSizeMax: 20
   m_fontStyle: 1
   m_HorizontalAlignment: 1
   m_VerticalAlignment: 256

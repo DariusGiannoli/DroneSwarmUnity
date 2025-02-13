@@ -15,7 +15,7 @@ public class SceneSelectorScript : MonoBehaviour
 
     [HideInInspector]
     public bool haptics = false;
-    public static bool _haptics = false;
+    public static bool _haptics = true;
 
     private string setupScene = "Setup";
     private string ObstacleFPV = "DemoFPV";
