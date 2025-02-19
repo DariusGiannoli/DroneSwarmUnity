@@ -18,6 +18,8 @@ TagManager:
   - SpawnLess
   - Dummy
   - Collectibles
+  - HapticvsVis
+  - SceneDescription
   layers:
   - Default
   - TransparentFX
@@ -30,7 +32,7 @@ TagManager:
   - SwarmHolder
   - Roof
   - Prediction
-  - 
+  - Glow
   - 
   - 
   - 

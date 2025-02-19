@@ -251,8 +251,15 @@ public class swarmModel : MonoBehaviour
 
     void getSwarmConnexion()
     {
-
-            List<DroneFake> connectedDrone = network.largestComponent.ToList();
+        if(CameraMovement.embodiedDrone == null)
+        {
+            //if there is one drones Movable
+            List<DroneFake> connectedDrone = network.drones.ToList();
+            bool hasNonMovable = drones.Exists(d => !d.isMovable);
+            if (hasNonMovable)
+            {
+                connectedDrone = network.largestComponent.ToList();
+            }
 
             NetworkCreator networkToCompute = new NetworkCreator(connectedDrone);
             networkToCompute.refreshNetwork();
@@ -263,6 +270,12 @@ public class swarmModel : MonoBehaviour
           //  float cohesionRadius = networkToCompute.ComputeCohesionRadius();
 
           swarmConnectionScore = energyDev;
+        }else{
+
+            swarmConnectionScore = this.GetComponent<NetworkRepresentation>().UpdateNetworkRepresentation(network.getLayersConfiguration());
+
+            //swarmConnectionScore = 1;
+        }
 
         //  swarmConnectionScore = this.GetComponent<NetworkRepresentation>().UpdateNetworkRepresentation(network.getLayersConfiguration());
     }
@@ -274,6 +287,7 @@ public class swarmModel : MonoBehaviour
 
     void restartFunction()
     {
+        print("----------------------------- Restarting -----------------------------");
         SceneSelectorScript.reset();
         // Start();
         // fogWar.ResetMapAndFogRevealers();
@@ -426,9 +440,7 @@ public class swarmModel : MonoBehaviour
 
         if (swarmHolder.transform.childCount == 0)
         {
-            this.GetComponent<Timer>().Restart();
-           // fogWar.ResetMapAndFogRevealers();
-            spawn();
+            restartFunction();
         }
 
         drones.Remove(drone.GetComponent<DroneController>().droneFake);
@@ -456,9 +468,8 @@ public class swarmModel : MonoBehaviour
         else
         {
 
-            //get embodied drone infos
             swarmOlfatiForces.Add(CameraMovement.embodiedDrone.GetComponent<DroneController>().droneFake.lastOlfati);
-            (List<Vector3> forces, bool hasCrashed) = CameraMovement.embodiedDrone.GetComponent<DroneController>().droneFake.getObstacleForces(2f, 2f, 1f);
+            (List<Vector3> forces, bool hasCrashed) = CameraMovement.embodiedDrone.GetComponent<DroneController>().droneFake.getObstacleForces(HapticsTest._distanceDetection, HapticsTest._distanceDetection, 1f);
             swarmObstacleForces = forces;
         }
     }

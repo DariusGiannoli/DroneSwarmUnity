@@ -103,7 +103,7 @@ public class ExperimentSetupS : MonoBehaviour
         savingText.gameObject.SetActive(false);
         nextButton.SetActive(true);
     }
-
+ 
     public void StartSavingCoroutine()
     {
         StartCoroutine(ShowSavingDots());

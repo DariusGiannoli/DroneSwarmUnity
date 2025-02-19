@@ -15,8 +15,8 @@ CONTROL_UNIT_NAME_2 = 'QT Py ESP32-S3 BJ'
 DEBUG = False
 
 # Global BLE clients for two controllers
-ble_client = None       # For Controller 1 (addresses ≤ 120)
-ble_client_2 = None     # For Controller 2 (addresses > 120)
+ble_client = None       # For Controller 1 (addresses < 120)
+ble_client_2 = None     # For Controller 2 (addresses >= 120)
 
 # --- Message batching for each controller ---
 # For each controller we use a dictionary so that if a message with the same "addr" arrives, it is replaced.
@@ -29,6 +29,9 @@ messages_ctrl2_first_time = None
 # One lock per controller to protect the batch dictionary
 lock_ctrl1 = asyncio.Lock()
 lock_ctrl2 = asyncio.Lock()
+
+IMMEDIATE_THRESHOLD = 20  # New constant for immediate flush
+
 
 
 def create_command(addr, mode, duty, freq):
@@ -175,17 +178,10 @@ async def send_message_bluetooth_on(websocket):
         else:
             await websocket.send('D')
 
-
 async def collect_messages(websocket):
-    """
-    As messages are received from the WebSocket, route them to the appropriate controller’s batch.
-    For messages with addr > 120, the address is normalized (addr - 120) for controller 2.
-    Also, if a message with the same address is already in the batch, it is replaced.
-    """
     global messages_ctrl1, messages_ctrl2, messages_ctrl1_first_time, messages_ctrl2_first_time
     try:
         async for message in websocket:
-            print(f"Received message: {message}")
             try:
                 msg_obj = json.loads(message)
             except Exception as e:
@@ -196,8 +192,8 @@ async def collect_messages(websocket):
             if addr is None:
                 continue
 
-            if addr > 120:
-                # Controller 2: normalize addr (so that addr 121 becomes 1, etc.)
+            if addr >= 120:
+                # Controller 2: Normalize address and add to batch.
                 normalized_addr = addr - 120
                 msg_obj['addr'] = normalized_addr
                 message_str = json.dumps(msg_obj)
@@ -205,18 +201,51 @@ async def collect_messages(websocket):
                     if not messages_ctrl2:
                         messages_ctrl2_first_time = time.time()
                     messages_ctrl2[normalized_addr] = message_str
+                    # Check if batch reached the immediate threshold.
+                    if len(messages_ctrl2) >= IMMEDIATE_THRESHOLD:
+                        combined_message = ''.join(messages_ctrl2.values())
+                        messages_ctrl2.clear()
+                        messages_ctrl2_first_time = None
+                        asyncio.create_task(process_ctrl2_immediate_flush(combined_message))
             else:
-                # Controller 1: keep addr as is
-                message_str = message  # already a JSON string
+                # Controller 1: Keep address as is.
+                message_str = message
                 async with lock_ctrl1:
                     if not messages_ctrl1:
                         messages_ctrl1_first_time = time.time()
                     messages_ctrl1[addr] = message_str
+                    # Check if batch reached the immediate threshold.
+                    if len(messages_ctrl1) >= IMMEDIATE_THRESHOLD:
+                        combined_message = ''.join(messages_ctrl1.values())
+                        messages_ctrl1.clear()
+                        messages_ctrl1_first_time = None
+                        asyncio.create_task(process_ctrl1_immediate_flush(combined_message))
     except websockets.exceptions.ConnectionClosed as e:
         print(f'WebSocket closed: {e}')
     except Exception as e:
         print(f'Error in collect_messages: {e}')
 
+
+async def process_ctrl1_immediate_flush(combined_message):
+    """
+    Immediately process and send the Controller 1 batch.
+    """
+    print("Immediately processing Controller 1 messages:", combined_message)
+    if not DEBUG and ble_client and ble_client.is_connected:
+        await setMotor(ble_client, combined_message)
+    else:
+        print("Controller 1 BLE not connected or DEBUG mode")
+    asyncio.create_task(send_to_server(combined_message))
+
+async def process_ctrl2_immediate_flush(combined_message):
+    """
+    Immediately process and send the Controller 2 batch.
+    """
+    print("Immediately processing Controller 2 messages:", combined_message)
+    if not DEBUG and ble_client_2 and ble_client_2.is_connected:
+        await setMotor(ble_client_2, combined_message)
+    else:
+        print("Controller 2 BLE not connected or DEBUG mode")
 
 async def process_ctrl1_timer():
     """
@@ -225,10 +254,10 @@ async def process_ctrl1_timer():
     or if the oldest message has been waiting longer than TIMEOUT seconds.
     """
     global messages_ctrl1, messages_ctrl1_first_time
-    THRESHOLD = 20
-    TIMEOUT = 0.1  # seconds
+    THRESHOLD = 10
+    TIMEOUT = 0.2  # seconds
     while True:
-        await asyncio.sleep(0.02)  # check every 20ms
+        await asyncio.sleep(0.05)  # check every 20ms
         combined_message = None
         async with lock_ctrl1:
             if messages_ctrl1:
@@ -245,17 +274,16 @@ async def process_ctrl1_timer():
                 print("Controller 1 BLE not connected or DEBUG mode")
             asyncio.create_task(send_to_server(combined_message))
 
-
 async def process_ctrl2_timer():
     """
     Check the Controller 2 message batch every 20 ms.
     Flush the batch if it has reached 20 messages or if the oldest message has been waiting too long.
     """
     global messages_ctrl2, messages_ctrl2_first_time
-    THRESHOLD = 20
-    TIMEOUT = 0.1  # seconds
+    THRESHOLD = 10
+    TIMEOUT = 0.2  # seconds
     while True:
-        await asyncio.sleep(0.02)
+        await asyncio.sleep(TIMEOUT)
         combined_message = None
         async with lock_ctrl2:
             if messages_ctrl2:
@@ -270,7 +298,7 @@ async def process_ctrl2_timer():
                 await setMotor(ble_client_2, combined_message)
             else:
                 print("Controller 2 BLE not connected or DEBUG mode")
-            asyncio.create_task(send_to_server(combined_message))
+            #asyncio.create_task(send_to_server(combined_message))
 
 
 async def send_to_server(message):

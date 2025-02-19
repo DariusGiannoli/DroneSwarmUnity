@@ -1,46 +1,50 @@
+using System.Data.SqlTypes;
 using UnityEngine;
+using TMPro;
 
 public class LevelConfiguration : MonoBehaviour
 {
     public bool SoftStart = true;
+    public static string _textTutorial  = "";
 
     public static int _CollectibleNumber = 0;
+    public int sceneNumber = 0;
 
 
     [Header("Control Settings")]
-    [SerializeField] private bool controlMovement = true;
-    [SerializeField] private bool controlSpreadness = true;
-    [SerializeField] private bool controlEmbodiement = true;
-    [SerializeField] private bool controlDesembodiement = false;
-    [SerializeField] private bool controlSelection = true;
-    [SerializeField] private bool controlRotation = true;
+    [SerializeField] public bool controlMovement = true;
+    [SerializeField] public bool controlSpreadness = true;
+    [SerializeField] public bool controlEmbodiement = true;
+    [SerializeField] public bool controlDesembodiement = false;
+    [SerializeField] public bool controlSelection = true;
+    [SerializeField] public bool controlRotation = true;
 
     [Header("Haptics Settings")]
-    [SerializeField] private bool hapticsObstacle = true;
-    [SerializeField] private bool hapticsNetwork = true;
-    [SerializeField] private bool hapticsForces = true;
-    [SerializeField] private bool hapticsCrash = true;
-    [SerializeField] private bool hapticsController = true;
+    [SerializeField] public bool hapticsObstacle = true;
+    [SerializeField] public bool hapticsNetwork = true;
+    [SerializeField] public bool hapticsForces = true;
+    [SerializeField] public bool hapticsCrash = true;
+    [SerializeField] public bool hapticsController = true;
 
     [Header("Start Configuration")]
-    [SerializeField] private bool startEmbodied = false;
-    [SerializeField] private int droneID = 0;
+    [SerializeField] public bool startEmbodied = false;
+    [SerializeField] public int droneID = 0;
 
 
     [Header("Audio Settings")]
-    [SerializeField] private bool audioIsolation = true;
-    [SerializeField] private bool audioSpreadness = true;
+    [SerializeField] public bool audioIsolation = true;
+    [SerializeField] public bool audioSpreadness = true;
 
     [Header("Spawn Settings")]
-    [SerializeField] private bool needToSpawn = true;
-    [SerializeField] private int numDrones = 20;
-    [SerializeField] private float spawnRadius = 3f;
-    [SerializeField] private float startSperation = 1f;
+    [SerializeField] public bool needToSpawn = true;
+    [SerializeField] public int numDrones = 20;
+    [SerializeField] public float spawnRadius = 3f;
+    [SerializeField] public float startSperation = 1f;
 
     [Header("Other")]
-    [SerializeField] private bool saveData = false;
-    [SerializeField] private bool miniMap = false;
-    [SerializeField] private bool showText = false;
+    [SerializeField] public bool saveData = false;
+    [SerializeField] public bool miniMap = false;
+    [SerializeField] public bool showText = false;
 
     // Corresponding static variables
     public static bool _control_movement;
@@ -92,17 +96,17 @@ public class LevelConfiguration : MonoBehaviour
         _control_selection = controlSelection;
         _control_rotation = controlRotation;
 
-        _Haptics_Obstacle = hapticsObstacle;
-        _Haptics_Network = hapticsNetwork;
-        _Haptics_Forces = hapticsForces;
-        _Haptics_Crash = hapticsCrash;
-        _Haptics_Controller = hapticsController;
+        _Haptics_Obstacle =  SceneSelectorScript._haptics ? hapticsObstacle : false;
+        _Haptics_Network = SceneSelectorScript._haptics ? hapticsNetwork : false;
+        _Haptics_Forces = SceneSelectorScript._haptics ? hapticsForces : false;
+        _Haptics_Crash = SceneSelectorScript._haptics ? hapticsCrash : false;
+        _Haptics_Controller = SceneSelectorScript._haptics ? hapticsController : false;
 
         _startEmbodied = startEmbodied;
         _droneID = droneID;
 
-        _Audio_isolation = audioIsolation;
-        _Audio_spreadness = audioSpreadness;
+        _Audio_isolation = SceneSelectorScript._haptics ? audioIsolation : false;
+        _Audio_spreadness = SceneSelectorScript._haptics ? audioSpreadness : false;
 
         _NeedToSpawn = needToSpawn;
         _NumDrones = numDrones;
@@ -155,24 +159,57 @@ public class LevelConfiguration : MonoBehaviour
         HapticsTest.lateStart();
     }
 
-    void Awake()
+    void setTextTuto()
     {
+        string name = "";
+        foreach (var scene in UnityEngine.SceneManagement.SceneManager.GetAllScenes())
+        {
+            if (char.IsDigit(scene.name[0]))
+            {
+                print(scene.name);
+                name = scene.name;
+                break;
+            }
+        }
+        //the names are 1 blabla 2 blabla 3 blabl
+        
+        //get the number
+        sceneNumber = int.Parse(name.Split(' ')[0].ToString());
+        print("Scene number: " + sceneNumber);
+        string haptics = SceneSelectorScript._haptics? "Haptics" : "NonHaptics";
+
+        string fileName = "Scene" + sceneNumber + haptics + ".txt";
+        string path = Application.dataPath + "/SceneDescription/" + fileName;
+
+        //check if the files exists if not create it
+        if(!System.IO.File.Exists(path))
+        {
+            System.IO.File.WriteAllText(path, "Scene" + sceneNumber + haptics + "\n");
+        }
+    
+        string[] lines = System.IO.File.ReadAllLines(path);
+
+        string text = "";
+        for(int i = 0; i < lines.Length; i++)
+        {
+            text += lines[i] + "\n";
+        }
+
+        _textTutorial = text;
+
+        
+    }
+
+    void Awake()
+    {        
+        setTextTuto();
+
+     //   GameObject.FindGameObjectWithTag("SceneDescription").GetComponent<TextMesh>().text = name;
+
+
         _CollectibleNumber = GameObject.FindGameObjectsWithTag("Collectibles").Length;
         
-        if(!SceneSelectorScript._haptics)
-        {
-            print("Haptics is off");
-            hapticsObstacle = false;
-            hapticsNetwork = false;
-            hapticsForces = false;
-            hapticsCrash = false;
-            hapticsController = false;
-
-            audioIsolation = false;
-            audioSpreadness = false;
-
-            showText = true;
-        }
+        showText = !SceneSelectorScript._haptics;
 
         if(SoftStart)
         {

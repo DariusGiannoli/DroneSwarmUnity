@@ -36,27 +36,32 @@ public class SceneSelectorScriptEditor : Editor
 
         //start vertical layout
         EditorGUILayout.BeginVertical();
-        //make a tick box stating Haptics 
-        bool newHapticsValue = EditorGUILayout.Toggle("Haptics enabled", myScript.haptics);
-        if (newHapticsValue != myScript.haptics)
-        {
-            myScript.haptics = newHapticsValue;
-            myScript.OnHapticsChanged();
-        }
 
         EditorGUILayout.BeginHorizontal();
 
         //make a button for Demo Scene
-        if (GUILayout.Button("Obstacles"))
+        if (GUILayout.Button("Obstacles FPV "))
         {
             // Tell our script to load this scene (unload the previous one if any)
-            myScript.SelectTrainingFromButton("DemoFPV");
+            myScript.SelectTrainingFromButton(myScript.ObstacleFPV);
         }
 
-        if (GUILayout.Button("Collectibles"))
+        if (GUILayout.Button("Obstacles TDV "))
         {
             // Tell our script to load this scene (unload the previous one if any)
-            myScript.SelectTrainingFromButton("CollectiblesFPV");
+            myScript.SelectTrainingFromButton(myScript.ObstacleTPV);
+        }
+
+        if (GUILayout.Button("Collectibles FPV "))
+        {
+            // Tell our script to load this scene (unload the previous one if any)
+            myScript.SelectTrainingFromButton(myScript.CollectibleFPV);
+        }
+
+        if (GUILayout.Button("Collectibles TDV "))
+        {
+            // Tell our script to load this scene (unload the previous one if any)
+            myScript.SelectTrainingFromButton(myScript.CollectibleTPV);
         }
 
         EditorGUILayout.EndHorizontal();

@@ -55,8 +55,8 @@ public class saveInfoToJSON : MonoBehaviour
     void saveDataThread(bool force)
     {
         string PID = SceneSelectorScript.pid;
-        bool haptics = SceneSelectorScript.hapticsEnabled;
-        bool order = SceneSelectorScript.order;
+        bool haptics = SceneSelectorScript._haptics;
+        bool order = SceneSelectorScript._order;
         int experimentNumber = SceneSelectorScript.experimentNumber;
 
 

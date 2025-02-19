@@ -340,5 +340,42 @@ public class NetworkCreator
         float overallScore = (connectivityError + cohesionError + deviationEnergyError + velocityMismatchError) / 4f;
         return overallScore;
     }
+
+
+    public List<HashSet<DroneFake>> GetSubnetworks()
+    {
+        List<HashSet<DroneFake>> subnetworks = new List<HashSet<DroneFake>>();
+        HashSet<DroneFake> visited = new HashSet<DroneFake>();
+
+        foreach (DroneFake drone in drones)
+        {
+            if (!visited.Contains(drone))
+            {
+                HashSet<DroneFake> component = new HashSet<DroneFake>();
+                Queue<DroneFake> queue = new Queue<DroneFake>();
+
+                queue.Enqueue(drone);
+                visited.Add(drone);
+
+                while (queue.Count > 0)
+                {
+                    DroneFake current = queue.Dequeue();
+                    component.Add(current);
+
+                    foreach (DroneFake neighbor in adjacencyList[current])
+                    {
+                        if (!visited.Contains(neighbor))
+                        {
+                            visited.Add(neighbor);
+                            queue.Enqueue(neighbor);
+                        }
+                    }
+                }
+                subnetworks.Add(component);
+            }
+        }
+
+        return subnetworks;
+    }
 }
 

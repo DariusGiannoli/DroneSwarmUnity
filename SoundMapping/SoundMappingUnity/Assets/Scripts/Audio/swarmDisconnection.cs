@@ -141,7 +141,7 @@ public class SwarmDisconnection : MonoBehaviour
             yield return new WaitForSeconds(0.01f);
             playingSound = false;
 
-            yield return new WaitForSeconds(5f);
+            yield return new WaitForSeconds(2f);
         }
     }
 

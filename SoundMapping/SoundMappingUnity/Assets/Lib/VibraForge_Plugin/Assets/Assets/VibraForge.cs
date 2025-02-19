@@ -47,7 +47,7 @@ public class VibraForge : MonoBehaviour
     //on quit
     void OnApplicationQuit()
     {
-        for(int i = 0; i < 180; i++)
+        for(int i = 0; i < 210; i++)
         {
             SendCommand(i, 0, 0, 0);
             if(i % 20 == 0)

@@ -46,7 +46,7 @@ public class TriggerHandlerWithCallback : MonoBehaviour
             {
                 if (isStart)
                 {
-                    print(gm.name);
+           //         print(gm.name);
                     gm.GetComponent<Timer>().StartTimer();
                 }
                 else

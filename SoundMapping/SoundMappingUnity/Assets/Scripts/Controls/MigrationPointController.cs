@@ -12,7 +12,6 @@ public class MigrationPointController : MonoBehaviour
 
     public Vector2 migrationPoint = new Vector2(0, 0);
 
-    private int lastSelectedChild = 0;
     public static GameObject selectedDrone = null;
 
     public Material normalMaterial;
@@ -125,20 +124,93 @@ public class MigrationPointController : MonoBehaviour
                         sortedScores.Sort((x, y) => y.Value.CompareTo(x.Value));
 
                         //select the highest score
-                        selectedDrone = sortedScores[0].Key;
+                        CameraMovement.nextEmbodiedDrone = sortedScores[0].Key;
                     }
                 }
                 else
                 {
                     int increment = Input.GetKeyDown("joystick button " + 5) ? 1 : -1;
-                    //change material
-                    lastSelectedChild = (lastSelectedChild + increment) % swarmModel.swarmHolder.transform.childCount;
-                    if(lastSelectedChild < 0)
+                    if(increment == 0)
                     {
-                        lastSelectedChild = swarmModel.swarmHolder.transform.childCount - 1;
+                        return;
                     }
 
-                    selectedDrone = swarmModel.swarmHolder.transform.GetChild(lastSelectedChild).gameObject;
+                    List<HashSet<DroneFake>> subnetwork = swarmModel.network.GetSubnetworks();
+                    print("Number of subnetworks: " + subnetwork.Count);
+                    //compute average position of each subnetwork
+                    Dictionary<HashSet<DroneFake>, Vector3> averagePositions = new Dictionary<HashSet<DroneFake>, Vector3>();
+                    foreach(HashSet<DroneFake> sub in subnetwork)
+                    {
+                        Vector3 averagePosition = new Vector3(0, 0, 0);
+                        foreach(DroneFake drone in sub)
+                        {
+                            averagePosition += drone.position;
+                        }
+                        averagePosition /= sub.Count;
+                        averagePositions.Add(sub, averagePosition);
+                    }
+
+                    //find the subnetwork of the selected drone
+                    HashSet<DroneFake> selectedSubnetwork = null;
+                    foreach(HashSet<DroneFake> sub in subnetwork)
+                    {
+                        if(sub.Contains(selectedDrone.GetComponent<DroneController>().droneFake)){
+                            selectedSubnetwork = sub;
+                            break;
+                        }
+                    }
+
+                    //order the subnetworks by the position.z of their average position
+                    List<KeyValuePair<HashSet<DroneFake>, Vector3>> sortedSubnetworks = new List<KeyValuePair<HashSet<DroneFake>, Vector3>>(averagePositions);
+                    sortedSubnetworks.Sort((x, y) => y.Value.z.CompareTo(x.Value.z));
+
+                    //find the index of the selected subnetwork
+                    int selectedSubnetworkIndex = -1;
+                    for(int i = 0; i < sortedSubnetworks.Count; i++)
+                    {
+                        if(sortedSubnetworks[i].Key == selectedSubnetwork)
+                        {
+                            selectedSubnetworkIndex = i;
+                            break;
+                        }
+                    }
+                    print("Selected subnetwork index: " + selectedSubnetworkIndex);
+
+                    //select the next subnetwork
+                    int nextSubnetworkIndex = (selectedSubnetworkIndex + increment) % sortedSubnetworks.Count;
+                    print("Next subnetwork index: " + nextSubnetworkIndex);
+                    if(nextSubnetworkIndex < 0)
+                    {
+                        nextSubnetworkIndex = sortedSubnetworks.Count - 1;
+                    }
+
+                    HashSet<DroneFake> nextSubnetwork = sortedSubnetworks[nextSubnetworkIndex].Key;
+
+                    //get the first droneFake in the subnetwork
+                    DroneFake nextDrone = null;
+                    foreach (DroneFake drone in nextSubnetwork)
+                    {
+                        nextDrone = drone;
+                        break;
+                    }
+
+                    if(nextDrone == null)
+                    {
+                        print("No drone in the subnetwork");
+                        return;
+                    }
+
+                    print("Next drone: " + nextDrone.id);
+
+                    //select the drone
+                    foreach(Transform drone in swarmModel.swarmHolder.transform)
+                    {
+                        if(drone.gameObject.GetComponent<DroneController>().droneFake == nextDrone)
+                        {
+                            selectedDrone = drone.gameObject;
+                            break;
+                        }
+                    }
                 }
             }
 

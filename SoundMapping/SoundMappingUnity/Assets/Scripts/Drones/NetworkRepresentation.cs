@@ -35,52 +35,17 @@ public class NetworkRepresentation : MonoBehaviour
             firstOrder = neighbors[2];
         }
 
-        // second order is the key = 2
-        int secondOrder = 0;
-        if (neighbors.ContainsKey(3))
+        // disconnected 
+        if (neighbors.ContainsKey(0) || neighbors.ContainsKey(-1)) // iff there is disconnected drones 
         {
-            secondOrder = neighbors[3];
+            return 1;
         }
 
-        //lefrt behind is the key = 0
-        int leftBehind = 0;
-        if (neighbors.ContainsKey(0))
-        {
-            leftBehind = neighbors[0];
-        }
-
-        // third order is the rest
-        int thirdOrder = totalNeighbors - firstOrder - secondOrder - leftBehind - 1; //embodied drone
-
-        // define the height of the bars
-        float firstOrderHeight = firstOrder / (float)totalNeighbors;
-        float secondOrderHeight = secondOrder / (float)totalNeighbors;
-        float thirdOrderHeight = thirdOrder / (float)totalNeighbors;
-        float leftBehindHeight = leftBehind / (float)totalNeighbors;
-
-        // update the bars
-        firstOrderNeighbors.rectTransform.sizeDelta = new Vector2(firstOrderNeighbors.rectTransform.sizeDelta.x, firstOrderHeight * 100);
-        secondOrderNeighbors.rectTransform.sizeDelta = new Vector2(secondOrderNeighbors.rectTransform.sizeDelta.x, secondOrderHeight * 100);
-        thirdOrderNeighbors.rectTransform.sizeDelta = new Vector2(thirdOrderNeighbors.rectTransform.sizeDelta.x, thirdOrderHeight * 100);
-        leftBehindNeighbors.rectTransform.sizeDelta = new Vector2(leftBehindNeighbors.rectTransform.sizeDelta.x, leftBehindHeight * 100);
-
-        //create the dictionary
-        neighborsRep = new Dictionary<int, int>();
-        neighborsRep.Add(1, firstOrder);
-        neighborsRep.Add(2, secondOrder);
-        neighborsRep.Add(3, thirdOrder);
-        neighborsRep.Add(0, leftBehind);
-
-        float a1 = firstOrder * 100 / (float)totalNeighbors;
-        float a2 = Mathf.Abs(Math.Min((a1 - 40)/40,0));
+        //proportion of first order neighbors
+        float firstOrderProportion = (float)firstOrder / (float)totalNeighbors;
         
-        float b1 = totalNeighbors - firstOrder - 1;
-        b1*=100/(float)totalNeighbors;
-        float b2 = Math.Min(Mathf.Max((b1 - 10)/60,0),1);
-
-
-        hasLeftBehind = leftBehind > 0;
-        networkScore = Mathf.Max(a2, b2);
+        float networkScore = -(firstOrderProportion-0.8f)/0.5f;
+        networkScore = Mathf.Clamp01(networkScore);
 
 
         return networkScore;

@@ -18,7 +18,7 @@ public class CameraMovement : MonoBehaviour
     public static string state = "TDView";
     // Start is called before the first frame update
 
-    public const float animationTime = 1f;
+    public const float animationTime = 0.1f;
 
     public static GameObject embodiedDrone = null;
     public static GameObject nextEmbodiedDrone = null;
@@ -100,7 +100,7 @@ public class CameraMovement : MonoBehaviour
 
         Debug.LogError("No drones to embody. Restart the simulation.");
         // Optionally restart the simulation here:
-         swarmModel.restart();
+        swarmModel.restart();
     }
 
 

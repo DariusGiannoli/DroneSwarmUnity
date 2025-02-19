@@ -143,7 +143,6 @@ public class DroneController : MonoBehaviour
         }
         catch (Exception e)
         {
-            print(this.gameObject.name);
             print("Error in drone update");
             print(e);
         }
@@ -169,7 +168,7 @@ public class DroneController : MonoBehaviour
         }else{
             if (MigrationPointController.selectedDrone == this.gameObject)
             {
-                setMaterial(selectedColor);
+                setMaterial(connectedColor);
                 this.droneFake.selected = true;
                 return;
             }else{
