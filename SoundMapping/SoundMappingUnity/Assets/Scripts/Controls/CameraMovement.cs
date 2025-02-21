@@ -221,11 +221,18 @@ public class CameraMovement : MonoBehaviour
         float elapsedTime = 0;
         float initialFOV = embodiedDrone.GetComponent<Camera>().fieldOfView;
 
-        print("DroneAnimation staart of " + embodiedDrone.name + " " + embodiedDrone.GetComponent<DroneController>().droneFake.embodied);
+     //   print("DroneAnimation staart of " + embodiedDrone.name + " " + embodiedDrone.GetComponent<DroneController>().droneFake.embodied);
 
-        if(lastEmbodiedDrone != embodiedDrone)
+        if(lastEmbodiedDrone != embodiedDrone) //desembodiement
         {
+            lastEmbodiedDrone.GetComponent<DroneController>().droneFake.selected = false;
             lastEmbodiedDrone.GetComponent<DroneController>().droneFake.embodied = false;
+
+            MigrationPointController.selectedDrone = null;
+
+
+            swarmModel.drones.Find(x => x.id == lastEmbodiedDrone.GetComponent<DroneController>().droneFake.id).embodied = false;
+            swarmModel.drones.Find(x => x.id == lastEmbodiedDrone.GetComponent<DroneController>().droneFake.id).selected = false;
         }
 
         
@@ -240,13 +247,15 @@ public class CameraMovement : MonoBehaviour
 
         lastEmbodiedDrone.GetComponent<Camera>().fieldOfView = initialFOV;
         lastEmbodiedDrone.GetComponent<Camera>().enabled = false;
+        print("lastEmbodiedDrone " + lastEmbodiedDrone.name + " " + lastEmbodiedDrone.GetComponent<DroneController>().droneFake.embodied);
 
         embodiedDrone.GetComponent<Camera>().enabled = true;
+        embodiedDrone.GetComponent<DroneController>().droneFake.embodied = true;
         Vector3 forwardDrone = new Vector3(lastEmbodiedDrone.transform.forward.x, 0, lastEmbodiedDrone.transform.forward.z);
         embodiedDrone.transform.forward = forwardDrone;
 
         
-        print("DroneAnimation end of " + embodiedDrone.name + " " + embodiedDrone.GetComponent<DroneController>().droneFake.embodied);
+     //   print("DroneAnimation end of " + embodiedDrone.name + " " + embodiedDrone.GetComponent<DroneController>().droneFake.embodied);
 
         StartCoroutine(droneView());
     }
@@ -270,11 +279,12 @@ public class CameraMovement : MonoBehaviour
                 
                 if(lastEmbodiedDrone == embodiedDrone)
                 {
-                    print("Crash but no worries" + lastEmbodiedDrone.GetComponent<DroneController>().droneFake.embodied + " " + embodiedDrone.name);
+                   // print("Crash but no worries" + lastEmbodiedDrone.GetComponent<DroneController>().droneFake.embodied + " " + embodiedDrone.name);
                     StartCoroutine(goAnimationDoneToDrone(0.01f));
                 }
                 else
                 {
+                    print("Embodied drone changed from " + lastEmbodiedDrone.name + " to " + embodiedDrone.name);
                     StartCoroutine(goAnimationDoneToDrone(animationTime));
                 }
                 yield break;
@@ -300,16 +310,29 @@ public class CameraMovement : MonoBehaviour
     public static void setEmbodiedDrone(GameObject drone)
     {
         embodiedDrone = drone;
+        
+        
         drone.GetComponent<DroneController>().droneFake.embodied = true;
-        drone.GetComponent<DroneController>().droneFake.resetEmbodied();
+        swarmModel.drones.Find(x => x.id == drone.GetComponent<DroneController>().droneFake.id).embodied = true;
+        swarmModel.drones.Find(x => x.id == drone.GetComponent<DroneController>().droneFake.id).selected = false;
+        
+        drone.GetComponent<DroneController>().droneFake.resetEmbodied(); //uyseless
+
+
         nextEmbodiedDrone = null;
     }
 
     public static void desembodiedDrone(GameObject drone)
     {
+        drone.GetComponent<DroneController>().droneFake.selected = false;
         drone.GetComponent<DroneController>().droneFake.embodied = false;
+
+        swarmModel.drones.Find(x => x.id == drone.GetComponent<DroneController>().droneFake.id).embodied = false;
+        swarmModel.drones.Find(x => x.id == drone.GetComponent<DroneController>().droneFake.id).selected = false;
+
         embodiedDrone = null;
     }
+
 
     DataEntry getCameraPositionDE()
     {

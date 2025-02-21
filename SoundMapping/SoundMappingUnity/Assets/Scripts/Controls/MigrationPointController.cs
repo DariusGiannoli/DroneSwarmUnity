@@ -84,12 +84,11 @@ public class MigrationPointController : MonoBehaviour
 
         if((Input.GetKeyDown("joystick button " + 5) || Input.GetKeyDown("joystick button " + 4)) && control_selection) //selection
         {
-            if(selectedDrone == null)
+            if(selectedDrone == null && CameraMovement.embodiedDrone == null) // if nothing selected
             {
                 if(swarmModel.swarmHolder.transform.childCount > 0)
                 {
                     selectedDrone = swarmModel.swarmHolder.transform.GetChild(0).gameObject;
-
                 }
             }
             else

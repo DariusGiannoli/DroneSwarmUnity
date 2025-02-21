@@ -286,8 +286,18 @@ public class NetworkCreator
             }
         }
         if (pairCount == 0) return 0;
+
+        //check if there is a drone that is not in the main network
+        foreach (var drone in drones)
+        {
+            if (!IsInMainNetwork(drone))
+            {
+                return 1;
+            }
+        }
+
         float avgSquaredError = sumSquaredError / pairCount;
-        return Mathf.Clamp01((avgSquaredError / (DroneFake.desiredSeparation * DroneFake.desiredSeparation)-0.22f)/(0.7f-0.22f));
+        return Mathf.Clamp01((avgSquaredError / (DroneFake.desiredSeparation * DroneFake.desiredSeparation)-0.3f)/(0.7f-0.22f));
     }
 
     // 5. Normalized Velocity Mismatch (~K(v)):
@@ -376,6 +386,12 @@ public class NetworkCreator
         }
 
         return subnetworks;
+    }
+
+    public bool IsFullyConnected()
+    {
+        Debug.Log("Subnetworks: " + GetSubnetworks().Count);
+        return GetSubnetworks().Count == 1;
     }
 }
 

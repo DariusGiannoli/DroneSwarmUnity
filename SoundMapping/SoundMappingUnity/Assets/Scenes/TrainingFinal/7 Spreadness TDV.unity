@@ -4931,7 +4931,7 @@ MonoBehaviour:
   startSperation: 3
   saveData: 0
   miniMap: 0
-  showText: 0
+  showText: 1
 --- !u!4 &1619444269
 Transform:
   m_ObjectHideFlags: 0

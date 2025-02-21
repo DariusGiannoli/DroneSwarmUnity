@@ -1606,6 +1606,8 @@ MonoBehaviour:
   saveData: 0
   miniMap: 0
   showText: 1
+  timeSensitive: 1
+  timeToComplete: 27
 --- !u!4 &941077769
 Transform:
   m_ObjectHideFlags: 0

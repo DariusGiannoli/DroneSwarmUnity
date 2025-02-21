@@ -46,6 +46,10 @@ public class LevelConfiguration : MonoBehaviour
     [SerializeField] public bool miniMap = false;
     [SerializeField] public bool showText = false;
 
+    [Header("Timing Settings")]
+    [SerializeField] public bool timeSensitive = false;
+    [SerializeField] public float timeToComplete = 60f;
+
     // Corresponding static variables
     public static bool _control_movement;
     public static bool _control_spreadness;
@@ -76,6 +80,9 @@ public class LevelConfiguration : MonoBehaviour
     public static bool _SaveData;
     public static bool _MiniMap;
     public static bool _ShowText;
+
+    public static bool _TimeSensitive;
+    public static float _TimeToComplete;
 
 
 
@@ -116,6 +123,9 @@ public class LevelConfiguration : MonoBehaviour
         _SaveData = saveData;
         _MiniMap = miniMap;
         _ShowText = showText;
+
+        _TimeSensitive = timeSensitive;
+        _TimeToComplete = timeToComplete;
     }
 
     void SoftStartFunc()
@@ -178,13 +188,15 @@ public class LevelConfiguration : MonoBehaviour
         print("Scene number: " + sceneNumber);
         string haptics = SceneSelectorScript._haptics? "Haptics" : "NonHaptics";
 
-        string fileName = "Scene" + sceneNumber + haptics + ".txt";
+       // string fileName = "Scene" + sceneNumber + haptics + ".txt";
+        string fileName = "0000Scene" + sceneNumber + haptics + ".txt";
         string path = Application.dataPath + "/SceneDescription/" + fileName;
 
         //check if the files exists if not create it
         if(!System.IO.File.Exists(path))
         {
-            System.IO.File.WriteAllText(path, "Scene" + sceneNumber + haptics + "\n");
+           // System.IO.File.WriteAllText(path, "Scene" + sceneNumber + haptics + "\n");
+            System.IO.File.WriteAllText(path, "");
         }
     
         string[] lines = System.IO.File.ReadAllLines(path);
@@ -210,6 +222,8 @@ public class LevelConfiguration : MonoBehaviour
         _CollectibleNumber = GameObject.FindGameObjectsWithTag("Collectibles").Length;
         
         showText = !SceneSelectorScript._haptics;
+
+        showText = true;
 
         if(SoftStart)
         {

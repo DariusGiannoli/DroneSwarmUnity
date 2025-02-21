@@ -241,11 +241,21 @@ public class Timer : MonoBehaviour
 
     private void UpdateTimerDisplay()
     {
-        timerText.text = elapsedTime.ToString("F2");
+        string extra = LevelConfiguration._TimeSensitive ? " / "+LevelConfiguration._TimeToComplete : "";
+        timerText.text = elapsedTime.ToString("F2") + extra;
     }
 
     private void UpdateTimerDisplayNetwork()
     {
         timerTextNetwork.text = elapsedTimeNetwork.ToString("F2");
+    }
+
+    public static bool isValidTime()
+    {
+        if(LevelConfiguration._TimeSensitive)
+        {
+            return elapsedTime <= LevelConfiguration._TimeToComplete;
+        }
+        return true;
     }
 }

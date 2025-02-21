@@ -12,6 +12,7 @@ public class textInfo : MonoBehaviour
     public TextMeshProUGUI DroneCrashText;
     public TextMeshProUGUI SpreadnessSwarmScore;
     public TextMeshProUGUI textTutorial;
+    public TextMeshProUGUI errorText;
 
     public TextMeshProUGUI CollectibleText;
     // Start is called before the first frame update
@@ -75,6 +76,23 @@ public class textInfo : MonoBehaviour
         {
             CollectibleText.text = "";
         }
+    }
+
+    public static void setTextErrorStatic(string text, float time)
+    {
+        GameObject.FindGameObjectWithTag("GameManager").GetComponent<textInfo>().setTextError(text, time);
+    }
+
+    public void setTextError(string text, float time)
+    {
+        StartCoroutine(setTextErrorCoroutine(text, time));
+    }
+
+    public IEnumerator setTextErrorCoroutine(string text, float time)
+    {
+        errorText.text = text;
+        yield return new WaitForSeconds(time);
+        errorText.text = "";
     }
 
     string getOneDecimal(float value)

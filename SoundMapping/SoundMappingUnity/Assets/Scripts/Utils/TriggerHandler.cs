@@ -24,6 +24,22 @@ public class TriggerHandlerWithCallback : MonoBehaviour
         }
     }
 
+    public bool allDronesConnected
+    {
+        get
+        {
+            try
+            {
+                return swarmModel.network.IsFullyConnected();
+            }
+            catch (Exception e)
+            {
+                return true;
+            }
+            //return GameObject.FindGameObjectsWithTag("Collectibles").Length == 0;
+        }
+    }
+
     [SerializeField] bool useUnityEvent = true;
     [SerializeField] bool isStart = true;
 
@@ -51,10 +67,24 @@ public class TriggerHandlerWithCallback : MonoBehaviour
                 }
                 else
                 {
+                    if(!allDronesConnected)
+                    {
+                        textInfo.setTextErrorStatic("No drones must be left behind", 2);
+                        return;
+                    }
                     if (allCollectiblesCollected)
                     {
-                        ExperimentSetupS.levelFinished();
-                        gm.GetComponent<Timer>().StopTimer();
+                        if(Timer.isValidTime())
+                        {
+                            ExperimentSetupS.levelFinished();
+                            gm.GetComponent<Timer>().StopTimer();
+                        }else{
+                            swarmModel.restart();
+                        }
+
+                    }else{
+                        textInfo.setTextErrorStatic("Collect all the collectibles", 2);
+                        return;
                     }
                 }
             }

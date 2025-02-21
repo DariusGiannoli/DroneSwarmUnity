@@ -95,7 +95,7 @@ public class MakePrediction : MonoBehaviour
         if(shortPred.donePrediction)
         {
             this.GetComponent<HapticsTest>().HapticsPrediction(shortPred);
-            UpdateLines(shortPred);
+            UpdateTubes(shortPred);
             shortPred.donePrediction = false;
             launchPreditionThread(shortPred);
         }
@@ -115,56 +115,147 @@ public class MakePrediction : MonoBehaviour
 
     }
 
-    void UpdateLines(Prediction pred)
-{
-    if (pred.allData == null || pred.allData.Count == 0)
-        return;
 
-    // Destroy all existing line renderers
-    foreach (LineRenderer lr in pred.LineRenderers)
+    void UpdateTubes(Prediction pred)
     {
-        Destroy(lr.material);
-        Destroy(lr.gameObject);
-    }
-    pred.LineRenderers.Clear();
+        if (pred.allData == null || pred.allData.Count == 0)
+            return;
 
-    //single lineRenderer for each drone
-    foreach (DroneDataPrediction data in pred.allData)
-    {
-        GameObject lineObj = new GameObject("DronePredictionLine");
-        lineObj.transform.SetParent(pred.lineHolder);
-
-        LineRenderer line = lineObj.AddComponent<LineRenderer>();
-        line.positionCount = data.positions.Count;
-        line.startWidth = 0.1f;
-        line.endWidth = 0.1f;
-        line.material = defaultMaterial;
-        line.gameObject.layer = 10;
-
-        bool hasCrashed = false;
-
-        // Fill positions in a single pass
-        for (int i = 0; i < data.positions.Count; i++)
+        // Destroy existing tube objects.
+        foreach (GameObject tube in pred.TubeObjects)
         {
-            Vector3 pos = data.positions[i];
-            if (!float.IsFinite(pos.x) || !float.IsFinite(pos.y) || !float.IsFinite(pos.z))
+            Destroy(tube);
+        }
+        pred.TubeObjects.Clear();
+
+        // Settings for tube generation:
+        float tubeRadius = CameraMovement.embodiedDrone != null ? 0.01f : 0.04f;
+        int radialSegments = 8; // adjust for smoothness vs. performance
+
+        foreach (DroneDataPrediction data in pred.allData)
+        {
+            if (data.positions == null || data.positions.Count < 2)
+                continue;
+
+            GameObject tubeObj = new GameObject("DronePredictionTube");
+            tubeObj.transform.SetParent(pred.lineHolder);
+
+            MeshFilter mf = tubeObj.AddComponent<MeshFilter>();
+            MeshRenderer mr = tubeObj.AddComponent<MeshRenderer>();
+
+            Mesh tubeMesh = GenerateTubeMesh(data.positions, tubeRadius, radialSegments);
+            mf.mesh = tubeMesh;
+            tubeObj.layer = 10;
+
+            // Determine tube color (red if any segment has crashed, grey otherwise)
+            bool hasCrashed = false;
+            for (int i = 0; i < data.crashed.Count; i++)
             {
-                Debug.LogError($"Invalid position at index {i}: {pos}");
-                // Optionally, set a default value to prevent the error:
-                pos = Vector3.zero;
+                hasCrashed = hasCrashed || data.crashed[i];
             }
-            hasCrashed = hasCrashed || data.crashed[i];
-            line.SetPosition(i, data.positions[i]);
+            Color tubeColor = hasCrashed ? Color.red : Color.grey;
+
+            //change opacity of the tube
+            tubeColor.a = 0.75f;
+
+            // Instantiate a new material instance to avoid modifying the shared material.
+            Material mat = new Material(defaultMaterial);
+            mat.color = tubeColor;
+            mr.material = mat;
+
+            pred.TubeObjects.Add(tubeObj);
+        }
+    }
+
+    Mesh GenerateTubeMesh(List<Vector3> points, float radius, int radialSegments)
+    {
+        int numPoints = points.Count;
+        List<Vector3> vertices = new List<Vector3>();
+        List<int> triangles = new List<int>();
+        List<Vector3> normals = new List<Vector3>();
+        List<Vector2> uvs = new List<Vector2>();
+
+        // We'll compute an orientation (normal/binormal) for each cross-section.
+        Vector3 prevNormal = Vector3.zero;
+        for (int i = 0; i < numPoints; i++)
+        {
+            // Determine the tangent direction:
+            Vector3 tangent;
+            if (i < numPoints - 1)
+                tangent = (points[i + 1] - points[i]).normalized;
+            else
+                tangent = (points[i] - points[i - 1]).normalized;
+
+            // For the first point, pick an arbitrary normal:
+            Vector3 normal;
+            if (i == 0)
+            {
+                normal = Vector3.Cross(tangent, Vector3.up);
+                if (normal.sqrMagnitude < 0.001f)
+                    normal = Vector3.Cross(tangent, Vector3.right);
+                normal.Normalize();
+                prevNormal = normal;
+            }
+            else
+            {
+                // Use a simple parallel transport method:
+                normal = prevNormal - Vector3.Dot(prevNormal, tangent) * tangent;
+                if (normal.sqrMagnitude < 0.001f)
+                {
+                    normal = Vector3.Cross(tangent, Vector3.up);
+                    if (normal.sqrMagnitude < 0.001f)
+                        normal = Vector3.Cross(tangent, Vector3.right);
+                }
+                normal.Normalize();
+                prevNormal = normal;
+            }
+            // Binormal completes the frame.
+            Vector3 binormal = Vector3.Cross(tangent, normal).normalized;
+
+            // Create vertices around a circle in the plane defined by normal and binormal.
+            for (int j = 0; j < radialSegments; j++)
+            {
+                float theta = 2 * Mathf.PI * j / radialSegments;
+                Vector3 radialDir = Mathf.Cos(theta) * normal + Mathf.Sin(theta) * binormal;
+                vertices.Add(points[i] + radialDir * radius);
+                normals.Add(radialDir);
+                uvs.Add(new Vector2((float)j / radialSegments, (float)i / (numPoints - 1)));
+            }
         }
 
-        Color segmentColor = hasCrashed ? Color.red : Color.grey;
-        line.material.color = segmentColor; 
+        // Build triangles between consecutive rings.
+        for (int i = 0; i < numPoints - 1; i++)
+        {
+            for (int j = 0; j < radialSegments; j++)
+            {
+                int current = i * radialSegments + j;
+                int next = current + radialSegments;
+                int currentNext = i * radialSegments + ((j + 1) % radialSegments);
+                int nextNext = currentNext + radialSegments;
 
-        pred.LineRenderers.Add(line);
+                // First triangle of quad
+                triangles.Add(current);
+                triangles.Add(next);
+                triangles.Add(currentNext);
+
+                // Second triangle of quad
+                triangles.Add(currentNext);
+                triangles.Add(next);
+                triangles.Add(nextNext);
+            }
+        }
+
+        Mesh mesh = new Mesh();
+        mesh.SetVertices(vertices);
+        mesh.SetTriangles(triangles, 0);
+        mesh.SetNormals(normals);
+        mesh.SetUVs(0, uvs);
+        return mesh;
     }
-}
 
 }
+
+
 
 
 
@@ -184,7 +275,9 @@ public class Prediction
     public List<DroneFake> dronesPrediction;
 
     public List<DroneDataPrediction> allData;
-    public List<LineRenderer> LineRenderers;
+   // public List<LineRenderer> LineRenderers;
+
+    public List<GameObject> TubeObjects = new List<GameObject>();
 
     public Vector3 alignementVector;
 
@@ -196,7 +289,8 @@ public class Prediction
         this.current = current;
         this.lineHolder = lineHolder;
         this.allData = new List<DroneDataPrediction>();
-        this.LineRenderers = new List<LineRenderer>();
+        //this.LineRenderers = new List<LineRenderer>();
+        this.TubeObjects = new List<GameObject>();
         directionOfMigration = Vector3.zero;
     }
 

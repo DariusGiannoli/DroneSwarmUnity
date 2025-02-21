@@ -162,9 +162,9 @@ public class DroneController : MonoBehaviour
     }
     void updateColor()
     {
-        if(droneFake.embodied)
+        if(CameraMovement.embodiedDrone == this.gameObject)
         {
-            this.GetComponent<Renderer>().material = embodiedColor;
+            setMaterial(embodiedColor);
         }else{
             if (MigrationPointController.selectedDrone == this.gameObject)
             {

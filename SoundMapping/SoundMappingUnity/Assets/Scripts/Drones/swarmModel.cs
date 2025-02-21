@@ -349,7 +349,11 @@ public class swarmModel : MonoBehaviour
         //select the first drone as the selected drone
         if (LevelConfiguration._droneID < drones.Count && LevelConfiguration._droneID != -1)
         {
-            MigrationPointController.selectedDrone = swarmHolder.transform.GetChild(LevelConfiguration._droneID).gameObject;
+            if(!LevelConfiguration._startEmbodied)
+            {
+                MigrationPointController.selectedDrone = swarmHolder.transform.GetChild(LevelConfiguration._droneID).gameObject;
+            }
+            
         }
         else
         {
@@ -565,6 +569,18 @@ public class swarmModel : MonoBehaviour
                     Gizmos.color = Color.cyan;
                     Gizmos.DrawLine(Camera.main.transform.position, Camera.main.transform.position + force * 10);
                 }
+            }
+        }
+
+        if(showDroneObstacleForces)
+        {
+            (List<Vector3> forces, bool hasCrashed) =  CameraMovement.embodiedDrone.GetComponent<DroneController>().droneFake.getObstacleForces(HapticsTest._distanceDetection, HapticsTest._distanceDetection, 1f);
+            Vector3 pos = CameraMovement.embodiedDrone.transform.position;
+            
+            foreach (Vector3 force in forces)
+            {
+                Gizmos.color = Color.blue;
+                Gizmos.DrawLine(pos, pos + force * 10);
             }
         }
 

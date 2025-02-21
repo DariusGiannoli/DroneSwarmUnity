@@ -154,7 +154,7 @@ public class HapticsTest : MonoBehaviour
             int adresse = angleMapping[i];
             int angle = angleMappingDict.ContainsKey(adresse) ? angleMappingDict[adresse] : 0; 
             actuatorsRange.Add(new PIDActuator(adresse:adresse, angle:angleMappingDict[adresse],
-                                                    kp:0f, kd:70, referencevalue:0, 
+                                                    kp:0f, kd:160, referencevalue:0, 
                                                     refresh:CloseToWallrefresherFunction));
         }
 
@@ -479,15 +479,21 @@ public class HapticsTest : MonoBehaviour
                 if(diff < 40 || diff > 320) 
                 {
                     actuator.UpdateValue(forcesDir.magnitude);
+                    return;
                 }
             }else{
                 //gte the y component
                 float y = forcesDir.y;
                 if(Mathf.Abs(y) > 0) {
                     actuator.UpdateValue(y);
+                    return;
                 }
             }
+
+
         }
+
+        actuator.UpdateValue(0);
     }
 
     #endregion
