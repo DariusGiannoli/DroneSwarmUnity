@@ -8,7 +8,7 @@ public class LevelConfiguration : MonoBehaviour
     public static string _textTutorial  = "";
 
     public static int _CollectibleNumber = 0;
-    public int sceneNumber = 0;
+    public static int sceneNumber = 0;
 
 
     [Header("Control Settings")]
@@ -208,6 +208,7 @@ public class LevelConfiguration : MonoBehaviour
         }
 
         _textTutorial = text;
+
 
         
     }

@@ -29,6 +29,8 @@ public class textInfo : MonoBehaviour
         textTutorial.text = LevelConfiguration._textTutorial;
         refresh();
 
+        TutorialPlayer.playTuto(LevelConfiguration.sceneNumber);
+
         
     }
 
