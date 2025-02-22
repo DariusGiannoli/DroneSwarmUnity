@@ -3,6 +3,7 @@ using UnityEngine;
 using System.Collections;
 using System.Linq;
 using System.Threading;
+using UnityEngine.InputSystem.Interactions;
 
 public class NetworkCreator
 {
@@ -98,11 +99,20 @@ public class NetworkCreator
         // if none, choose the largest.
         largestComponent.Clear();
         int maxCount = 0;
+
+        int idLeader = -1;
+        if(CameraMovement.embodiedDrone != null)
+        {
+            idLeader = CameraMovement.idLeader;
+        }else if(MigrationPointController.selectedDrone != null)
+        {
+            idLeader = MigrationPointController.idLeader;
+        }
+
         foreach (HashSet<DroneFake> component in components)
         {
-            bool containsEmbodied = component.Any(d => d.embodied);
-            bool containsSelected = component.Any(d => d.selected);
-            if (containsEmbodied || containsSelected)
+            bool isLeader = component.Any(d => d.id == idLeader);
+            if (isLeader)
             {
                 largestComponent = component;
                 break;
@@ -113,6 +123,8 @@ public class NetworkCreator
                 largestComponent = component;
             }
         }
+
+        Debug.Log("Largest component: " + largestComponent.Count);
     }
 
     public bool IsInMainNetwork(DroneFake drone)
@@ -297,7 +309,7 @@ public class NetworkCreator
         }
 
         float avgSquaredError = sumSquaredError / pairCount;
-        return Mathf.Clamp01((avgSquaredError / (DroneFake.desiredSeparation * DroneFake.desiredSeparation)-0.3f)/(0.7f-0.22f));
+        return Mathf.Clamp01((avgSquaredError / (DroneFake.desiredSeparation * DroneFake.desiredSeparation)-0.25f)/(0.7f-0.22f));
     }
 
     // 5. Normalized Velocity Mismatch (~K(v)):

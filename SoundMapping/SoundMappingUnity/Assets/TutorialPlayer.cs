@@ -32,19 +32,35 @@ public class TutorialPlayer : MonoBehaviour
         {
             if (Input.GetKeyDown(KeyCode.V))
             {
-                RestartVideo();
+                stopVideo();
             }
+        }
+
+        public static void stopVideo()
+        {
+            _thisGameObject.GetComponent<TutorialPlayer>().StopVideo();
+        }
+
+        public void StopVideo()
+        {
+            videoPlayer.Stop();
+            audioSource.Stop();
+
+            OnVideoFinished(videoPlayer);
         }
 
         private void OnVideoFinished(VideoPlayer vp)
         {
+            AudioPriorityManager.Restore();
+            MigrationPointController.InControl = true;
             Debug.Log("Video finished!");
             tutoVideo.SetActive(false);
-            // Add any additional logic you want to execute when the video finishes
         }
 
         private void RestartVideo()
         {
+            AudioPriorityManager.Mute();
+            MigrationPointController.InControl = false;
             tutoVideo.SetActive(true);
             videoPlayer.Stop();
             audioSource.Stop();
@@ -55,6 +71,7 @@ public class TutorialPlayer : MonoBehaviour
     private void Awake()
     {
         _thisGameObject = this.gameObject;
+        MigrationPointController.InControl = false;
         // Get references
         videoPlayer = GetComponent<VideoPlayer>();
         audioSource = GetComponent<AudioSource>();
@@ -70,6 +87,7 @@ public class TutorialPlayer : MonoBehaviour
 
     public static void playTuto(int tutoNumber)
     {
+        AudioPriorityManager.Mute();
         _thisGameObject.GetComponent<TutorialPlayer>().PlayTutorial(tutoNumber);
     }
 

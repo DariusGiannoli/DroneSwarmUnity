@@ -14,6 +14,8 @@ public class textInfo : MonoBehaviour
     public TextMeshProUGUI textTutorial;
     public TextMeshProUGUI errorText;
 
+    public Image deathImage;
+
     public TextMeshProUGUI CollectibleText;
     // Start is called before the first frame update
     // Update is called once per frame
@@ -55,9 +57,9 @@ public class textInfo : MonoBehaviour
     {
         if(LevelConfiguration._ShowText)
         {
-            connexionText.text = showConnexion ? "Connexion: " + getOneDecimal(swarmModel.swarmConnectionScore) : "";
+            connexionText.text = showConnexion ? "Connetion: " + getOneDecimal(swarmModel.swarmConnectionScore) : "";
             SpreadnessText.text = showSpreadness ? "Spreadness: " + getOneDecimal(swarmModel.desiredSeparation) : "";
-            IsolationText.text = showIsolation ? "Isolation : " + swarmModel.numberOfDroneDiscionnected.ToString() : "";
+            IsolationText.text = true ? "Isolation : " + swarmModel.numberOfDroneDiscionnected.ToString() : "";
             DroneCrashText.text = showDroneCrash ? "Drone Crash : " + swarmModel.numberOfDroneCrashed.ToString() : "";
             SpreadnessSwarmScore.text = showSpreadness ? "Swarm spreadness : " + getOneDecimal(swarmModel.swarmAskingSpreadness) : "";
         }else
@@ -80,6 +82,24 @@ public class textInfo : MonoBehaviour
         }
     }
 
+
+    public static void setDeathImageStatic(float value)
+    {
+        Image img = GameObject.FindGameObjectWithTag("GameManager").GetComponent<textInfo>().deathImage;
+        if(value > 0.9f)
+        {
+            GameObject.FindGameObjectWithTag("GameManager").GetComponent<textInfo>().deathImage.gameObject.SetActive(false);
+            return;
+        }
+
+        img.gameObject.SetActive(true);
+        Color color = img.color;
+        color.a = (1 - value/2);
+
+        img.color = color;
+
+
+    }
     public static void setTextErrorStatic(string text, float time)
     {
         GameObject.FindGameObjectWithTag("GameManager").GetComponent<textInfo>().setTextError(text, time);

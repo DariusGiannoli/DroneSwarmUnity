@@ -45,7 +45,6 @@ public class swarmModel : MonoBehaviour
 
     public float lastObstacleAvoidance = -1f;
 
-
     public float maxSpeed = 5f;
     public float maxForce = 10f;
 
@@ -209,7 +208,6 @@ public class swarmModel : MonoBehaviour
         DroneFake.avoidanceForce = avoidanceForce;
         DroneFake.droneRadius = droneRadius;
         DroneFake.neighborRadius = neighborRadius;
-        DroneFake.obstacleLayer = obstacleLayer;
         DroneFake.PRIORITYWHENEMBODIED = PRIORITYWHENEMBODIED;
         DroneFake.dampingFactor = dampingFactor;
         DroneFake.spawnHeight = spawnHeight;
@@ -339,7 +337,7 @@ public class swarmModel : MonoBehaviour
 
             if (startEmbodied && i == droneID)
             {
-                CameraMovement.embodiedDrone = drone.gameObject;
+                CameraMovement.SetEmbodiedDrone(drone.gameObject);
                 CameraMovement.embodiedDrone.GetComponent<DroneController>().droneFake.embodied = true;
             }
 
@@ -352,6 +350,7 @@ public class swarmModel : MonoBehaviour
             if(!LevelConfiguration._startEmbodied)
             {
                 MigrationPointController.selectedDrone = swarmHolder.transform.GetChild(LevelConfiguration._droneID).gameObject;
+                MigrationPointController.idLeader = MigrationPointController.selectedDrone.GetComponent<DroneController>().droneFake.id;
             }
             
         }
@@ -422,7 +421,7 @@ public class swarmModel : MonoBehaviour
 
             if (startEmbodied && i == droneID)
             {
-                CameraMovement.embodiedDrone = drone.gameObject;
+                CameraMovement.SetEmbodiedDrone(drone);
                 CameraMovement.embodiedDrone.GetComponent<DroneController>().droneFake.embodied = true;
             }
         }

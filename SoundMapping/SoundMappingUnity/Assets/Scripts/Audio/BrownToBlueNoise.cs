@@ -218,6 +218,8 @@ public class BrownToBlueNoise : MonoBehaviour
 
     public void Shrink()
     {
+
+        return;
         if (coroutine == null && !isShrinking)
         {
             //check if close to fully shrunk
@@ -231,6 +233,7 @@ public class BrownToBlueNoise : MonoBehaviour
 
     public void Expand()
     {
+        return;
         if (coroutine == null && !isShrinking)
         {
             coroutine = StartCoroutine(startAnimation(realBlend, Mathf.Clamp(realBlend - a, 0f, 1f), animationDuration));

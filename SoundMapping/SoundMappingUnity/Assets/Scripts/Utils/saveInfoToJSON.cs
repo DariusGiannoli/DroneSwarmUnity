@@ -101,6 +101,10 @@ public class SwarmState
     public List<float> time = new List<float>();
 
 
+    //control inputs
+    
+
+
 
     // Constants or static fields do not get serialized by default by JsonUtility
     // If you need them in the JSON, make them non-static. 

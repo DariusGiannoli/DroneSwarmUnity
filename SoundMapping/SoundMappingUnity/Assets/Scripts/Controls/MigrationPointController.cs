@@ -4,6 +4,7 @@ using UnityEngine;
 
 public class MigrationPointController : MonoBehaviour
 {
+    public static int idLeader = -1;
     public Camera mainCamera; // Assign your main camera in the Inspector
     public LayerMask groundLayer; // Layer mask for the ground
     public LayerMask droneLayer; // Layer mask for the drones
@@ -23,6 +24,8 @@ public class MigrationPointController : MonoBehaviour
 
     public static float maxSpreadness = 5f;
     public static float minSpreadness = 1f;
+
+    public static bool InControl = true;
 
     bool firstTime = true;
 
@@ -69,6 +72,11 @@ public class MigrationPointController : MonoBehaviour
 
     void Update()
     {
+        if(!InControl)
+        {
+            return;
+        }
+        
         UpdateMigrationPoint();
         SelectionUpdate();  
         SpreadnessUpdate();
@@ -88,7 +96,11 @@ public class MigrationPointController : MonoBehaviour
             {
                 if(swarmModel.swarmHolder.transform.childCount > 0)
                 {
-                    selectedDrone = swarmModel.swarmHolder.transform.GetChild(0).gameObject;
+                    if(LevelConfiguration._startEmbodied)
+                    {
+                        selectedDrone = swarmModel.swarmHolder.transform.GetChild(0).gameObject;
+                        idLeader = selectedDrone.GetComponent<DroneController>().droneFake.id;
+                    }
                 }
             }
             else
@@ -103,6 +115,7 @@ public class MigrationPointController : MonoBehaviour
                         {
                             continue;
                         }
+
 
                         Vector3 diff = drone.position - CameraMovement.embodiedDrone.transform.position;
                         float score = Vector3.Dot(diff, CameraMovement.embodiedDrone.transform.forward);
@@ -135,7 +148,7 @@ public class MigrationPointController : MonoBehaviour
                     }
 
                     List<HashSet<DroneFake>> subnetwork = swarmModel.network.GetSubnetworks();
-                    print("Number of subnetworks: " + subnetwork.Count);
+                   // print("Number of subnetworks: " + subnetwork.Count);
                     //compute average position of each subnetwork
                     Dictionary<HashSet<DroneFake>, Vector3> averagePositions = new Dictionary<HashSet<DroneFake>, Vector3>();
                     foreach(HashSet<DroneFake> sub in subnetwork)
@@ -173,11 +186,11 @@ public class MigrationPointController : MonoBehaviour
                             break;
                         }
                     }
-                    print("Selected subnetwork index: " + selectedSubnetworkIndex);
+//                    print("Selected subnetwork index: " + selectedSubnetworkIndex);
 
                     //select the next subnetwork
                     int nextSubnetworkIndex = (selectedSubnetworkIndex + increment) % sortedSubnetworks.Count;
-                    print("Next subnetwork index: " + nextSubnetworkIndex);
+             //       print("Next subnetwork index: " + nextSubnetworkIndex);
                     if(nextSubnetworkIndex < 0)
                     {
                         nextSubnetworkIndex = sortedSubnetworks.Count - 1;
@@ -195,11 +208,11 @@ public class MigrationPointController : MonoBehaviour
 
                     if(nextDrone == null)
                     {
-                        print("No drone in the subnetwork");
+               //         print("No drone in the subnetwork");
                         return;
                     }
 
-                    print("Next drone: " + nextDrone.id);
+           //         print("Next drone: " + nextDrone.id);
 
                     //select the drone
                     foreach(Transform drone in swarmModel.swarmHolder.transform)
@@ -207,6 +220,7 @@ public class MigrationPointController : MonoBehaviour
                         if(drone.gameObject.GetComponent<DroneController>().droneFake == nextDrone)
                         {
                             selectedDrone = drone.gameObject;
+                            idLeader = nextDrone.id;
                             break;
                         }
                     }
@@ -219,10 +233,7 @@ public class MigrationPointController : MonoBehaviour
         // button 0
         if(Input.GetKeyDown("joystick button " + 0) && control_embodiement) //embodiement
         {
-            if(CameraMovement.state == "animation")
-            {
-                return;
-            }
+
             if(CameraMovement.embodiedDrone != null)
             {
                 if(selectedDrone != CameraMovement.embodiedDrone)//drone 2 drone
@@ -232,7 +243,7 @@ public class MigrationPointController : MonoBehaviour
             }
             else if(selectedDrone != null)
             {
-                CameraMovement.setEmbodiedDrone(selectedDrone);
+                CameraMovement.SetEmbodiedDrone(selectedDrone);
             }
         }
 
@@ -241,7 +252,7 @@ public class MigrationPointController : MonoBehaviour
             if(CameraMovement.embodiedDrone != null)
             {
                 CameraMovement.embodiedDrone.GetComponent<Camera>().enabled = false;                
-                CameraMovement.desembodiedDrone(CameraMovement.embodiedDrone); 
+                CameraMovement.DesembodiedDrone(CameraMovement.embodiedDrone); 
             }
         }
     }

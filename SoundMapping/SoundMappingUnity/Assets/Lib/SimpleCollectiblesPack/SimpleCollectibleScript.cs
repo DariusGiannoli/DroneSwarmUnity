@@ -57,6 +57,7 @@ public class SimpleCollectibleScript : MonoBehaviour {
 		{
 			AudioSource audioSource = GetComponent<AudioSource>();
 			audioSource.clip = collectSound;
+			audioSource.volume = 0.2f;
 			audioSource.Play();
 		//	Destroy(audioSource, collectSound.length);
 		}
@@ -67,9 +68,9 @@ public class SimpleCollectibleScript : MonoBehaviour {
 			audioSource.clip = collectSound;
 			audioSource.spatialBlend = 1;
 			audioSource.rolloffMode = AudioRolloffMode.Linear;
-			audioSource.maxDistance = 10;
+			audioSource.maxDistance = 4;
 			audioSource.clip = collectSound;
-			audioSource.volume = 1f;
+			audioSource.volume = 0.35f;
 			audioSource.Play();
 			sound.GetComponent<AudioSource>().Play();
 			Destroy(sound, collectSound.length);
@@ -84,7 +85,7 @@ public class SimpleCollectibleScript : MonoBehaviour {
 
 			//Add in code here;
 
-			Debug.Log ("Do NoType Command");
+//			Debug.Log ("Do NoType Command");
 		}
 		if (CollectibleType == CollectibleTypes.Type1) {
 

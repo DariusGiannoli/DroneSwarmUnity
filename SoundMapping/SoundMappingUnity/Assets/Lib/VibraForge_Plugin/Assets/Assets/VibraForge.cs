@@ -47,6 +47,15 @@ public class VibraForge : MonoBehaviour
     //on quit
     void OnApplicationQuit()
     {
+        Reset();
+        
+        //wait for 1 second
+   //     System.Threading.Thread.Sleep(1000);
+
+    }
+
+    public static void Reset()
+    {
         for(int i = 0; i < 210; i++)
         {
             SendCommand(i, 0, 0, 0);
@@ -55,9 +64,5 @@ public class VibraForge : MonoBehaviour
                 System.Threading.Thread.Sleep(100);
             }
         }
-        
-        //wait for 1 second
-   //     System.Threading.Thread.Sleep(1000);
-
-        }
+    }
 }

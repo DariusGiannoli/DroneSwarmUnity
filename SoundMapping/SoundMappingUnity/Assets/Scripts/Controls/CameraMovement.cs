@@ -1,124 +1,104 @@
-using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Data.Common;
-using Unity.VisualScripting;
 using UnityEngine;
 
 public class CameraMovement : MonoBehaviour
 {
+    public static int idLeader = -1;
+
+
+    public static Vector3 forward;
+    public static Vector3 right;
+    public static Vector3 up;
+
+
     public static Camera cam;
     public GameObject camMinimap;
     public GameObject minimap;
     public Transform swarmHolder;
-    private int FOVDrones = 5;
-
-    public float heightCamera = 20;
-
-    public static string state = "TDView";
-    // Start is called before the first frame update
-
+    public float heightCamera = 20f;
+    public float rotationSpeed = 80f;
     public const float animationTime = 0.1f;
-
     public static GameObject embodiedDrone = null;
     public static GameObject nextEmbodiedDrone = null;
     public GameObject lastEmbodiedDrone = null;
-    public Quaternion intialCamRotation;
-    const float DEFAULT_HEIGHT_CAMERA = 20;
+    public Quaternion initialCamRotation;
+    private const float DEFAULT_HEIGHT_CAMERA = 20f;
 
-    public float rotationSpeed = 80;
+    // A simple state machine for the camera
+    private enum CameraState { TDView, Animation, DroneView, Crash, AnimationDroneToDrone };
+    private static CameraState currentState;
 
-    public bool minimapActive
-    {
-        get
-        {
-            return LevelConfiguration._MiniMap;
-        }
-    }
+    // Animation variables (used when transitioning between states)
+    private static float animTimer = 0f;
+    private Vector3 animStartPos;
+    private Vector3 animTargetPos;
 
-
-    public static Vector3 forward = Vector3.forward;
-    public static Vector3 right = Vector3.right;
-    public static Vector3 up = Vector3.up;
-    private bool control_rotation
-    {
-        get
-        {
-            return this.GetComponent<MigrationPointController>().control_rotation;
-        }
-    }
+    
 
     void Start()
     {
-        cam = Camera.main;
+        _this = gameObject;
 
+
+        cam = Camera.main;
         cam.transform.position = new Vector3(0, DEFAULT_HEIGHT_CAMERA, 0);
         heightCamera = DEFAULT_HEIGHT_CAMERA;
+        initialCamRotation = cam.transform.rotation;
 
-        intialCamRotation = cam.transform.rotation;
-
-        StartCoroutine(TDView());
-        
+        // Begin in top-down view mode
+        currentState = CameraState.TDView;
     }
 
-    public static void setNextEmbodiedDrone()
+    void Update()
     {
-        Transform swarmHolder = swarmModel.swarmHolder.transform;
-        nextEmbodiedDrone = null;
 
-        if (swarmHolder.childCount > 0)
+        print("CameraMovement: " + idLeader + " Selected: " + MigrationPointController.idLeader);
+
+        // Run main loop based on current state.
+        switch (currentState)
         {
-            // Create a list of indices for the drones
-            List<int> indices = new List<int>();
-            for (int i = 0; i < swarmHolder.childCount; i++)
-            {
-                indices.Add(i);
-            }
-
-            // Iterate over the list in random order
-            while (indices.Count > 0)
-            {
-                // Pick a random index from the list
-                int randomListIndex = UnityEngine.Random.Range(0, indices.Count);
-                int droneIndex = indices[randomListIndex];
-                // Remove the index from the list so it isn’t tried again
-                indices.RemoveAt(randomListIndex);
-
-                GameObject drone = swarmHolder.GetChild(droneIndex).gameObject;
-                DroneController droneController = drone.GetComponent<DroneController>();
-
-                if (droneController != null && !droneController.droneFake.hasCrashed)
+            case CameraState.TDView:
+                UpdateTDView();
+                // If a drone becomes embodied, start the animation to switch view.
+                if (embodiedDrone != null)
                 {
-                    // Mark the drone as embodied and set the camera
-                    droneController.droneFake.embodied = true;
-                    CameraMovement.embodiedDrone = drone;
-                    CameraMovement.nextEmbodiedDrone = drone;
-                    return;
+                    BeginAnimation(embodiedDrone.transform.position);
+                    currentState = CameraState.Animation;
                 }
-            }
-        }
+                break;
 
-        Debug.LogError("No drones to embody. Restart the simulation.");
-        // Optionally restart the simulation here:
-        swarmModel.restart();
+            case CameraState.Animation:
+                UpdateAnimation();
+                break;
+
+            case CameraState.AnimationDroneToDrone:
+                AnimationDroneToDroneFunc();
+                break;
+
+            case CameraState.DroneView:
+                UpdateDroneView();
+                // If a new drone has been chosen, initiate the transition.
+                if (nextEmbodiedDrone != null)
+                {
+                    startFOV = embodiedDrone.GetComponent<Camera>().fieldOfView;
+                    BeginAnimation(embodiedDrone.transform.position);
+                    currentState = CameraState.AnimationDroneToDrone;
+                }
+                break;
+
+            case CameraState.Crash:
+                HandleCrash();
+                break;
+        }
     }
 
+    //setup of the crash animation
 
-    public Vector3 getCameraPosition()
+    // TDView mode: Camera follows a “center of mass” of the drones.
+    void UpdateTDView()
     {
-        if (cam.enabled)
-        {
-            return cam.transform.position;
-        }
-        else
-        {
-            return embodiedDrone.transform.position;
-        }
-    }
-    // Update is called once per frame
-    void updateTDView()
-    {
-        List<DroneFake> drones = swarmModel.dronesInMainNetwork;
+        // Update the camera position to center on all drones.
+        List<DroneFake> drones = swarmModel.dronesInMainNetwork; // Assumes swarmModel exists.
         if (drones.Count > 0)
         {
             Vector3 center = Vector3.zero;
@@ -126,230 +106,220 @@ public class CameraMovement : MonoBehaviour
             {
                 center += drone.position;
             }
-            center /= drones.Count; 
-
+            center /= drones.Count;
             center.y = heightCamera;
-            cam.transform.position = Vector3.Lerp(cam.transform.position, center, Time.deltaTime * 2);
+            cam.transform.position = Vector3.Lerp(cam.transform.position, center, Time.deltaTime * 2f);
         }
 
-
-        float rightStickHorizontal = control_rotation ? Input.GetAxis("JoystickRightHorizontal") : 0;
-        // applz rotation to the camera with lerp
+        // Rotate camera using joystick input (if rotation is enabled)
+        float rightStickHorizontal = (GetComponent<MigrationPointController>().control_rotation) ? Input.GetAxis("JoystickRightHorizontal") : 0;
         cam.transform.Rotate(-Vector3.forward, rightStickHorizontal * Time.deltaTime * rotationSpeed);
 
-        cam.GetComponent<Camera>().orthographicSize = Mathf.Lerp(cam.GetComponent<Camera>().orthographicSize, Mathf.Max(swarmModel.desiredSeparation * 3, 6), Time.deltaTime * 2);
+        // Adjust orthographic size based on swarm separation.
+        float targetSize = Mathf.Max(swarmModel.desiredSeparation * 3, 6);
+        cam.GetComponent<Camera>().orthographicSize = Mathf.Lerp(cam.GetComponent<Camera>().orthographicSize, targetSize, Time.deltaTime * 2f);
     }
 
-    void updateDroneView()
+    // DroneView mode: Camera follows the embodied drone.
+    void UpdateDroneView()
     {
-        float rightStickHorizontal = control_rotation ? Input.GetAxis("JoystickRightHorizontal") : 0;
+        // Rotate the drone with joystick input.
+        float rightStickHorizontal = (GetComponent<MigrationPointController>().control_rotation) ? Input.GetAxis("JoystickRightHorizontal") : 0;
+        if (embodiedDrone != null)
+        {
+            embodiedDrone.transform.Rotate(Vector3.up, rightStickHorizontal * Time.deltaTime * rotationSpeed);
+            // The camera follows the drone at the set height.
+            cam.transform.position = new Vector3(embodiedDrone.transform.position.x, heightCamera, embodiedDrone.transform.position.z);
+        }
 
-        // applz rotation to the embodied drone with lerp
-        embodiedDrone.transform.Rotate(Vector3.up, rightStickHorizontal * Time.deltaTime * rotationSpeed);
-        
-
-        updateTDView();
-
+        // Update minimap camera if enabled.
         camMinimap.GetComponent<Camera>().orthographicSize = swarmModel.desiredSeparation * 3;
-        cam.transform.position = new Vector3(embodiedDrone.transform.position.x, heightCamera, embodiedDrone.transform.position.z);
     }
 
-    public IEnumerator TDView()
+    // Begins an animation from the current camera position to a target position.
+    void BeginAnimation(Vector3 targetPos)
     {
-        state = "TDView";
-        minimap.SetActive(false);
-        yield return new WaitForSeconds(0.01f);
-      
-        while(CameraMovement.embodiedDrone == null)
+        animTimer = 0f;
+        animStartPos = cam.transform.position;
+        animTargetPos = targetPos;
+    }
+
+    // Animation update: smoothly moves the camera from animStartPos to animTargetPos.
+    void UpdateAnimation()
+    {
+        animTimer += Time.deltaTime;
+        float t = Mathf.Clamp01(animTimer / animationTime);
+        cam.transform.position = Vector3.Lerp(animStartPos, animTargetPos, t);
+        cam.GetComponent<Camera>().orthographicSize = Mathf.Lerp(cam.GetComponent<Camera>().orthographicSize, 5, t);
+
+        // When the animation completes, update the embodied drone’s forward direction and switch to DroneView.
+        if (t >= 1f)
         {
-            updateTDView();
-            yield return new WaitForSeconds(0.01f);
+            if (embodiedDrone != null)
+            {
+                Vector3 forwardDrone = cam.transform.up;
+                forwardDrone.y = 0;
+                embodiedDrone.transform.forward = forwardDrone;
+
+                // activate the camera 
+                embodiedDrone.GetComponent<Camera>().enabled = true;
+               // MigrationPointController.selectedDrone = embodiedDrone;
+                cam.enabled = false;
+            }else
+            {
+                cam.enabled = true;
+            }
+            currentState = CameraState.DroneView;
+        }
+    }
+
+    private float startFOV;
+
+    void AnimationDroneToDroneFunc()
+    {
+        animTimer += Time.deltaTime;
+        float t = Mathf.Clamp01(animTimer / animationTime);
+        print("t: " + t);
+        embodiedDrone.transform.LookAt(nextEmbodiedDrone.transform);
+        embodiedDrone.GetComponent<Camera>().fieldOfView = Mathf.Lerp(embodiedDrone.GetComponent<Camera>().fieldOfView, 20, t);
+
+        if (t >= 1f)
+        {
+            embodiedDrone.GetComponent<Camera>().fieldOfView = startFOV;
+            embodiedDrone.GetComponent<Camera>().enabled = false;
+            Vector3 forwardDrone = embodiedDrone.transform.forward;
+            forwardDrone.y = 0;
+            SetEmbodiedDrone(nextEmbodiedDrone);
+            embodiedDrone.GetComponent<Camera>().enabled = true;
+            embodiedDrone.transform.forward = forwardDrone;
+            currentState = CameraState.DroneView;
+        }
+    }
+
+    // Crash handling: reposition the camera and log the crash.
+    private static float startAvoidanceForce;
+    public static void crashAnimationSetup()
+    {
+        animTimer = 0f;
+        if(embodiedDrone != null)
+        {
+            cam.enabled = false;
+            embodiedDrone.GetComponent<Camera>().enabled = false;
+
+            DesembodiedDrone(embodiedDrone);
         }
 
-        StartCoroutine(goAnimation());
+        nextEmbodiedDrone = GetEmbodiedDrone();
+        nextEmbodiedDrone.GetComponent<Camera>().enabled = true;
+
+        startAvoidanceForce = DroneFake.avoidanceForce;
+        DroneFake.avoidanceForce = 200f;
+
+
+        currentState = CameraState.Crash;
     }
 
-    public IEnumerator goAnimation(float _animationTime = animationTime)
+
+    void HandleCrash() // crash animation
     {
-        state = "animation";
-        float elapsedTime = 0;
-        //position of the active camera
-        Vector3 startingPos = cam.transform.position;
+        MigrationPointController.InControl = false;
+        animTimer += Time.deltaTime;
+        float t = Mathf.Clamp01(animTimer / 2f);
+        textInfo.setDeathImageStatic(t);
 
-        while (elapsedTime < _animationTime)
+        
+        if (t >= 1f)
         {
-            if(embodiedDrone == null)
+            DroneFake.avoidanceForce = startAvoidanceForce;
+            MigrationPointController.InControl = true;
+            if(nextEmbodiedDrone.activeSelf)
             {
-                if(lastEmbodiedDrone != null)
-                {
-                    Vector3 forwardDroneC = lastEmbodiedDrone.transform.forward;
-                    forwardDroneC.y = 0;
+                nextEmbodiedDrone.GetComponent<Camera>().enabled = true;
+                SetEmbodiedDrone(nextEmbodiedDrone);
+                currentState = CameraState.DroneView;
+            }else
+            {
+                crashAnimationSetup();
+            }
+        }
+    }
 
-                    cam.transform.position = new Vector3(lastEmbodiedDrone.transform.position.x, heightCamera, lastEmbodiedDrone.transform.position.z);
-                    cam.transform.up = forwardDroneC;
-                    
-                    StartCoroutine(TDView());
-                    yield break;
-                }else // been a crash
+    // Returns an available drone from the swarm that hasn’t crashed.
+    public static GameObject GetEmbodiedDrone()
+    {
+        Transform swarmHolder = swarmModel.swarmHolder.transform;
+        nextEmbodiedDrone = null;
+
+        if (swarmHolder.childCount > 0)
+        {
+            List<int> indices = new List<int>();
+            for (int i = 0; i < swarmHolder.childCount; i++)
+            {
+                indices.Add(i);
+            }
+            while (indices.Count > 0)
+            {
+                int randomListIndex = UnityEngine.Random.Range(0, indices.Count);
+                int droneIndex = indices[randomListIndex];
+                indices.RemoveAt(randomListIndex);
+
+                GameObject drone = swarmHolder.GetChild(droneIndex).gameObject;
+                DroneController droneController = drone.GetComponent<DroneController>();
+                if (droneController != null && !droneController.droneFake.hasCrashed)
                 {
-                    StartCoroutine(TDView());
-                    yield break;
+                    return drone;
                 }
             }
-            
-            
-            cam.GetComponent<Camera>().orthographicSize = Mathf.Lerp(cam.GetComponent<Camera>().orthographicSize, 5, elapsedTime / _animationTime);
-            cam.transform.position = Vector3.Lerp(cam.transform.position, embodiedDrone.transform.position, elapsedTime / _animationTime);
-            elapsedTime += Time.deltaTime;
-            yield return new WaitForEndOfFrame();
         }
-
-        Vector3 forwardDrone = cam.transform.up;
-        forwardDrone.y = 0;
-
-        embodiedDrone.transform.forward = forwardDrone;
-
-        embodiedDrone.GetComponent<Camera>().enabled = true;
-        cam.enabled = false;
-
-        StartCoroutine(droneView());
+        return null;
     }
 
-    public IEnumerator goAnimationDoneToDrone(float _animationTime = animationTime)
+    // Sets the next drone to be embodied; the Update loop will transition to it.
+    public static void SetNextEmbodiedDrone()
     {
-        state = "animation";
-        float elapsedTime = 0;
-        float initialFOV = embodiedDrone.GetComponent<Camera>().fieldOfView;
-
-     //   print("DroneAnimation staart of " + embodiedDrone.name + " " + embodiedDrone.GetComponent<DroneController>().droneFake.embodied);
-
-        if(lastEmbodiedDrone != embodiedDrone) //desembodiement
+        GameObject drone = GetEmbodiedDrone();
+        if (drone != null)
         {
-            lastEmbodiedDrone.GetComponent<DroneController>().droneFake.selected = false;
-            lastEmbodiedDrone.GetComponent<DroneController>().droneFake.embodied = false;
-
-            MigrationPointController.selectedDrone = null;
-
-
-            swarmModel.drones.Find(x => x.id == lastEmbodiedDrone.GetComponent<DroneController>().droneFake.id).embodied = false;
-            swarmModel.drones.Find(x => x.id == lastEmbodiedDrone.GetComponent<DroneController>().droneFake.id).selected = false;
+            SetEmbodiedDrone(drone);
+        }else
+        {
+           swarmModel.restart();
         }
-
-        
-        while (elapsedTime < _animationTime)
-        {           
-            lastEmbodiedDrone.GetComponent<Camera>().fieldOfView = Mathf.Lerp(lastEmbodiedDrone.GetComponent<Camera>().fieldOfView, 20, elapsedTime / _animationTime);
-            lastEmbodiedDrone.transform.LookAt(embodiedDrone.transform.position);
-            
-            elapsedTime += Time.deltaTime;
-            yield return new WaitForEndOfFrame();
-        }
-
-        lastEmbodiedDrone.GetComponent<Camera>().fieldOfView = initialFOV;
-        lastEmbodiedDrone.GetComponent<Camera>().enabled = false;
-        print("lastEmbodiedDrone " + lastEmbodiedDrone.name + " " + lastEmbodiedDrone.GetComponent<DroneController>().droneFake.embodied);
-
-        embodiedDrone.GetComponent<Camera>().enabled = true;
-        embodiedDrone.GetComponent<DroneController>().droneFake.embodied = true;
-        Vector3 forwardDrone = new Vector3(lastEmbodiedDrone.transform.forward.x, 0, lastEmbodiedDrone.transform.forward.z);
-        embodiedDrone.transform.forward = forwardDrone;
-
-        
-     //   print("DroneAnimation end of " + embodiedDrone.name + " " + embodiedDrone.GetComponent<DroneController>().droneFake.embodied);
-
-        StartCoroutine(droneView());
     }
 
-    public IEnumerator droneView()
-    {
-
-        print("DroneView of " + embodiedDrone.name + " " + embodiedDrone.GetComponent<DroneController>().droneFake.embodied);
-        state = "droneView";
-        Vector3 lastPosition = embodiedDrone.transform.position;
-        minimap.SetActive(minimapActive);
-        while (embodiedDrone != null)
-        {
-            lastPosition = embodiedDrone.transform.position;
-            updateDroneView();
-            if(nextEmbodiedDrone != null)
-            {
-                lastEmbodiedDrone = embodiedDrone;
-
-                setEmbodiedDrone(nextEmbodiedDrone);
-                
-                if(lastEmbodiedDrone == embodiedDrone)
-                {
-                   // print("Crash but no worries" + lastEmbodiedDrone.GetComponent<DroneController>().droneFake.embodied + " " + embodiedDrone.name);
-                    StartCoroutine(goAnimationDoneToDrone(0.01f));
-                }
-                else
-                {
-                    print("Embodied drone changed from " + lastEmbodiedDrone.name + " to " + embodiedDrone.name);
-                    StartCoroutine(goAnimationDoneToDrone(animationTime));
-                }
-                yield break;
-            }
-            yield return new WaitForSeconds(0.01f);
-        }
-
-        cam.transform.position = new Vector3(lastPosition.x, heightCamera, lastPosition.z);
-        
-        if(lastEmbodiedDrone != null)
-        {
-            Vector3 forwardDroneC = lastEmbodiedDrone.transform.forward;
-            forwardDroneC.y = 0;
-
-            cam.transform.position = new Vector3(lastEmbodiedDrone.transform.position.x, heightCamera, lastEmbodiedDrone.transform.position.z);
-        }
-        cam.enabled = true;
-
-
-        StartCoroutine(TDView());
-    }
-
-    public static void setEmbodiedDrone(GameObject drone)
+    // Immediately set the given drone as the embodied drone.
+    public static void SetEmbodiedDrone(GameObject drone)
     {
         embodiedDrone = drone;
-        
-        
-        drone.GetComponent<DroneController>().droneFake.embodied = true;
+        idLeader = drone.GetComponent<DroneController>().droneFake.id;
+        DroneController controller = drone.GetComponent<DroneController>();
+        if (controller != null)
+        {
+            controller.droneFake.embodied = true;
+            controller.droneFake.selected = true;
+        }
         swarmModel.drones.Find(x => x.id == drone.GetComponent<DroneController>().droneFake.id).embodied = true;
         swarmModel.drones.Find(x => x.id == drone.GetComponent<DroneController>().droneFake.id).selected = false;
-        
-        drone.GetComponent<DroneController>().droneFake.resetEmbodied(); //uyseless
-
-
         nextEmbodiedDrone = null;
     }
 
-    public static void desembodiedDrone(GameObject drone)
+    public static Vector3 getCameraPosition()
     {
-        drone.GetComponent<DroneController>().droneFake.selected = false;
-        drone.GetComponent<DroneController>().droneFake.embodied = false;
-
-        swarmModel.drones.Find(x => x.id == drone.GetComponent<DroneController>().droneFake.id).embodied = false;
-        swarmModel.drones.Find(x => x.id == drone.GetComponent<DroneController>().droneFake.id).selected = false;
-
-        embodiedDrone = null;
+        return cam.transform.position;
     }
 
-
-    DataEntry getCameraPositionDE()
+    public static void DesembodiedDrone(GameObject drone)
     {
-        return new DataEntry("camera", cam.transform.position.x.ToString());
-    }
-
-    DataEntry getEmbodiedDrone()
-    {
-        if(embodiedDrone == null)
+        if (drone == embodiedDrone)
         {
-            return new DataEntry("embodiedDrone", "null");
+            embodiedDrone = null;
         }
-        return new DataEntry("embodiedDrone", embodiedDrone.name);
     }
 
-    void OnDisable()
+
+    public static GameObject _this; 
+    public static void setNextEmbodiedDrone()
     {
-        StopAllCoroutines();
     }
+
 }

@@ -30,10 +30,10 @@ EditorBuildSettings:
     path: Assets/Scenes/TrainingFinal/2 Single Drone FPV.unity
     guid: ff29c634b007cfb41ad25276bdabf66b
   - enabled: 1
-    path: Assets/Scenes/TrainingFinal/3 Swarm SensationTDV.unity
+    path: Assets/Scenes/TrainingFinal/Extra/3 Swarm SensationTDV.unity
     guid: b9e10f8fe61737c4a8d9657c53d5ad55
   - enabled: 1
-    path: Assets/Scenes/TrainingFinal/4 Swarm Sensation FPV.unity
+    path: Assets/Scenes/TrainingFinal/Extra/4 Swarm Sensation FPV.unity
     guid: a742a9321f3eac544af1b07207f21ee2
   - enabled: 1
     path: Assets/Scenes/TrainingFinal/5 Swicth View TDV.unity

@@ -19,7 +19,7 @@ public class MapScanning : MonoBehaviour
 
     private void update_center_position()
     {
-        center_position = this.GetComponent<CameraMovement>().getCameraPosition();
+        center_position = CameraMovement.getCameraPosition();
     }
 
 

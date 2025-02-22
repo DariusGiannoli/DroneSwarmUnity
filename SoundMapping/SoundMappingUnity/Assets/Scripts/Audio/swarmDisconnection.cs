@@ -53,10 +53,6 @@ public class SwarmDisconnection : MonoBehaviour
 
     public static void CheckDisconnection()
     {
-        if(!LevelConfiguration._Audio_isolation)
-        {
-            return; 
-        }
         List<int> dronesIDAnalysis = new List<int>();
         
         NetworkCreator network = swarmModel.network;
@@ -67,6 +63,11 @@ public class SwarmDisconnection : MonoBehaviour
             {
                 dronesIDAnalysis.Add(drone.id);
             }
+        }
+
+        if(!LevelConfiguration._Audio_isolation)
+        {
+            return; 
         }
 
         //chedck if every element of dronesIDAnalysis is in dronesID
@@ -97,12 +98,12 @@ public class SwarmDisconnection : MonoBehaviour
             
             if(dronesIDAnalysis.Count == 0)
             {
-                print("Stop sound");
+//                print("Stop sound");
                 gm.GetComponent<SwarmDisconnection>().StopSound();
             }
             else
             {
-                print("Disconnection detected");
+       //         print("Disconnection detected");
                 gm.GetComponent<SwarmDisconnection>().StopAndPlaySound(0);
             }
         }

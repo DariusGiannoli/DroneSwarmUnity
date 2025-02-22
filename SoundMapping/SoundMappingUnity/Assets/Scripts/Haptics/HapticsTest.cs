@@ -111,6 +111,7 @@ public class HapticsTest : MonoBehaviour
 
     void Start()
     {
+        VibraForge.Reset();
         print("HapticsTest Start");
         finalList = new List<Actuators>();
         actuatorsRange = new List<Actuators>();
@@ -124,7 +125,7 @@ public class HapticsTest : MonoBehaviour
 
 
         //
-        int[] mappingOlfati = Haptics_Forces ? new int[] {0,1,2,3,120,121,122,123} : new int[] {}; 
+        int[] mappingOlfati = Haptics_Forces ? new int[] {/*0,1,2,3,120,121,122,123*/} : new int[] {}; 
     //    int[] mappingOlfati = Haptics_Forces ? new int[] {90,91,92,93,180,181,182,183} : new int[] {}; 
         
         int [] velocityMapping = {}; //relative mvt of the swarm
@@ -471,6 +472,7 @@ public class HapticsTest : MonoBehaviour
                 }
 
 
+
                 
                 float diff = Math.Abs(actuator.Angle - angle);
          //   print("Diff: " + diff); 
@@ -478,9 +480,25 @@ public class HapticsTest : MonoBehaviour
 
                 if(diff < 40 || diff > 320) 
                 {
-                    actuator.UpdateValue(forcesDir.magnitude);
+                    float threshold = forcesDir.magnitude > 3.5f ? 0.3f : 0.7f;
+                    if(Vector3.Dot(MigrationPointController.alignementVector.normalized, -forcesDir.normalized) > threshold) { // if col with velocity
+                        actuator.UpdateValue(forcesDir.magnitude);
+                        return;
+                    }
+
+                    if(CameraMovement.embodiedDrone != null) {
+                        if(Vector3.Dot(CameraMovement.embodiedDrone.GetComponent<DroneController>().droneFake.velocity.normalized, -forcesDir.normalized) > threshold)
+                        {
+                            actuator.UpdateValue(forcesDir.magnitude);
+                            return;
+                        }
+                    }
+
+                    actuator.UpdateValue(0);
                     return;
                 }
+
+                    
             }else{
                 //gte the y component
                 float y = forcesDir.y;
@@ -527,7 +545,7 @@ public class HapticsTest : MonoBehaviour
             actuator.dutyIntensity = 10;
             actuator.frequency = 1;
             actuator.sendValue();
-            print("Actuator: " + actuator.Adresse + " Duty: " + actuator.duty + " Frequency: " + actuator.frequency);
+         //   print("Actuator: " + actuator.Adresse + " Duty: " + actuator.duty + " Frequency: " + actuator.frequency);
         }
 
         yield return new WaitForSeconds(1);

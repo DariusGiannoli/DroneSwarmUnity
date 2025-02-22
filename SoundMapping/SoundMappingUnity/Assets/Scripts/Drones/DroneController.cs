@@ -63,16 +63,19 @@ public class DroneController : MonoBehaviour
     {
         if (CameraMovement.embodiedDrone == this.gameObject)
         {
-            CameraMovement.desembodiedDrone(this.gameObject);
-            CameraMovement.nextEmbodiedDrone = null;
-            this.droneFake.embodied = false;
-            this.droneFake.selected = false;
             MigrationPointController.selectedDrone = null;
+            CameraMovement.nextEmbodiedDrone = null;
+
 
             if(LevelConfiguration._startEmbodied)
             {
-                CameraMovement.setNextEmbodiedDrone();
+                CameraMovement.crashAnimationSetup();
+            }else{
+                CameraMovement.DesembodiedDrone(this.gameObject);
+                this.droneFake.embodied = false;
+                this.droneFake.selected = false;
             }
+
         }
 
 
@@ -222,7 +225,9 @@ public class DroneController : MonoBehaviour
             Vector3 forwardDrone = new Vector3(droneFake.velocity.x, 0, droneFake.velocity.z);
             //lerp the rotation
             transform.forward = Vector3.Lerp(transform.forward, forwardDrone, Time.deltaTime * 5);
-
+        }else{
+            //only keep rotation on y axis
+            transform.forward = new Vector3(transform.forward.x, 0, transform.forward.z);
         }
 
     }

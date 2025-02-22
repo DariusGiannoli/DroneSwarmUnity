@@ -62,6 +62,7 @@ public class TriggerHandlerWithCallback : MonoBehaviour
             {
                 if (isStart)
                 {
+                    TutorialPlayer.stopVideo();
            //         print(gm.name);
                     gm.GetComponent<Timer>().StartTimer();
                 }

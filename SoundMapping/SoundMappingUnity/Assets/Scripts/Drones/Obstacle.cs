@@ -5,6 +5,7 @@ using UnityEngine;
 
 public abstract class Obstacle
 {
+    public bool transparent = false;
     public Vector3 centerObs;
     public float radiusObs;
     public abstract Vector3 ClosestPoint(Vector3 point);
@@ -404,6 +405,11 @@ public static class ClosestPointCalculator
             {
                 if (obstacle.IsLineIntersecting(start, end))
                 {
+                    if(obstacle.transparent)
+                    {
+                        return false;
+                    }
+                    
                     return true;
                 }
             }

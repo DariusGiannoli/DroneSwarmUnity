@@ -654,7 +654,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 57.85
+  m_fontSize: 56.3
   m_fontSizeBase: 24
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -1662,7 +1662,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 35.15
+  m_fontSize: 34.2
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -1917,8 +1917,12 @@ MonoBehaviour:
   isLoading: 0
   scenes: []
   scenesPlayed: []
-  haptics: 0
+  ObstacleFPV: 101 DemoFPV
+  ObstacleTPV: 100 DemoTDV
+  CollectibleFPV: 103 CollectiblesFPV
+  CollectibleTPV: 102 CollectiblesTDV
   assetPathTraining: Assets/Scenes/TrainingFinal
+  hapticsEnabled: 1
 --- !u!4 &1134447792
 Transform:
   m_ObjectHideFlags: 0
@@ -2363,7 +2367,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 41.2
+  m_fontSize: 39.8
   m_fontSizeBase: 14
   m_fontWeight: 400
   m_enableAutoSizing: 1

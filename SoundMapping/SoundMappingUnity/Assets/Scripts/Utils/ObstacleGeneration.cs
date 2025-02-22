@@ -238,6 +238,11 @@ public class ObstacleGeneration : MonoBehaviour
                 continue;
             }
 
+            if(obstacleObject.layer == 0)
+            {
+                obstacle.transparent = true;
+            }    
+
             obstacles.Add(obstacle);
         }
 

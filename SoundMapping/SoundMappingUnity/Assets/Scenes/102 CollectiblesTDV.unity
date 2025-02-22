@@ -6367,10 +6367,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   SoftStart: 1
-  sceneNumber: 0
   controlMovement: 1
   controlSpreadness: 1
-  controlEmbodiement: 0
+  controlEmbodiement: 1
   controlDesembodiement: 0
   controlSelection: 1
   controlRotation: 1
@@ -6390,6 +6389,8 @@ MonoBehaviour:
   saveData: 1
   miniMap: 0
   showText: 1
+  timeSensitive: 0
+  timeToComplete: 60
 --- !u!4 &1684221840
 Transform:
   m_ObjectHideFlags: 0

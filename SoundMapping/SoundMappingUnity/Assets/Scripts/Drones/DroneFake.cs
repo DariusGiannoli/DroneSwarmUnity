@@ -47,8 +47,6 @@ public class DroneFake
 
     public bool hasCrashed = false;
 
-    public static LayerMask obstacleLayer;
-
     public Vector3 lastOlfati = Vector3.zero;
     public Vector3 lastObstacle = Vector3.zero;
     public Vector3 lastAllignementSwarm = Vector3.zero; // forces applied
@@ -282,7 +280,7 @@ public class DroneFake
         lastObstacle = accObs;
         lastAllignementSwarm = accVel;
 
-        if (embodied)
+        if (CameraMovement.idLeader == this.id && CameraMovement.embodiedDrone != null)
         {
             addDataEmbodied(accCoh, accObs);
 
