@@ -179,7 +179,7 @@ public class CameraMovement : MonoBehaviour
     {
         animTimer += Time.deltaTime;
         float t = Mathf.Clamp01(animTimer / animationTime);
-        print("t: " + t);
+       // print("t: " + t);
         embodiedDrone.transform.LookAt(nextEmbodiedDrone.transform);
         embodiedDrone.GetComponent<Camera>().fieldOfView = Mathf.Lerp(embodiedDrone.GetComponent<Camera>().fieldOfView, 20, t);
 

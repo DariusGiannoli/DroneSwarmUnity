@@ -137,6 +137,7 @@ public class MigrationPointController : MonoBehaviour
 
                         //select the highest score
                         CameraMovement.nextEmbodiedDrone = sortedScores[0].Key;
+                        print("Next Selected drone: " + CameraMovement.nextEmbodiedDrone.GetComponent<DroneController>().droneFake.id);
                     }
                 }
                 else

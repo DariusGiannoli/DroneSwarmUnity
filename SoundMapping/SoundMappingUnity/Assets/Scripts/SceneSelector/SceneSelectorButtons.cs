@@ -14,7 +14,13 @@ public class SceneSelectorScriptEditor : Editor
         SceneSelectorScript myScript = (SceneSelectorScript)target;
 
         // Label for clarity
-        EditorGUILayout.LabelField("Dynamic Scenes from "+myScript.assetPathTraining+  ":", EditorStyles.boldLabel);
+
+        //make  a text for Script.pid centered and in big font
+        GUIStyle style = new GUIStyle();
+        style.fontSize = 20;
+        style.alignment = TextAnchor.MiddleCenter;
+        style.normal.textColor = Color.white;
+        EditorGUILayout.LabelField("ID: " + SceneSelectorScript.pid, style);
 
         // Find all scenes in "Assets/Scenes/Training"
         string[] sceneGuids = AssetDatabase.FindAssets("t:Scene", new[] { myScript.assetPathTraining });

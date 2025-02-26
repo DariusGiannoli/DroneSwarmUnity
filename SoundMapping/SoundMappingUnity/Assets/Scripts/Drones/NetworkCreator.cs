@@ -124,7 +124,7 @@ public class NetworkCreator
             }
         }
 
-        Debug.Log("Largest component: " + largestComponent.Count);
+      //  Debug.Log("Largest component: " + largestComponent.Count);
     }
 
     public bool IsInMainNetwork(DroneFake drone)
@@ -149,10 +149,25 @@ public class NetworkCreator
         return adjacencyList[drone];
     }
 
+    public DroneFake GetLeader()
+    {
+        int idLeader = -1;
+        if(CameraMovement.embodiedDrone != null)
+        {
+            idLeader = CameraMovement.idLeader;
+        }else if(MigrationPointController.selectedDrone != null)
+        {
+            idLeader = MigrationPointController.idLeader;
+        }
+
+        return drones.Find(d => d.id == idLeader);
+
+    }
+
     public void AssignLayers()
     {
         // Use the embodied (or selected) drone as the core if possible.
-        DroneFake coreDrone = drones.Find(d => d.embodied || d.selected);
+        DroneFake coreDrone = GetLeader();
         foreach (var drone in adjacencyList.Keys)
         {
             drone.layer = 0;
