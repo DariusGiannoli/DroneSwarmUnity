@@ -50,18 +50,17 @@ public class textInfo : MonoBehaviour
         showIsolation = config.audioIsolation;
         showDroneCrash = config.hapticsCrash;
 
-        print("sXXXXXXXXXXXXXXXXXXX howConnexion: " + showConnexion + " showSpreadness: " + showSpreadness + " showIsolation: " + showIsolation + " showDroneCrash: " + showDroneCrash);
-        print(config.showText);
     }
     void Update()
     {
         if(LevelConfiguration._ShowText)
         {
-            connexionText.text = showConnexion ? "Connetion: " + getOneDecimal(swarmModel.swarmConnectionScore) : "";
+            connexionText.text = showConnexion ? "Connection: " + getOneDecimal(swarmModel.swarmConnectionScore) : "";
             SpreadnessText.text = showSpreadness ? "Spreadness: " + getOneDecimal(swarmModel.desiredSeparation) : "";
             IsolationText.text = true ? "Isolation : " + swarmModel.numberOfDroneDiscionnected.ToString() : "";
             DroneCrashText.text = showDroneCrash ? "Drone Crash : " + swarmModel.numberOfDroneCrashed.ToString() : "";
-            SpreadnessSwarmScore.text = showSpreadness ? "Swarm spreadness : " + getOneDecimal(swarmModel.swarmAskingSpreadness) : "";
+            //SpreadnessSwarmScore.text = showSpreadness ? "Swarm spreadness : " + getOneDecimal(swarmModel.swarmAskingSpreadness) : "";
+            SpreadnessSwarmScore.text = "";
         }else
         {
             connexionText.text = "";

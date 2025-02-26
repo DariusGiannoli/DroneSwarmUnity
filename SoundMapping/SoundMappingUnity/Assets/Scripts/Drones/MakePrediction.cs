@@ -12,7 +12,7 @@ public class MakePrediction : MonoBehaviour
 {
     Material defaultMaterial;
     public Transform allPredictionsHolder;
-    public Prediction longPred, shortPred;
+    public static Prediction shortPred;
 
 
     public Transform longPredictionLineHolder, shortPredictionLineHolder;
@@ -36,7 +36,7 @@ public class MakePrediction : MonoBehaviour
         for(int i = 0; i < pred.deep; i++)
         {
             NetworkCreator network = new NetworkCreator(pred.dronesPrediction);
-            network.refreshNetwork();
+            network.refreshNetwork(idLeader: pred.idLeader);
             foreach (DroneFake drone in pred.dronesPrediction)
             {
                 drone.startPrediction(alignementVector, network);
@@ -99,6 +99,13 @@ public class MakePrediction : MonoBehaviour
             shortPred.donePrediction = false;
             launchPreditionThread(shortPred);
         }
+        //check if thread crashed
+        if (predictionThread != null && !predictionThread.IsAlive)
+        {
+            predictionThread = null;
+            //restart the thread
+            launchPreditionThread(shortPred);
+        }
     }
 
     //on exit
@@ -110,8 +117,6 @@ public class MakePrediction : MonoBehaviour
         {
             predictionThread.Abort();
         }
-
-        print("Prediction thread stopped");
 
     }
 
@@ -281,6 +286,11 @@ public class Prediction
 
     public Vector3 alignementVector;
 
+    public GameObject selectedDrone = MigrationPointController.selectedDrone;
+    public GameObject embodiedDrone = CameraMovement.embodiedDrone;
+
+    public int idLeader = -1;
+
     public Prediction(bool prediction, int deep, int step, int current,  Transform lineHolder)
     {
         this.shortPrediction = prediction;
@@ -292,6 +302,15 @@ public class Prediction
         //this.LineRenderers = new List<LineRenderer>();
         this.TubeObjects = new List<GameObject>();
         directionOfMigration = Vector3.zero;
+
+        idLeader = -1;
+        if(CameraMovement.embodiedDrone != null)
+        {
+            idLeader = CameraMovement.idLeader;
+        }else if(MigrationPointController.selectedDrone != null)
+        {
+            idLeader = MigrationPointController.idLeader;
+        }
     }
 
 }

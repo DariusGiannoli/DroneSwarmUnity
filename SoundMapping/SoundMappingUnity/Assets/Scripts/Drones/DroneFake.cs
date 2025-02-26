@@ -280,7 +280,7 @@ public class DroneFake
         lastObstacle = accObs;
         lastAllignementSwarm = accVel;
 
-        if (CameraMovement.idLeader == this.id && CameraMovement.embodiedDrone != null)
+        if (layer == 1 && embodied)
         {
             addDataEmbodied(accCoh, accObs);
 

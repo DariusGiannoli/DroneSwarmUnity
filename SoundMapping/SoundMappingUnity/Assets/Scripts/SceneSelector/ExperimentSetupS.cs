@@ -73,6 +73,10 @@ public class ExperimentSetupS : MonoBehaviour
             "Haptics: " + Haptics.isOn + "\n" +
             "Order: " + Order.isOn;
 
+        SceneSelectorScript.pid = PID;
+        SceneSelectorScript._haptics = Haptics.isOn;
+        SceneSelectorScript._order = Order.isOn;
+
         confirmGO.SetActive(true);
     }
 

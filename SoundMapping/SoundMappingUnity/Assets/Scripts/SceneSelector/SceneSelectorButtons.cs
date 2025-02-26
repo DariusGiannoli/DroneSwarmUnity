@@ -21,6 +21,26 @@ public class SceneSelectorScriptEditor : Editor
         style.alignment = TextAnchor.MiddleCenter;
         style.normal.textColor = Color.white;
         EditorGUILayout.LabelField("ID: " + SceneSelectorScript.pid, style);
+        //put in red the text Haptics if haptics is disabled
+        if (!SceneSelectorScript._haptics)
+        {
+            style.normal.textColor = Color.red;
+        }
+        else
+        {
+            style.normal.textColor = Color.white;
+        }
+        EditorGUILayout.LabelField("Haptics: " + SceneSelectorScript._haptics, style);
+        //same thing for order
+        if (!SceneSelectorScript._order)
+        {
+            style.normal.textColor = Color.red;
+        }
+        else
+        {
+            style.normal.textColor = Color.white;
+        }
+        EditorGUILayout.LabelField("Order: " + SceneSelectorScript._order, style);
 
         // Find all scenes in "Assets/Scenes/Training"
         string[] sceneGuids = AssetDatabase.FindAssets("t:Scene", new[] { myScript.assetPathTraining });

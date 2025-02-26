@@ -10,7 +10,17 @@ public class swarmModel : MonoBehaviour
 {
 
     #region Parameters
-
+    public static int idLeader
+    {
+        get
+        {
+            if(LevelConfiguration._startEmbodied)
+            {
+                return CameraMovement.idLeader;
+            }
+            return MigrationPointController.idLeader;
+        }
+    }
     public bool saveData
     {
         get

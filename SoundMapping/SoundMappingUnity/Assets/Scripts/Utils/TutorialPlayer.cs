@@ -106,7 +106,7 @@ public class TutorialPlayer : MonoBehaviour
 
         if (!Directory.Exists(folderPath))
         {
-            Debug.LogError("Tutorial folder does not exist: " + folderPath);
+            OnVideoFinished(videoPlayer);
             return;
         }
 

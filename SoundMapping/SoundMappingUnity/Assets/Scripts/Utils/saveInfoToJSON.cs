@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using JetBrains.Annotations;
 using Unity.VisualScripting;
 using UnityEngine;
 
@@ -84,39 +85,70 @@ public class saveInfoToJSON : MonoBehaviour
 
         isSaving = false;
     }
+
+    public static void addStarData(string starName, float timeCollected, int droneId, Vector3 position)
+    {
+        swarmData.addStar(starName, timeCollected, droneId, position);
+    }
 }
 
+
+[System.Serializable]
+public class StarRecord
+{
+    public string starName;
+    public float timeCollected;
+    public int droneId;
+    public Vector3 position;
+
+    public StarRecord(string starName, float timeCollected, int droneId, Vector3 position)
+    {
+        this.starName = starName;
+        this.timeCollected = timeCollected;
+        this.droneId = droneId;
+        this.position = position;
+    }
+}
 
 
 [System.Serializable]
 public class SwarmState
 {
-    // We replace Dictionary with a list of (string, DroneState) pairs
     public List<DroneStateEntry> swarmState = new List<DroneStateEntry>();
 
-    // Just as an example, let's initialize these
+
+
     public List<Vector3> alignment = new List<Vector3>();
     public List<float> desiredSeparation = new List<float>();
-
     public List<float> time = new List<float>();
+    public List<float> swarmConnectivness = new List<float>();
+    public List<int> isolation = new List<int>();
+    public List<int> idLeader = new List<int>();
 
 
-    //control inputs
-    
+
+
+    //stars
+    public List<StarRecord> stars = new List<StarRecord>();
 
 
 
-    // Constants or static fields do not get serialized by default by JsonUtility
-    // If you need them in the JSON, make them non-static. 
+    // Constants
     public float maxSpeed = DroneFake.maxSpeed; 
     public float maxForce = DroneFake.maxForce;
     public float alpha = DroneFake.alpha;
     public float beta = DroneFake.beta;
     public float delta = DroneFake.delta;
     public float avoidanceRadius = DroneFake.avoidanceRadius;  
+    public float desiredSeparationToObs = DroneFake.desiredSeparationObs;
     public float avoidanceForce = DroneFake.avoidanceForce;   
     public float droneRadius = DroneFake.droneRadius;
     public float dampingFactor = DroneFake.dampingFactor;
+    public bool FPV = LevelConfiguration._startEmbodied;
+    public string PID = SceneSelectorScript.pid;
+    public bool haptics = SceneSelectorScript._haptics;
+    public bool order = SceneSelectorScript._order;
+
 
 
     public void saveDataPoint()
@@ -146,14 +178,21 @@ public class SwarmState
                     net = network.adjacencyList[drone];
                 }
             }
-            entry.droneState.add(drone, net);
+            entry.droneState.add(drone, net, MakePrediction.shortPred);
         }
 
         desiredSeparation.Add(DroneFake.desiredSeparation);
         alignment.Add(MigrationPointController.alignementVector);
         time.Add(Timer.elapsedTime);
+        swarmConnectivness.Add(swarmModel.swarmConnectionScore);
+        isolation.Add(swarmModel.numberOfDroneDiscionnected);
+        idLeader.Add(swarmModel.idLeader);
 
+    }
 
+    public void addStar(string starName, float timeCollected, int droneId, Vector3 position)
+    {
+        stars.Add(new StarRecord(starName, timeCollected, droneId, position));
     }
 
 }
@@ -171,27 +210,40 @@ public class DroneState
 {
     public List<Vector3> position = new List<Vector3>();
     public List<Vector3> velocity = new List<Vector3>();
-    public List<Vector3> obstacleAvoidance = new List<Vector3>();
-    public List<Vector3> olfatiSaber = new List<Vector3>();
+    public List<Vector3> FobstacleAvoidance = new List<Vector3>();
+    public List<Vector3> FolfatiSaber = new List<Vector3>();
 
-    public List<Vector3> alignment = new List<Vector3>();
-    public List<bool> embodied = new List<bool>();
-    public List<bool> selected = new List<bool>();
-
+    public List<Vector3> Falignment = new List<Vector3>();
     public List<string> network = new List<string>();
+    public List<int> layer = new List<int>();
 
-    public void add(DroneFake drone, List<DroneFake> connected)
+    public List<int> crashedPred = new List<int>();
+
+    public void add(DroneFake drone, List<DroneFake> connected, Prediction pred)
     {
 
         position.Add(drone.position);
         velocity.Add(drone.velocity);
-        embodied.Add(drone.embodied);
-        selected.Add(drone.selected);
-        obstacleAvoidance.Add(drone.lastObstacle);
-        olfatiSaber.Add(drone.lastOlfati);
-        alignment.Add(drone.lastAllignement);
+        FobstacleAvoidance.Add(drone.lastObstacle);
+        FolfatiSaber.Add(drone.lastOlfati);
+        Falignment.Add(drone.lastAllignement);
+        layer.Add(drone.layer);
 
         addNetwork(connected);
+        addPredictrion(pred, drone);
+    }
+
+    private void addPredictrion(Prediction pred, DroneFake drone)
+    {
+        int indexPred = pred.dronesPrediction.IndexOf(drone);
+        if (indexPred != -1)
+        {
+            crashedPred.Add(pred.allData[indexPred].idFirstCrash);
+        }
+        else
+        {
+            crashedPred.Add(-1);
+        }
     }
 
     private void addNetwork(List<DroneFake> connected)

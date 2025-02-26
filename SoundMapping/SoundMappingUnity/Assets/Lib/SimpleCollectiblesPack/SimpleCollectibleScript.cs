@@ -47,6 +47,8 @@ public class SimpleCollectibleScript : MonoBehaviour {
 	void OnTriggerEnter(Collider other)
 	{
 		if (other.tag == "Drone") {
+			//string starName, float timeCollected, int droneId, Vector3 position
+			saveInfoToJSON.addStarData(this.name, Timer.elapsedTime, other.gameObject.GetComponent<DroneController>().droneFake.id, transform.position);
 			Collect ();
 		}
 	}

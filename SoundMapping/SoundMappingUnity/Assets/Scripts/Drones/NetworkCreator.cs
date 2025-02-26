@@ -33,6 +33,13 @@ public class NetworkCreator
         AssignLayers();
     }
 
+    public void refreshNetwork(int idLeader)
+    {
+        BuildNetwork(drones);
+        FindLargestComponent(drones, idLeader);
+        AssignLayers(idLeader);
+    }
+
     void BuildNetwork(List<DroneFake> drones)
     {
         try
@@ -127,6 +134,62 @@ public class NetworkCreator
       //  Debug.Log("Largest component: " + largestComponent.Count);
     }
 
+    void FindLargestComponent(List<DroneFake> drones, int idLeader)
+    {
+        largestComponent.Clear();
+
+        HashSet<DroneFake> visited = new HashSet<DroneFake>();
+        List<HashSet<DroneFake>> components = new List<HashSet<DroneFake>>();
+
+        foreach (DroneFake drone in drones)
+        {
+            if (!visited.Contains(drone))
+            {
+                HashSet<DroneFake> component = new HashSet<DroneFake>();
+                Queue<DroneFake> queue = new Queue<DroneFake>();
+                queue.Enqueue(drone);
+                visited.Add(drone);
+
+                while (queue.Count > 0)
+                {
+                    DroneFake current = queue.Dequeue();
+                    component.Add(current);
+                    foreach (DroneFake neighbor in adjacencyList[current])
+                    {
+                        if (!visited.Contains(neighbor))
+                        {
+                            visited.Add(neighbor);
+                            queue.Enqueue(neighbor);
+                        }
+                    }
+                }
+                components.Add(component);
+            }
+        }
+
+        // Choose the component that either contains an embodied or selected drone;
+        // if none, choose the largest.
+        largestComponent.Clear();
+        int maxCount = 0;
+
+        foreach (HashSet<DroneFake> component in components)
+        {
+            bool isLeader = component.Any(d => d.id == idLeader);
+            if (isLeader)
+            {
+                largestComponent = component;
+                break;
+            }
+            if (component.Count > maxCount)
+            {
+                maxCount = component.Count;
+                largestComponent = component;
+            }
+        }
+
+      //  Debug.Log("Largest component: " + largestComponent.Count);
+    }
+
     public bool IsInMainNetwork(DroneFake drone)
     {
         return largestComponent.Contains(drone);
@@ -160,6 +223,12 @@ public class NetworkCreator
             idLeader = MigrationPointController.idLeader;
         }
 
+        return drones.Find(d => d.id == idLeader);
+
+    }
+
+    public DroneFake GetLeader(int idLeader)
+    {
         return drones.Find(d => d.id == idLeader);
 
     }
@@ -200,6 +269,44 @@ public class NetworkCreator
             }
         }
     }
+
+    public void AssignLayers(int idLeader)
+    {
+        // Use the embodied (or selected) drone as the core if possible.
+        DroneFake coreDrone = GetLeader(idLeader);
+        foreach (var drone in adjacencyList.Keys)
+        {
+            drone.layer = 0;
+        }
+        if (coreDrone == null)
+        {
+            return;
+        }
+        if (!adjacencyList.ContainsKey(coreDrone))
+        {
+            return;
+        }
+        Queue<DroneFake> queue = new Queue<DroneFake>();
+        coreDrone.layer = 1;
+        queue.Enqueue(coreDrone);
+        while (queue.Count > 0)
+        {
+            DroneFake currentDrone = queue.Dequeue();
+            int currentLayer = currentDrone.layer;
+            if (adjacencyList.ContainsKey(currentDrone))
+            {
+                foreach (DroneFake neighbor in adjacencyList[currentDrone])
+                {
+                    if (neighbor.layer == 0) // unassigned drone 
+                    {
+                        neighbor.layer = currentLayer + 1;
+                        queue.Enqueue(neighbor);
+                    }
+                }
+            }
+        }
+    }
+
 
     public Dictionary<int, int> getLayersConfiguration()
     {

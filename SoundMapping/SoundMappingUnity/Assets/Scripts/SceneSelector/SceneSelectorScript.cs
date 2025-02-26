@@ -125,7 +125,7 @@ public class SceneSelectorScript : MonoBehaviour
         // Set up your experiment order.
         scenesPlayed = new List<string>(scenes);
 
-       // scenesPlayed.Clear();
+        scenesPlayed.Clear();
 
         if (Order)
         {
