@@ -423,6 +423,9 @@ public class swarmModel : MonoBehaviour
             {
                 CameraMovement.SetEmbodiedDrone(drone);
                 CameraMovement.embodiedDrone.GetComponent<DroneController>().droneFake.embodied = true;
+            }else if(!startEmbodied && i == droneID){
+                MigrationPointController.selectedDrone = drone;
+                MigrationPointController.idLeader = i;
             }
         }
 
