@@ -753,7 +753,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 25.4
+  m_fontSize: 18.55
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -2331,7 +2331,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 25.4
+  m_fontSize: 18.55
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -2659,7 +2659,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 25.4
+  m_fontSize: 18.5
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -3169,7 +3169,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 25.4
+  m_fontSize: 18.55
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -3593,18 +3593,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   dronePrefab: {fileID: 2904365767565868958, guid: 8665b86975cd58e49a996d130ca17994, type: 3}
   lastObstacleAvoidance: -1
-  maxSpeed: 7
+  maxSpeed: 6
   maxForce: 17
-  alpha: 2
-  beta: 4
+  alpha: 3.5
+  beta: 10
   delta: 1
-  avoidanceRadius: 0.8
-  desiredSeparationObs: 0.8
-  avoidanceForce: 6
+  cVm: 1
+  avoidanceRadius: 1
+  desiredSeparationObs: 1
+  avoidanceForce: 10
   obstacleLayer:
     serializedVersion: 2
     m_Bits: 64
-  PRIORITYWHENEMBODIED: 1
+  PRIORITYWHENEMBODIED: 4
   dampingFactor: 0.98
   showObstacleGizmos: 0
   showNetworkGizmos: 0
@@ -5006,7 +5007,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 25.4
+  m_fontSize: 18.55
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1

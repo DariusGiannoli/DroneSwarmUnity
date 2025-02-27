@@ -1260,7 +1260,7 @@ MonoBehaviour:
   hapticsObstacle: 1
   hapticsNetwork: 0
   hapticsForces: 0
-  hapticsCrash: 0
+  hapticsCrash: 1
   hapticsController: 1
   startEmbodied: 0
   droneID: 0

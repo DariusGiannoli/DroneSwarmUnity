@@ -164,6 +164,7 @@ public class SwarmState
     public float alpha = DroneFake.alpha;
     public float beta = DroneFake.beta;
     public float delta = DroneFake.delta;
+    public float cvm = DroneFake.cVm;
     public float avoidanceRadius = DroneFake.avoidanceRadius;  
     public float desiredSeparationToObs = DroneFake.desiredSeparationObs;
     public float avoidanceForce = DroneFake.avoidanceForce;   

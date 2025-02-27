@@ -62,6 +62,7 @@ public class TriggerHandlerWithCallback : MonoBehaviour
             {
                 if (isStart)
                 {
+                //    XboxScreenRecorder.StartRecording();
                     TutorialPlayer.stopVideo();
            //         print(gm.name);
                     gm.GetComponent<Timer>().StartTimer();
@@ -77,6 +78,7 @@ public class TriggerHandlerWithCallback : MonoBehaviour
                     {
                         if(Timer.isValidTime())
                         {
+                       //     XboxScreenRecorder.StopRecordingAndSave();
                             ExperimentSetupS.levelFinished();
                             gm.GetComponent<Timer>().StopTimer();
                         }else{

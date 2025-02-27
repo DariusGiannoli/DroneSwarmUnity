@@ -58,13 +58,13 @@ public class swarmModel : MonoBehaviour
     public float maxSpeed = 5f;
     public float maxForce = 10f;
 
-    public static int extraDistanceNeighboor = 3;
+    public static float extraDistanceNeighboor = 2f;
     public static float neighborRadius
     {
         get
         {
             //return 3*desiredSeparation;
-            return Mathf.Max(1.2f * desiredSeparation, desiredSeparation + extraDistanceNeighboor);
+            return Mathf.Max(2f * desiredSeparation, desiredSeparation + extraDistanceNeighboor);
         }
     }
 
@@ -72,6 +72,7 @@ public class swarmModel : MonoBehaviour
     public float alpha = 1.5f; // Separation weight
     public float beta = 1.0f;  // Alignment weight
     public float delta = 1.0f; // Migration weight
+    public float cVm = 1f;    // Maximum velocity change
 
     public float avoidanceRadius = 2f;     // Radius for obstacle detection
     public float desiredSeparationObs = 3f;
@@ -210,6 +211,7 @@ public class swarmModel : MonoBehaviour
     {
         DroneFake.maxForce = maxForce;
         DroneFake.maxSpeed = maxSpeed;
+        DroneFake.cVm = cVm;
         DroneFake.desiredSeparation = desiredSeparation;
         DroneFake.alpha = alpha;
         DroneFake.beta = beta;
@@ -259,7 +261,26 @@ public class swarmModel : MonoBehaviour
 
     void getSwarmConnexion()
     {
-        if(CameraMovement.embodiedDrone == null)
+        //if there is one drones Movable
+        List<DroneFake> connectedDrone = network.drones.ToList();
+        bool hasNonMovable = drones.Exists(d => !d.isMovable);
+        if (hasNonMovable)
+        {
+            connectedDrone = network.largestComponent.ToList();
+        }
+
+        NetworkCreator networkToCompute = new NetworkCreator(connectedDrone);
+        networkToCompute.refreshNetwork();
+
+        // float velMissmatch = networkToCompute.ComputeNormalizedVelocityMismatch();
+        float energyDev = networkToCompute.ComputeNormalizedDeviationEnergy();
+        ////   float relativeConnectivity = networkToCompute.ComputeRelativeConnectivity();
+        //  float cohesionRadius = networkToCompute.ComputeCohesionRadius();
+
+        swarmConnectionScore = energyDev;
+
+        return;
+       /* if(CameraMovement.embodiedDrone == null)
         {
             //if there is one drones Movable
             List<DroneFake> connectedDrone = network.drones.ToList();
@@ -286,6 +307,8 @@ public class swarmModel : MonoBehaviour
         }
 
         //  swarmConnectionScore = this.GetComponent<NetworkRepresentation>().UpdateNetworkRepresentation(network.getLayersConfiguration());
+    
+    */
     }
 
     public static void restart()

@@ -24,6 +24,7 @@ public class DroneFake
     public static float alpha = 1.5f; // c
     public static float beta = 1.0f;  // c
     public static float delta = 1.0f; // c
+    public static float cVm = 1.0f; // Velocity matching coefficient
     public static float avoidanceRadius = 2f;     // Radius for obstacle detection
     public static float avoidanceForce = 10f;     // Strength of the avoidance force
     public static float droneRadius = 0.17f;
@@ -201,8 +202,6 @@ public class DroneFake
 
         float r0Coh = neighborRadius;
         float r0Obs = avoidanceRadius;
-
-        float cVm = 1.0f; // Velocity matching coefficient
         float cPmObs = avoidanceForce;
 
                 // Reference velocity
@@ -249,15 +248,9 @@ public class DroneFake
         }
 
         if(totalPriority == 0){
-            if(this.layer <= 2)
-            {
-                accVel = cVm * (vRef - velocity); // 50% of the velocity matching force
-            }
+            accVel = cVm * (vRef - velocity); // 50% of the velocity matching force
         }else{
-            if(this.layer <= 2)
-            {
-                accVel = (accVel + cVm * (vRef - velocity)) / 2; // 50% of the velocity matching force
-            }
+            accVel = (accVel + cVm * (vRef - velocity)) / 2; // 50% of the velocity matching force
         }
 
         // Obstacle avoidance
@@ -287,7 +280,7 @@ public class DroneFake
             lastAllignement = accVel;
 
             Vector3 force = accVel;
-            force = Vector3.ClampMagnitude(force, maxForce/3);
+            force = Vector3.ClampMagnitude(force, maxForce/3f);
             acceleration = force;
             return;
         }
@@ -309,19 +302,20 @@ public class DroneFake
     float getPriority(float basePriority, DroneFake neighbour)
     {
         float neighborPriority = basePriority;
+        neighborPriority = 1;
         if (neighbour.layer == 1) // embodied drone
         {
-            neighborPriority = Mathf.Max((int)(PRIORITYWHENEMBODIED/2),4);
-            return neighborPriority;
+            neighborPriority = Mathf.Max((int)(PRIORITYWHENEMBODIED/2),PRIORITYWHENEMBODIED);
+            return PRIORITYWHENEMBODIED;
         }
         else if(neighbour.layer == 2) // neighbor to embodied
         {
-            neighborPriority = Mathf.Max((int)(PRIORITYWHENEMBODIED/4),2);
+           // neighborPriority = Mathf.Max((int)(PRIORITYWHENEMBODIED/4),1);
         }else if(neighbour.layer == 3)
         {
-            neighborPriority = Mathf.Max((int)(PRIORITYWHENEMBODIED/8), 1);
+           // neighborPriority = Mathf.Max((int)(PRIORITYWHENEMBODIED/8), 1);
         }else {
-            neighborPriority = 0.5f;
+          //  neighborPriority = 0.5f;
         }
 
         return neighborPriority;
@@ -433,7 +427,12 @@ public class DroneFake
         for (int i = 0; i < numberOfTimeApplied; i++)
         {
             velocity += acceleration * 0.02f; //v(t+1) = v(t) + a(t) * dt  @ a(t) = f(t) w a(t) E Vec3
-            velocity = Vector3.ClampMagnitude(velocity, maxSpeed);
+            if (layer == 1 && embodied)
+            {
+                velocity = Vector3.ClampMagnitude(velocity, maxSpeed/2f);
+            }else{
+                velocity = Vector3.ClampMagnitude(velocity, maxSpeed);
+            }
 
             // Apply damping to reduce the velocity over time
             velocity *= dampingFactor;

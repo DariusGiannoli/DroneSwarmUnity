@@ -5,6 +5,7 @@ using UnityEngine.SceneManagement;
 
 public class SceneSelectorScript : MonoBehaviour
 {
+
     private string lastLoadedScene = null;
     public static int experimentNumber = 0;
 
@@ -30,6 +31,7 @@ public class SceneSelectorScript : MonoBehaviour
 
     void Start()
     {
+     //   XboxScreenRecorder.StartRecording();
         // For initial cleanup.
         StartCoroutine(UnloadAllScenesExcept("Scene Selector"));
 
