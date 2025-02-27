@@ -77,6 +77,7 @@ public class MakePrediction : MonoBehaviour
     {
         pred.allData = new List<DroneDataPrediction>();
         pred.dronesPrediction = new List<DroneFake>();
+        pred.refreshIdLeader();
 
         foreach (DroneFake child in swarmModel.drones)
         {
@@ -303,13 +304,21 @@ public class Prediction
         this.TubeObjects = new List<GameObject>();
         directionOfMigration = Vector3.zero;
 
+        refreshIdLeader();
+
+    }
+
+
+    public void refreshIdLeader(){
         idLeader = -1;
         if(CameraMovement.embodiedDrone != null)
         {
+//            Debug.Log("Embodied drone prediction" + idLeader);
             idLeader = CameraMovement.idLeader;
         }else if(MigrationPointController.selectedDrone != null)
         {
             idLeader = MigrationPointController.idLeader;
+ //           Debug.Log("Selected drone prediction" + idLeader);
         }
     }
 

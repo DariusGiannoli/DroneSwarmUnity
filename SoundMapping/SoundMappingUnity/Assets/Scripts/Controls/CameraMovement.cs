@@ -52,7 +52,7 @@ public class CameraMovement : MonoBehaviour
     void Update()
     {
 
-        print("CameraMovement: " + idLeader + " Selected: " + MigrationPointController.idLeader);
+      //  print("CameraMovement: " + idLeader + " Selected: " + MigrationPointController.idLeader);
 
         // Run main loop based on current state.
         switch (currentState)

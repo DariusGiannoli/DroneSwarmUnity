@@ -282,6 +282,7 @@ public class DroneFake
 
         if (layer == 1 && embodied)
         {
+//            Debug.Log(id);
             accVel = cVm * (vRef - velocity);
             lastAllignement = accVel;
 

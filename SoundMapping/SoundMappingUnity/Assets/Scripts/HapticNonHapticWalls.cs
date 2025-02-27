@@ -9,7 +9,7 @@ public class HapticNonHapticWalls : MonoBehaviour
     public Material materialWall;
     void Start()
     {
-        print("HapticNonHapticWalls " + SceneSelectorScript._haptics);
+        
         if(!SceneSelectorScript._haptics)
         {
             GameObject walls = GameObject.FindGameObjectWithTag("HapticvsVis");
@@ -23,7 +23,6 @@ public class HapticNonHapticWalls : MonoBehaviour
 
                 //set the material
                 child.GetComponent<Renderer>().material = materialWall;
-                print("HapticNonHapticWalls " + child.name);
             }
         }
     }
