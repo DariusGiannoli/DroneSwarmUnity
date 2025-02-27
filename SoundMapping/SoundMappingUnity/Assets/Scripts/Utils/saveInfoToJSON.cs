@@ -90,6 +90,11 @@ public class saveInfoToJSON : MonoBehaviour
     {
         swarmData.addStar(starName, timeCollected, droneId, position);
     }
+
+    public static void addHapticRecord(int id, int duty, int freq)
+    {
+        swarmData.addHapticRecord(id, duty, freq);
+    }
 }
 
 
@@ -110,6 +115,22 @@ public class StarRecord
     }
 }
 
+public class HapticRecord
+{
+    public int i;
+    public float t;
+
+    public int d;
+    public int f;
+
+    public HapticRecord(int id, float time, int duty, int freq)
+    {
+        this.i = id;
+        this.t = time;
+        this.d = duty;
+        this.f = freq;
+    }
+}
 
 [System.Serializable]
 public class SwarmState
@@ -125,12 +146,16 @@ public class SwarmState
     public List<int> isolation = new List<int>();
     public List<int> idLeader = new List<int>();
 
+    public List<int> subNetworkNumber = new List<int>();
+
 
 
 
     //stars
     public List<StarRecord> stars = new List<StarRecord>();
 
+    //haptics
+    public List<HapticRecord> hapticRecords = new List<HapticRecord>();
 
 
     // Constants
@@ -156,6 +181,8 @@ public class SwarmState
         // Example: gather your drones
         List<DroneFake> drones = swarmModel.drones;
         NetworkCreator network = swarmModel.network;
+
+        subNetworkNumber.Add(network.adjacencyList.Count);
 
         foreach(DroneFake drone in drones)
         {
@@ -193,6 +220,11 @@ public class SwarmState
     public void addStar(string starName, float timeCollected, int droneId, Vector3 position)
     {
         stars.Add(new StarRecord(starName, timeCollected, droneId, position));
+    }
+
+    public void addHapticRecord(int id, int duty, int freq)
+    {
+        hapticRecords.Add(new HapticRecord(id, Timer.elapsedTime, duty, freq));
     }
 
 }

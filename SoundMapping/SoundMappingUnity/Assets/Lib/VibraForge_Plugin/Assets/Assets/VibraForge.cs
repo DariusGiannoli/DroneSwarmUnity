@@ -41,6 +41,8 @@ public class VibraForge : MonoBehaviour
         command["duty"] = duty;
         command["freq"] = freq;
         sender.SendData(DictionaryToString(command));
+
+        saveInfoToJSON.addHapticRecord(addr, duty, freq);
     }
 
 
