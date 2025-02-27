@@ -45,7 +45,7 @@ public class ExperimentSetupS : MonoBehaviour
     {
         GUIIDisable();
 
-        this.GetComponent<SceneSelectorScript>().StartTraining(Haptics.isOn, Order.isOn, PID);
+        this.GetComponent<SceneSelectorScript>().StartTraining(PID);
     }
 
     public void NextScene()
@@ -62,20 +62,28 @@ public class ExperimentSetupS : MonoBehaviour
         confirmGO.SetActive(false);
     }
 
+
     // Update is called once per frame
 
     public void StartExperiment()
     {
         PID = PIDInput.text;
+        if (PID.Length < 3)
+        {
+            Debug.LogError("PID must be at least 3 characters long.");
+            return;
+        }
+
+        SceneSelectorScript._haptics = PID[0] == 'H';
+        SceneSelectorScript._order = PID[1] == 'T';
+        SceneSelectorScript.pid = PID.Substring(2);
+
 
         confirmText.text = "Are you sure you want to start the experiment? \n\n" +
-            "PID: " + PID + "\n" +
-            "Haptics: " + Haptics.isOn + "\n" +
-            "Order: " + Order.isOn;
+            "PID: " + SceneSelectorScript.pid + "\n" +
+            "Haptics: " + SceneSelectorScript._haptics + "\n" +
+            "TDV first : " + SceneSelectorScript._order;
 
-        SceneSelectorScript.pid = PID;
-        SceneSelectorScript._haptics = Haptics.isOn;
-        SceneSelectorScript._order = Order.isOn;
 
         confirmGO.SetActive(true);
     }

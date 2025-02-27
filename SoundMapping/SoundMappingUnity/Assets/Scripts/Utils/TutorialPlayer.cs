@@ -4,6 +4,7 @@ using UnityEngine.Networking;
 using System.Collections;
 using System.IO;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 
 [RequireComponent(typeof(VideoPlayer), typeof(AudioSource))]
 public class TutorialPlayer : MonoBehaviour
@@ -53,7 +54,6 @@ public class TutorialPlayer : MonoBehaviour
         {
             AudioPriorityManager.Restore();
             MigrationPointController.InControl = true;
-            Debug.Log("Video finished!");
             tutoVideo.SetActive(false);
         }
 
@@ -61,6 +61,7 @@ public class TutorialPlayer : MonoBehaviour
         {
             AudioPriorityManager.Mute();
             MigrationPointController.InControl = false;
+            MigrationPointController.alignementVector = Vector3.zero;
             tutoVideo.SetActive(true);
             videoPlayer.Stop();
             audioSource.Stop();
@@ -70,24 +71,41 @@ public class TutorialPlayer : MonoBehaviour
 
     private void Awake()
     {
-        _thisGameObject = this.gameObject;
-        MigrationPointController.InControl = false;
-        // Get references
         videoPlayer = GetComponent<VideoPlayer>();
         audioSource = GetComponent<AudioSource>();
+        _thisGameObject = this.gameObject;
 
+        
         // Configure VideoPlayer to output to RenderTexture
         videoPlayer.renderMode = VideoRenderMode.RenderTexture;
         videoPlayer.targetTexture = targetRenderTexture;
 
         // We handle audio from a separate MP3, so set this to None
         videoPlayer.audioOutputMode = VideoAudioOutputMode.None;
+
+
+        MigrationPointController.InControl = false;
+        MigrationPointController.alignementVector = Vector3.zero;
+        // Get references
+
+    }
+
+    void Start()
+    {
+        // PlayTutorial(LevelConfiguration.sceneNumber);
     }
 
 
     public static void playTuto(int tutoNumber)
     {
         AudioPriorityManager.Mute();
+        
+        if(!SceneSelectorScript.needToWatchTutorial())
+        {
+            stopVideo();
+            return;
+        }
+
         _thisGameObject.GetComponent<TutorialPlayer>().PlayTutorial(tutoNumber);
     }
 

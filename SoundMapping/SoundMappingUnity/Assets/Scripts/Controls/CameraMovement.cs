@@ -223,6 +223,7 @@ public class CameraMovement : MonoBehaviour
     void HandleCrash() // crash animation
     {
         MigrationPointController.InControl = false;
+        MigrationPointController.alignementVector = Vector3.zero;
         animTimer += Time.deltaTime;
         float t = Mathf.Clamp01(animTimer / 2f);
         textInfo.setDeathImageStatic(t);

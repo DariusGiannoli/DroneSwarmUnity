@@ -21,7 +21,6 @@ public class AudioPriorityManager : MonoBehaviour
 
     public void MuteAllExceptPriority()
     {
-        print("MuteAllExceptPriority+++++++++++++++++++++++++++++++++++++++");
         GameObject[] allStars = GameObject.FindGameObjectsWithTag("Collectibles");
         GameObject[] allDrones = GameObject.FindGameObjectsWithTag("Drone");
 

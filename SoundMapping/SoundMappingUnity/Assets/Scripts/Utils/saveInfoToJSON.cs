@@ -145,8 +145,8 @@ public class SwarmState
     public List<float> swarmConnectivness = new List<float>();
     public List<int> isolation = new List<int>();
     public List<int> idLeader = new List<int>();
-
     public List<int> subNetworkNumber = new List<int>();
+    public List<Vector3> cameraForward = new List<Vector3>();
 
 
 
@@ -210,6 +210,7 @@ public class SwarmState
 
         desiredSeparation.Add(DroneFake.desiredSeparation);
         alignment.Add(MigrationPointController.alignementVector);
+        cameraForward.Add(CameraMovement.forward);
         time.Add(Timer.elapsedTime);
         swarmConnectivness.Add(swarmModel.swarmConnectionScore);
         isolation.Add(swarmModel.numberOfDroneDiscionnected);

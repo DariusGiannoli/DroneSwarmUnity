@@ -36,7 +36,7 @@ public class ExperimentSetupScript : MonoBehaviour
         mainMenu.SetActive(false);
         experimentMenu.SetActive(false);
 
-        this.GetComponent<SceneSelectorScript>().StartTraining(Haptics.isOn, Order.isOn, PID);
+        this.GetComponent<SceneSelectorScript>().StartTraining(PID);
     }
 
     public void NextScene()
@@ -62,7 +62,7 @@ public class ExperimentSetupScript : MonoBehaviour
         confirmText.text = "Are you sure you want to start the experiment? \n\n" +
             "PID: " + PID + "\n" +
             "Haptics: " + Haptics.isOn + "\n" +
-            "Order: " + Order.isOn;
+            "TDV first : " + Order.isOn;
 
         confirmGO.SetActive(true);
     }

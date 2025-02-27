@@ -176,7 +176,7 @@ public class LevelConfiguration : MonoBehaviour
         {
             if (char.IsDigit(scene.name[0]))
             {
-                print(scene.name);
+//                print(scene.name);
                 name = scene.name;
                 break;
             }

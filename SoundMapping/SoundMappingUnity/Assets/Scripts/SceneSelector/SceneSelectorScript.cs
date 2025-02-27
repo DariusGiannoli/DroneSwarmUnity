@@ -119,12 +119,10 @@ public class SceneSelectorScript : MonoBehaviour
         NextScene();
     }
 
-    public void StartTraining(bool Haptics, bool Order, string PID)
+    public void StartTraining(string PID)
     {
-        pid = PID;
-        hapticsEnabled = Haptics;
-        _haptics = Haptics;
-        _order = Order;
+
+        hapticsEnabled = _haptics;
 
         // Set up your experiment order.
         scenesPlayed = new List<string>(scenes);
@@ -142,7 +140,7 @@ public class SceneSelectorScript : MonoBehaviour
     public void addStudyScene()
     {
         
-        if (_order)
+        if (!_order)
         {
             scenesPlayed.Add(ObstacleFPV);
           //  scenesPlayed.Add(ObstacleFPV);
@@ -182,6 +180,21 @@ public class SceneSelectorScript : MonoBehaviour
         }
 
         SelectTraining(scenesPlayed[experimentNumber]);
+    }
+
+    public static List<int> tutorialPlayed = new List<int>();
+    public static bool needToWatchTutorial()
+    {
+        //print("Experiment Number: " + tutorialPlayed.Count);
+        if(tutorialPlayed.Contains(experimentNumber))
+        {
+            return false;
+        }
+        else
+        {
+            tutorialPlayed.Add(experimentNumber);
+            return true;
+        }
     }
 
     public void ResetScene()

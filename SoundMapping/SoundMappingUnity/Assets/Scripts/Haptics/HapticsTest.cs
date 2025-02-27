@@ -142,7 +142,7 @@ public class HapticsTest : MonoBehaviour
 
         //drone crash mapping
         int[] crashMapping =  Haptics_Crash ? new int[] {4,5,124,125}  : new int[] {};
-        print("Crash Mapping: " + crashMapping.Length);
+//        print("Crash Mapping: " + crashMapping.Length);
         
         
         //layers movement on arm mapping
