@@ -431,7 +431,8 @@ public class NetworkCreator
         }
 
         float avgSquaredError = sumSquaredError / pairCount;
-        return Mathf.Clamp01((avgSquaredError / (DroneFake.desiredSeparation * DroneFake.desiredSeparation)-0.25f)/(0.7f-0.22f));
+        float score = Mathf.Clamp01((avgSquaredError / (DroneFake.desiredSeparation * DroneFake.desiredSeparation)-0.25f)/(0.7f-0.22f));
+        return Mathf.Clamp01(score-0.1f);
     }
 
     // 5. Normalized Velocity Mismatch (~K(v)):

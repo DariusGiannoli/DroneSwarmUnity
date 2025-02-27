@@ -282,8 +282,6 @@ public class DroneFake
 
         if (layer == 1 && embodied)
         {
-            addDataEmbodied(accCoh, accObs);
-
             accVel = cVm * (vRef - velocity);
             lastAllignement = accVel;
 
@@ -299,7 +297,6 @@ public class DroneFake
         }
 
         lastAllignementSwarm = accVel;
-
         lastAllignement = accVel;
 
         Vector3 fo = accCoh + accObs + accVel;
@@ -328,7 +325,6 @@ public class DroneFake
 
         return neighborPriority;
     }
-
 
     public float getThisPrioity()
     {

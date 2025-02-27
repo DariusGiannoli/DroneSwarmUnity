@@ -290,6 +290,12 @@ public class CameraMovement : MonoBehaviour
     // Immediately set the given drone as the embodied drone.
     public static void SetEmbodiedDrone(GameObject drone)
     {
+        // if(embodiedDrone != drone)
+        // {
+        //     swarmModel.drones.Find(x => x.id == embodiedDrone.GetComponent<DroneController>().droneFake.id).embodied = false;
+        //     swarmModel.drones.Find(x => x.id == embodiedDrone.GetComponent<DroneController>().droneFake.id).embodied = false;
+        // }
+        
         embodiedDrone = drone;
         idLeader = drone.GetComponent<DroneController>().droneFake.id;
         DroneController controller = drone.GetComponent<DroneController>();

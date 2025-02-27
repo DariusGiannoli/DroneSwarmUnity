@@ -9,23 +9,24 @@ public class saveInfoToJSON : MonoBehaviour
 {
     public static SwarmState swarmData = new SwarmState();
     public int saveEvery = 100; // in ms
+    float time = 0;
 
-    public IEnumerator saveDataPointCoroutine()
+    public void Update()
     {
-        while (true)
+        time += Time.deltaTime;
+        if (LevelConfiguration._SaveData)
         {
-            saveDataPoint();
-            yield return new WaitForSecondsRealtime(saveEvery/1000);
+            if (time > saveEvery / 1000)
+            {
+                time = 0;
+                saveDataPoint();
+            }
         }
     }
 
     public void Start()
     {
         swarmData = new SwarmState();
-        if (LevelConfiguration._SaveData)
-        {
-            StartCoroutine(saveDataPointCoroutine());
-        }
     }
 
 
@@ -38,7 +39,6 @@ public class saveInfoToJSON : MonoBehaviour
 
     public static bool isSaving = false;
     
-
     public void exportData(bool force)
     {
         if (!isSaving)
@@ -81,7 +81,7 @@ public class saveInfoToJSON : MonoBehaviour
         System.IO.File.WriteAllText("./Assets/Data/"+PID+"/"+fileName, json);
 
         // wait an extra 1s to make sure the file is written
-        System.Threading.Thread.Sleep(500);
+        System.Threading.Thread.Sleep(10);
 
         isSaving = false;
     }

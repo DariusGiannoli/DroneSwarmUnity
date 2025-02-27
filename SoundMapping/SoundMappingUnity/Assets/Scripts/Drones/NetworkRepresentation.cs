@@ -47,6 +47,8 @@ public class NetworkRepresentation : MonoBehaviour
         float networkScore = -(firstOrderProportion-0.8f)/0.5f;
         networkScore = Mathf.Clamp01(networkScore);
 
+        networkScore = Mathf.Clamp01(networkScore-0.1f);
+
 
         return networkScore;
 

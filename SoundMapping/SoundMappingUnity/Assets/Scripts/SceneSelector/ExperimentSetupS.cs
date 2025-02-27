@@ -82,9 +82,6 @@ public class ExperimentSetupS : MonoBehaviour
 
     public void experimentMenuEnable()
     {
-        mainMenu.SetActive(false);
-        experimentMenu.SetActive(true);
-
         StartCoroutine(ShowSavingDots());
     }
 
@@ -101,11 +98,10 @@ public class ExperimentSetupS : MonoBehaviour
             {
                 savingText.text = "Saving";
             }
-            yield return new WaitForSeconds(1f);
+            yield return new WaitForSeconds(0.1f);
         }
 
-        savingText.gameObject.SetActive(false);
-        nextButton.SetActive(true);
+        SceneSelectorScript.nextScene();
     }
  
     public void StartSavingCoroutine()

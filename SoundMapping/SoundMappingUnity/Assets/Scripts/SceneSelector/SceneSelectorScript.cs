@@ -110,9 +110,13 @@ public class SceneSelectorScript : MonoBehaviour
     {
         _haptics = hapticsEnabled;
         this.GetComponent<ExperimentSetupS>().GUIIDisable();
-        scenesPlayed = new List<string> { sceneName };
+        
+        scenesPlayed = new List<string>(scenes);
+        addStudyScene();
 
-        SelectTraining(sceneName);
+        experimentNumber = scenesPlayed.IndexOf(sceneName) - 1;
+        
+        NextScene();
     }
 
     public void StartTraining(bool Haptics, bool Order, string PID)
@@ -125,9 +129,20 @@ public class SceneSelectorScript : MonoBehaviour
         // Set up your experiment order.
         scenesPlayed = new List<string>(scenes);
 
-        scenesPlayed.Clear();
+        //scenesPlayed.Clear();
 
-        if (Order)
+        addStudyScene();
+
+
+        experimentNumber = -1;
+//        print("Haptics: " + Haptics + " Order: " + Order + " PID: " + PID);
+        NextScene();
+    }
+
+    public void addStudyScene()
+    {
+        
+        if (_order)
         {
             scenesPlayed.Add(ObstacleFPV);
           //  scenesPlayed.Add(ObstacleFPV);
@@ -149,11 +164,11 @@ public class SceneSelectorScript : MonoBehaviour
             scenesPlayed.Add(CollectibleFPV);
          //   scenesPlayed.Add(CollectibleFPV);
         }
+    }
 
-
-        experimentNumber = -1;
-//        print("Haptics: " + Haptics + " Order: " + Order + " PID: " + PID);
-        NextScene();
+    public static void nextScene()
+    {
+        GameObject.FindObjectOfType<SceneSelectorScript>().NextScene();
     }
 
     public void NextScene()
