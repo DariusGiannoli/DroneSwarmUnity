@@ -392,7 +392,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &179030188
 RectTransform:
   m_ObjectHideFlags: 0
@@ -654,7 +654,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 48.9
+  m_fontSize: 50.75
   m_fontSizeBase: 24
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -1662,7 +1662,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 29.7
+  m_fontSize: 30.8
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -1727,7 +1727,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &999664066
 RectTransform:
   m_ObjectHideFlags: 0
@@ -1892,9 +1892,9 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1134447792}
-  - component: {fileID: 1134447791}
   - component: {fileID: 1134447794}
   - component: {fileID: 1134447795}
+  - component: {fileID: 1134447796}
   m_Layer: 0
   m_Name: SceneSelector
   m_TagString: Untagged
@@ -1902,27 +1902,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1134447791
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1134447790}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ea9602127f575004aa634cbf97278c49, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  isLoading: 0
-  scenes: []
-  scenesPlayed: []
-  ObstacleFPV: 101 DemoFPV
-  ObstacleTPV: 100 DemoTDV
-  CollectibleFPV: 103 CollectiblesFPV
-  CollectibleTPV: 102 CollectiblesTDV
-  assetPathTraining: Assets/Scenes/TrainingFinal
-  hapticsEnabled: 1
 --- !u!4 &1134447792
 Transform:
   m_ObjectHideFlags: 0
@@ -1994,6 +1973,27 @@ MonoBehaviour:
   experimentMenu: {fileID: 999664065}
   savingText: {fileID: 1962881193}
   nextButton: {fileID: 778010046}
+--- !u!114 &1134447796
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1134447790}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ea9602127f575004aa634cbf97278c49, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  isLoading: 0
+  scenes: []
+  scenesPlayed: []
+  ObstacleFPV: 101 DemoFPV
+  ObstacleTPV: 100 DemoTDV
+  CollectibleFPV: 201 CollectiblesFPV
+  CollectibleTPV: 200 CollectiblesTDV
+  assetPathTraining: Assets/Scenes/TrainingFinal
+  hapticsEnabled: 1
 --- !u!1 &1166913635
 GameObject:
   m_ObjectHideFlags: 0
@@ -2367,7 +2367,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 33
+  m_fontSize: 34.7
   m_fontSizeBase: 14
   m_fontWeight: 400
   m_enableAutoSizing: 1

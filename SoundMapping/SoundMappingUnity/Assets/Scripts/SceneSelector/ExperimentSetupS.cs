@@ -116,9 +116,6 @@ public class ExperimentSetupS : MonoBehaviour
     {
         StartCoroutine(ShowSavingDots());
     }
-
-
-
     public static void levelFinished()
     {
         GameObject.FindObjectOfType<ExperimentSetupS>().experimentMenuEnable();

@@ -51,6 +51,10 @@ public class CameraMovement : MonoBehaviour
 
     void Update()
     {
+        if(!MigrationPointController.InControl)
+        {
+            return;
+        }
 
       //  print("CameraMovement: " + idLeader + " Selected: " + MigrationPointController.idLeader);
 

@@ -209,6 +209,14 @@ public class LevelConfiguration : MonoBehaviour
 
         _textTutorial = text;
 
+        if(sceneNumber >= 200)
+        {
+            sceneNumber = 200;
+        }else if(sceneNumber >= 100)
+        {
+            sceneNumber = 100;
+        }
+
 
         
     }

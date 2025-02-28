@@ -17,8 +17,8 @@ public class SceneSelectorScript : MonoBehaviour
     [HideInInspector] private string setupScene = "Setup";
     [HideInInspector] public string ObstacleFPV = "101 DemoFPV";
     [HideInInspector] public string ObstacleTPV = "100 DemoTDV";
-    [HideInInspector] public string CollectibleFPV = "103 CollectiblesFPV";
-    [HideInInspector] public string CollectibleTPV = "102 CollectiblesTDV";
+    [HideInInspector] public string CollectibleFPV = "201 CollectiblesFPV";
+    [HideInInspector] public string CollectibleTPV = "200 CollectiblesTDV";
 
     [HideInInspector] public string assetPathTraining = "Assets/Scenes/TrainingFinal";
 
@@ -82,6 +82,7 @@ public class SceneSelectorScript : MonoBehaviour
 
     IEnumerator LoadTrainingScene(string sceneName)
     {
+        print("Loading Scene: " + sceneName);
         if (isLoading)
         {
             Debug.LogWarning("Scene loading already in progress.");
@@ -145,12 +146,19 @@ public class SceneSelectorScript : MonoBehaviour
         if (!_order)
         {
             scenesPlayed.Add(ObstacleFPV);
+
+
           //  scenesPlayed.Add(ObstacleFPV);
             scenesPlayed.Add(ObstacleTPV);
+            tutorialPlayed.Add(scenesPlayed.Count - 1);
+
          //   scenesPlayed.Add(ObstacleTPV);
             scenesPlayed.Add(CollectibleFPV);
+
         //    scenesPlayed.Add(CollectibleFPV);
             scenesPlayed.Add(CollectibleTPV);
+            tutorialPlayed.Add(scenesPlayed.Count - 1);
+
         //    scenesPlayed.Add(CollectibleTPV);
         }
         else
@@ -158,11 +166,15 @@ public class SceneSelectorScript : MonoBehaviour
             scenesPlayed.Add(ObstacleTPV);
            // scenesPlayed.Add(ObstacleTPV);
             scenesPlayed.Add(ObstacleFPV);
-          //  scenesPlayed.Add(ObstacleFPV);
+            tutorialPlayed.Add(scenesPlayed.Count - 1);
+
+            //  scenesPlayed.Add(ObstacleFPV);
             scenesPlayed.Add(CollectibleTPV);
-          //  scenesPlayed.Add(CollectibleTPV);
+            //  scenesPlayed.Add(CollectibleTPV);
             scenesPlayed.Add(CollectibleFPV);
-         //   scenesPlayed.Add(CollectibleFPV);
+            tutorialPlayed.Add(scenesPlayed.Count - 1);
+
+            //   scenesPlayed.Add(CollectibleFPV);
         }
     }
 
@@ -193,7 +205,7 @@ public class SceneSelectorScript : MonoBehaviour
             return false;
         }
         else
-        {
+        { 
             tutorialPlayed.Add(experimentNumber);
             return true;
         }
