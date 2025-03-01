@@ -51,10 +51,6 @@ public class CameraMovement : MonoBehaviour
 
     void Update()
     {
-        if(!MigrationPointController.InControl)
-        {
-            return;
-        }
 
       //  print("CameraMovement: " + idLeader + " Selected: " + MigrationPointController.idLeader);
 
@@ -232,6 +228,8 @@ public class CameraMovement : MonoBehaviour
         float t = Mathf.Clamp01(animTimer / 2f);
         textInfo.setDeathImageStatic(t);
 
+        Debug.Log(t);
+
         
         if (t >= 1f)
         {
@@ -245,6 +243,7 @@ public class CameraMovement : MonoBehaviour
             }else
             {
                 crashAnimationSetup();
+                currentState = CameraState.DroneView;
             }
         }
     }

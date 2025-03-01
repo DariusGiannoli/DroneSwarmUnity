@@ -12,13 +12,18 @@ public class SceneSelectorScript : MonoBehaviour
     [HideInInspector]public bool isLoading = false;
     
     [HideInInspector] public List<string> scenes = new List<string>();
-    [HideInInspector] public List<string> scenesPlayed = new List<string>();
+    [HideInInspector] public static List<string> scenesPlayed = new List<string>();
 
     [HideInInspector] private string setupScene = "Setup";
-    [HideInInspector] public string ObstacleFPV = "101 DemoFPV";
-    [HideInInspector] public string ObstacleTPV = "100 DemoTDV";
-    [HideInInspector] public string CollectibleFPV = "201 CollectiblesFPV";
-    [HideInInspector] public string CollectibleTPV = "200 CollectiblesTDV";
+    [HideInInspector] public string ObstacleFPV = "FPVObs";
+    [HideInInspector] public string ObstacleFPV1 = "FPVObs_1";
+    [HideInInspector] public string ObstacleTPV = "TDVObs";
+    [HideInInspector] public string ObstacleTPV1 = "TDVObs_1";
+
+    [HideInInspector] public string CollectibleFPV = "FPVCollectibles";
+    [HideInInspector] public string CollectibleFPV1 = "FPVCollectibles_1";
+    [HideInInspector] public string CollectibleTPV = "TDVCollectibles";
+    [HideInInspector] public string CollectibleTPV1 = "TDVCollectibles_1";
 
     [HideInInspector] public string assetPathTraining = "Assets/Scenes/TrainingFinal";
 
@@ -119,6 +124,7 @@ public class SceneSelectorScript : MonoBehaviour
 
         experimentNumber = scenesPlayed.IndexOf(sceneName) - 1;
         
+        print("Experiment Number fron training button: " + experimentNumber);
         NextScene();
     }
 
@@ -147,16 +153,27 @@ public class SceneSelectorScript : MonoBehaviour
         {
             scenesPlayed.Add(ObstacleFPV);
 
+            scenesPlayed.Add(ObstacleFPV1);
+            tutorialPlayed.Add(scenesPlayed.Count - 1);
 
           //  scenesPlayed.Add(ObstacleFPV);
             scenesPlayed.Add(ObstacleTPV);
             tutorialPlayed.Add(scenesPlayed.Count - 1);
 
-         //   scenesPlayed.Add(ObstacleTPV);
+            scenesPlayed.Add(ObstacleTPV1);
+            tutorialPlayed.Add(scenesPlayed.Count - 1);
+
             scenesPlayed.Add(CollectibleFPV);
+
+         //   scenesPlayed.Add(ObstacleTPV);
+            scenesPlayed.Add(CollectibleFPV1);
+            tutorialPlayed.Add(scenesPlayed.Count - 1);
 
         //    scenesPlayed.Add(CollectibleFPV);
             scenesPlayed.Add(CollectibleTPV);
+            tutorialPlayed.Add(scenesPlayed.Count - 1);
+
+            scenesPlayed.Add(CollectibleTPV1);
             tutorialPlayed.Add(scenesPlayed.Count - 1);
 
         //    scenesPlayed.Add(CollectibleTPV);
@@ -164,14 +181,26 @@ public class SceneSelectorScript : MonoBehaviour
         else
         {
             scenesPlayed.Add(ObstacleTPV);
+
+            scenesPlayed.Add(ObstacleTPV1);
+            tutorialPlayed.Add(scenesPlayed.Count - 1);
            // scenesPlayed.Add(ObstacleTPV);
             scenesPlayed.Add(ObstacleFPV);
             tutorialPlayed.Add(scenesPlayed.Count - 1);
 
+            scenesPlayed.Add(ObstacleFPV1);
+            tutorialPlayed.Add(scenesPlayed.Count - 1);
+
             //  scenesPlayed.Add(ObstacleFPV);
             scenesPlayed.Add(CollectibleTPV);
+
+            scenesPlayed.Add(CollectibleTPV1);
+            tutorialPlayed.Add(scenesPlayed.Count - 1);
             //  scenesPlayed.Add(CollectibleTPV);
             scenesPlayed.Add(CollectibleFPV);
+            tutorialPlayed.Add(scenesPlayed.Count - 1);
+
+            scenesPlayed.Add(CollectibleFPV1);
             tutorialPlayed.Add(scenesPlayed.Count - 1);
 
             //   scenesPlayed.Add(CollectibleFPV);
@@ -186,13 +215,13 @@ public class SceneSelectorScript : MonoBehaviour
     public void NextScene()
     {
         experimentNumber++;
-        if (experimentNumber >= scenesPlayed.Count)
-        {
-            // End of experiment; unload all non-persistent scenes.
-            StartCoroutine(UnloadAllScenesExcept("Scene Selector"));
-            return;
-        }
-
+        // if (experimentNumber >= scenesPlayed.Count)
+        // {
+        //     // End of experiment; unload all non-persistent scenes.
+        //     StartCoroutine(UnloadAllScenesExcept("Scene Selector"));
+        //     return;
+        // }
+        print("Experiment Number: " + experimentNumber);
         SelectTraining(scenesPlayed[experimentNumber]);
     }
 
@@ -223,5 +252,10 @@ public class SceneSelectorScript : MonoBehaviour
     public static void reset()
     {
         GameObject.FindObjectOfType<SceneSelectorScript>().ResetScene();
+    }
+
+    public static string getNameScene()
+    {
+        return scenesPlayed[experimentNumber];
     }
 }

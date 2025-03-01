@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using JetBrains.Annotations;
 using Unity.VisualScripting;
+using UnityEditor.SearchService;
 using UnityEngine;
 
 public class saveInfoToJSON : MonoBehaviour
@@ -39,51 +40,62 @@ public class saveInfoToJSON : MonoBehaviour
 
     public static bool isSaving = false;
     
-    public void exportData(bool force)
+    public static void exportData(bool force)
     {
-        if (!isSaving)
-        {
-            isSaving = true;
-            System.Threading.Thread saveThread = new System.Threading.Thread(() =>
+        // if(LevelConfiguration._SaveData)
+        // {
+            if (!isSaving)
             {
+                isSaving = true;
                 saveDataThread(force);
-                isSaving = false;
-            });
-            saveThread.Start();
-        }
+            }
+       // }
     }
 
-    void saveDataThread(bool force)
+    static void saveDataThread(bool force)
     {
         string PID = SceneSelectorScript.pid;
         bool haptics = SceneSelectorScript._haptics;
         bool order = SceneSelectorScript._order;
         int experimentNumber = SceneSelectorScript.experimentNumber;
 
+        string nameScene = SceneSelectorScript.getNameScene();
+
 
         string forceString = force ? "dataForce_" : "";
-        string hapticSring = haptics ? "1" : "0";
-        string orderString = order ? "1" : "0";
+        string hapticSring = haptics ? "H" : "NH";
+        string orderString = order ? "O" : "NO";
 
-        //convert dataSave into JSON
-        string json = JsonUtility.ToJson(swarmData, true);
-
-       // string date = System.DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss");
-        string fileName =  forceString+PID+"_"+hapticSring+"_"+orderString+"_"+experimentNumber+".json";
-
-        //Create a folder with the name of the PID
-        if (!System.IO.Directory.Exists("./Assets/Data/"+PID))
+        if(LevelConfiguration._SaveData)
         {
-            System.IO.Directory.CreateDirectory("./Assets/Data/"+PID);
+
+            //convert dataSave into JSON
+            string json = JsonUtility.ToJson(swarmData, true);
+
+        // string date = System.DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss");
+            string fileName =  forceString+nameScene+"_"+hapticSring+"_"+orderString+".json";
+
+            //Create a folder with the name of the PID
+            if (!System.IO.Directory.Exists("./Assets/Data/"+PID))
+            {
+                System.IO.Directory.CreateDirectory("./Assets/Data/"+PID);
+            }
+            
+            //Write the JSON file
+            System.IO.File.WriteAllText("./Assets/Data/"+PID+"/"+fileName, json);
         }
-        
-        //Write the JSON file
-        System.IO.File.WriteAllText("./Assets/Data/"+PID+"/"+fileName, json);
 
         // wait an extra 1s to make sure the file is written
-        System.Threading.Thread.Sleep(10);
+        System.Threading.Thread.Sleep(100);
 
         isSaving = false;
+
+        if(!force)
+        {
+            SceneSelectorScript.nextScene();
+        }
+
+        //restart 
     }
 
     public static void addStarData(string starName, float timeCollected, int droneId, Vector3 position)
@@ -156,6 +168,8 @@ public class SwarmState
 
     //haptics
     public List<HapticRecord> hapticRecords = new List<HapticRecord>();
+
+    public int a = 1;
 
 
     // Constants

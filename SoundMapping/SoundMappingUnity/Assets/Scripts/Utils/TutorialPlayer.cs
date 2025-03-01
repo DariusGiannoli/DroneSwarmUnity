@@ -33,7 +33,11 @@ public class TutorialPlayer : MonoBehaviour
         {
             if (Input.GetKeyDown(KeyCode.V))
             {
-                stopVideo();
+                PlayTutorial(LevelConfiguration.sceneNumber);
+            }
+            if (Input.GetKeyDown(KeyCode.S))
+            {
+                StopVideo();
             }
         }
 

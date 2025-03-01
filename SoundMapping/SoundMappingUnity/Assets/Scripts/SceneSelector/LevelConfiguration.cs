@@ -169,6 +169,9 @@ public class LevelConfiguration : MonoBehaviour
         HapticsTest.lateStart();
     }
 
+    // make a dico with the scene number and the text
+
+
     void setTextTuto()
     {
         string name = "";
@@ -184,7 +187,22 @@ public class LevelConfiguration : MonoBehaviour
         //the names are 1 blabla 2 blabla 3 blabl
         
         //get the number
-        sceneNumber = int.Parse(name.Split(' ')[0].ToString());
+
+        //check if it is a number
+        if(SceneSelectorScript.experimentNumber >=10)
+        {
+        if(SceneSelectorScript.experimentNumber < 14)   
+            {
+                sceneNumber = 100;
+            }
+            else
+            {
+                sceneNumber = 200;
+            }
+        }else{
+            //get the number
+            sceneNumber = int.Parse(name.Split(' ')[0].ToString());
+        }
         print("Scene number: " + sceneNumber);
         string haptics = SceneSelectorScript._haptics? "Haptics" : "NonHaptics";
 
@@ -208,14 +226,6 @@ public class LevelConfiguration : MonoBehaviour
         }
 
         _textTutorial = text;
-
-        if(sceneNumber >= 200)
-        {
-            sceneNumber = 200;
-        }else if(sceneNumber >= 100)
-        {
-            sceneNumber = 100;
-        }
 
 
         

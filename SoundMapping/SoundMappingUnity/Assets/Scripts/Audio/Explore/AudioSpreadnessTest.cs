@@ -7,7 +7,7 @@ using UnityEngine;
 [RequireComponent(typeof(AudioSource))]
 public class AudioSpreadnessTest : MonoBehaviour
 {
-    private float minSpreadness = 1f;
+    private float minSpreadness = 1.5f;
     private float maxSpreadness = 10f;
     private float speadness 
     {

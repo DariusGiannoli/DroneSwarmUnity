@@ -807,7 +807,7 @@ public class swarmModel : MonoBehaviour
 
         if (saveData)
         {
-            this.GetComponent<saveInfoToJSON>().exportData(true);
+            saveInfoToJSON.exportData(true);
         }
 
     }

@@ -31,7 +31,7 @@ public class textInfo : MonoBehaviour
         textTutorial.text = LevelConfiguration._textTutorial;
         refresh();
 
-         TutorialPlayer.playTuto(LevelConfiguration.sceneNumber);
+        TutorialPlayer.playTuto(LevelConfiguration.sceneNumber);
 
         
     }
@@ -57,7 +57,7 @@ public class textInfo : MonoBehaviour
         {
             connexionText.text = showConnexion ? "Connection: " + getOneDecimal(swarmModel.swarmConnectionScore) : "";
             SpreadnessText.text = showSpreadness ? "Spreadness: " + getOneDecimal(swarmModel.desiredSeparation) : "";
-            IsolationText.text = true ? "Isolation : " + swarmModel.numberOfDroneDiscionnected.ToString() : "";
+            IsolationText.text = showIsolation ? "Isolation : " + swarmModel.numberOfDroneDiscionnected.ToString() : "";
             DroneCrashText.text = showDroneCrash ? "Drone Crash : " + swarmModel.numberOfDroneCrashed.ToString() : "";
             //SpreadnessSwarmScore.text = showSpreadness ? "Swarm spreadness : " + getOneDecimal(swarmModel.swarmAskingSpreadness) : "";
             SpreadnessSwarmScore.text = "";

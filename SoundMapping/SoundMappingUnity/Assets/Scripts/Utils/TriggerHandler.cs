@@ -79,8 +79,9 @@ public class TriggerHandlerWithCallback : MonoBehaviour
                         if(Timer.isValidTime())
                         {
                        //     XboxScreenRecorder.StopRecordingAndSave();
-                            ExperimentSetupS.levelFinished();
-                            gm.GetComponent<Timer>().StopTimer();
+                            print("Level Finished from trigger");
+                           saveInfoToJSON.exportData(false);
+                            //  gm.GetComponent<Timer>().StopTimer();
                         }else{
                             swarmModel.restart();
                         }

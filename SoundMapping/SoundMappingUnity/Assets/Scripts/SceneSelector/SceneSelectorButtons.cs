@@ -92,10 +92,41 @@ public class SceneSelectorScriptEditor : Editor
 
         EditorGUILayout.EndHorizontal();
 
+        EditorGUILayout.BeginHorizontal();
+
+        //make a button for Demo Scene
+        if (GUILayout.Button("Obstacles FPV 2"))
+        {
+            // Tell our script to load this scene (unload the previous one if any)
+            myScript.SelectTrainingFromButton(myScript.ObstacleFPV1);
+        }
+
+        if (GUILayout.Button("Obstacles TDV 2"))
+        {
+            // Tell our script to load this scene (unload the previous one if any)
+            myScript.SelectTrainingFromButton(myScript.ObstacleTPV1);
+        }
+
+        if (GUILayout.Button("Collectibles FPV 2"))
+        {
+            // Tell our script to load this scene (unload the previous one if any)
+            myScript.SelectTrainingFromButton(myScript.CollectibleFPV1);
+        }
+
+        if (GUILayout.Button("Collectibles TDV 2"))
+        {
+            // Tell our script to load this scene (unload the previous one if any)
+            myScript.SelectTrainingFromButton(myScript.CollectibleTPV1);
+        }
+
+        EditorGUILayout.EndHorizontal();
+
         //button unload all scenes
 
         //end vertical layout
         EditorGUILayout.EndVertical();
+
+
 
 
 

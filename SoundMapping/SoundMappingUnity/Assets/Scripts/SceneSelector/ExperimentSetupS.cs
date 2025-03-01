@@ -48,15 +48,6 @@ public class ExperimentSetupS : MonoBehaviour
         this.GetComponent<SceneSelectorScript>().StartTraining(PID);
     }
 
-    public void NextScene()
-    {
-        confirmGO.SetActive(false);
-        mainMenu.SetActive(false);
-        experimentMenu.SetActive(false);
-
-        this.GetComponent<SceneSelectorScript>().NextScene();
-    }
-
     public void cancel()
     {
         confirmGO.SetActive(false);
@@ -88,37 +79,5 @@ public class ExperimentSetupS : MonoBehaviour
         confirmGO.SetActive(true);
     }
 
-    public void experimentMenuEnable()
-    {
-        StartCoroutine(ShowSavingDots());
-    }
-
-    private IEnumerator ShowSavingDots()
-    {
-        nextButton.SetActive(false);
-        savingText.gameObject.SetActive(true);
-        savingText.text = "Saving";
-
-        while (saveInfoToJSON.isSaving)
-        {
-            savingText.text += ".";
-            if (savingText.text.Length > 10)
-            {
-                savingText.text = "Saving";
-            }
-            yield return new WaitForSeconds(0.1f);
-        }
-
-        SceneSelectorScript.nextScene();
-    }
- 
-    public void StartSavingCoroutine()
-    {
-        StartCoroutine(ShowSavingDots());
-    }
-    public static void levelFinished()
-    {
-        GameObject.FindObjectOfType<ExperimentSetupS>().experimentMenuEnable();
-    }
 
 }

@@ -1987,11 +1987,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   isLoading: 0
   scenes: []
-  scenesPlayed: []
-  ObstacleFPV: 101 DemoFPV
-  ObstacleTPV: 100 DemoTDV
-  CollectibleFPV: 201 CollectiblesFPV
-  CollectibleTPV: 200 CollectiblesTDV
+  ObstacleFPV: FPVObs
+  ObstacleFPV1: FPVObs_1
+  ObstacleTPV: TDVObs
+  ObstacleTPV1: TDVObs_1
+  CollectibleFPV: FPVCollectibles
+  CollectibleFPV1: FPVCollectibles_1
+  CollectibleTPV: TDVCollectibles
+  CollectibleTPV1: TDVCollectibles_1
   assetPathTraining: Assets/Scenes/TrainingFinal
   hapticsEnabled: 1
 --- !u!1 &1166913635

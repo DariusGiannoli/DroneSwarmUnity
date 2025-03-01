@@ -65,10 +65,10 @@ public class SwarmDisconnection : MonoBehaviour
             }
         }
 
-        if(!LevelConfiguration._Audio_isolation)
-        {
-            return; 
-        }
+        // if(!LevelConfiguration._Audio_isolation)
+        // {
+        //     return; 
+        // }
 
         //chedck if every element of dronesIDAnalysis is in dronesID
         bool changeOfList = false;
@@ -88,6 +88,12 @@ public class SwarmDisconnection : MonoBehaviour
             }
         }
         dronesID = dronesIDAnalysis;
+
+        
+        if(!LevelConfiguration._Audio_isolation)
+        {
+            return; 
+        }
 
         if(changeOfList)
         {
