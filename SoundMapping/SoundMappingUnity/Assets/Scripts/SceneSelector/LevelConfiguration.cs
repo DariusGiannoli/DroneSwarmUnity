@@ -189,9 +189,8 @@ public class LevelConfiguration : MonoBehaviour
         //get the number
 
         //check if it is a number
-        if(SceneSelectorScript.experimentNumber >=10)
-        {
-        if(SceneSelectorScript.experimentNumber < 14)   
+        if(SceneSelectorScript.experimentNumber >=10){
+            if(SceneSelectorScript.experimentNumber < 15)   
             {
                 sceneNumber = 100;
             }

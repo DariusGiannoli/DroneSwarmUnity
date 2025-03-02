@@ -73,7 +73,8 @@ public class saveInfoToJSON : MonoBehaviour
             string json = JsonUtility.ToJson(swarmData, true);
 
         // string date = System.DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss");
-            string fileName =  forceString+nameScene+"_"+hapticSring+"_"+orderString+".json";
+            string date = System.DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss");
+            string fileName =  forceString+nameScene+"_"+hapticSring+"_"+orderString+"_"+date+".json";
 
             //Create a folder with the name of the PID
             if (!System.IO.Directory.Exists("./Assets/Data/"+PID))
@@ -81,7 +82,7 @@ public class saveInfoToJSON : MonoBehaviour
                 System.IO.Directory.CreateDirectory("./Assets/Data/"+PID);
             }
             
-            //Write the JSON file
+
             System.IO.File.WriteAllText("./Assets/Data/"+PID+"/"+fileName, json);
         }
 

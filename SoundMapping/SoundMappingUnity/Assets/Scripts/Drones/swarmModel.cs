@@ -799,6 +799,7 @@ public class swarmModel : MonoBehaviour
 
     void OnApplicationQuit()
     {
+        print("Application ending after " + Time.time + " seconds");
         isThreadRunning = false;
         if (scorePlottingThread != null && scorePlottingThread.IsAlive)
         {

@@ -43,6 +43,7 @@ public class TriggerHandlerWithCallback : MonoBehaviour
     [SerializeField] bool useUnityEvent = true;
     [SerializeField] bool isStart = true;
 
+
     public UnityEvent onTriggerEnter; // Callback to assign in the Inspector
 
     private static GameObject gm;

@@ -40,7 +40,7 @@ public class SceneSelectorScriptEditor : Editor
         {
             style.normal.textColor = Color.white;
         }
-        EditorGUILayout.LabelField("Order : " + SceneSelectorScript._order, style);
+        EditorGUILayout.LabelField("TDV First : " + SceneSelectorScript._order, style);
 
         // Find all scenes in "Assets/Scenes/Training"
         string[] sceneGuids = AssetDatabase.FindAssets("t:Scene", new[] { myScript.assetPathTraining });

@@ -116,7 +116,6 @@ public class Timer : MonoBehaviour
     {
         if (timerCoroutine != null)
         {
-           // this.GetComponent<saveInfoToJSON>().exportData(false);
             StopCoroutine(timerCoroutine);
             timerCoroutine = null;
           // SaveScore();
