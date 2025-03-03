@@ -27,6 +27,7 @@ public class saveInfoToJSON : MonoBehaviour
 
     public void Start()
     {
+        isSaving = false;
         swarmData = new SwarmState();
     }
 
@@ -48,6 +49,11 @@ public class saveInfoToJSON : MonoBehaviour
             {
                 isSaving = true;
                 saveDataThread(force);
+            }else{
+                if(force)
+                {
+                    saveDataThread(force);
+                }
             }
        // }
     }
@@ -88,8 +94,6 @@ public class saveInfoToJSON : MonoBehaviour
 
         // wait an extra 1s to make sure the file is written
         System.Threading.Thread.Sleep(100);
-
-        isSaving = false;
 
         if(!force)
         {
