@@ -26,6 +26,7 @@ public class DroneFake
     public static float delta = 1.0f; // c
     public static float cVm = 1.0f; // Velocity matching coefficient
     public static float avoidanceRadius = 2f;     // Radius for obstacle detection
+    public static float avoidanceRadiusFeedback = 2f;     // Radius for obstacle detection
     public static float avoidanceForce = 10f;     // Strength of the avoidance force
     public static float droneRadius = 0.17f;
 
@@ -47,12 +48,14 @@ public class DroneFake
     public static int PRIORITYWHENEMBODIED = 1;
 
     public bool hasCrashed = false;
+    public bool hasCrashedFeedback = false;
 
     public Vector3 lastOlfati = Vector3.zero;
     public Vector3 lastObstacle = Vector3.zero;
     public Vector3 lastAllignementSwarm = Vector3.zero; // forces applied
 
     public List<Vector3> lastObstacleForces = new List<Vector3>();  
+    public List<Vector3> lastObstacleForcesFeedback = new List<Vector3>();  
 
     public Vector3 lastAllignement = Vector3.zero; //direction of migration
 
@@ -122,6 +125,34 @@ public class DroneFake
         }
 
         return (forces, hasCrashed);
+    }
+
+    public (List<Vector3> forces, bool hasCrashedFeedback) getObstacleForcesFeedback(float avoidanceRadiusFeedback, float distanceObs, float cPmObs = 10f)
+    {
+        List<Vector3> forces = new List<Vector3>();
+        float c = (beta - alpha) / (2 * Mathf.Sqrt(alpha * beta));
+        bool hasCrashedFeedback = false;
+
+        List<Vector3> obstacles = ClosestPointCalculator.ClosestPointsWithinRadius(position, avoidanceRadiusFeedback);
+        foreach (Vector3 obsPos in obstacles)
+        {
+            Vector3 posRel = position - obsPos;
+            float dist = posRel.magnitude - droneRadius;
+            if (dist <= Mathf.Epsilon)
+            {
+                hasCrashedFeedback = true;
+                continue;
+            }
+
+            // Apply forces similar to your original logic
+            Vector3 force = cPmObs * (GetNeighbourWeight(dist, distanceObs, delta) *
+                        GetCohesionForce(dist, distanceObs, alpha, beta, c, avoidanceRadiusFeedback, delta, obsPos - position)
+                        );
+
+            forces.Add(force);
+        }
+
+        return (forces, hasCrashedFeedback);
     }
 
     public void startPrediction(Vector3 alignementVector, NetworkCreator network)
@@ -195,6 +226,7 @@ public class DroneFake
         //     dRef = Mathf.Max(desiredSeparation*(0.8f - 0.2f*((float)layer - 3f)), 1);
         // }
         float dRefObs = avoidanceRadius;
+        float dRefObsFb = avoidanceRadiusFeedback;
 
         float a = alpha;
         float b = beta;
@@ -260,9 +292,11 @@ public class DroneFake
 
         // get obstacle forces
         (List<Vector3> obstacleForces, bool hasCrashed) = getObstacleForces(avoidanceRadius, dRefObs, cPmObs);
+        (List<Vector3> obstacleForcesFeedback, bool hasCrashedFeedback) = getObstacleForcesFeedback(avoidanceRadiusFeedback, dRefObsFb, cPmObs);
 
         this.hasCrashed = hasCrashed || this.hasCrashed;
         this.lastObstacleForces = obstacleForces;
+        this.lastObstacleForcesFeedback = obstacleForcesFeedback;
 
         foreach (Vector3 force in obstacleForces)
         {
@@ -273,17 +307,17 @@ public class DroneFake
         lastObstacle = accObs;
         lastAllignementSwarm = accVel;
 
-        if (layer == 1 && embodied)
-        {
-//            Debug.Log(id);
-            accVel = cVm * (vRef - velocity);
-            lastAllignement = accVel;
+//         if (layer == 1 && embodied)
+//         {
+// //            Debug.Log(id);
+//             accVel = cVm * (vRef - velocity);
+//             lastAllignement = accVel;
 
-            Vector3 force = accVel;
-            force = Vector3.ClampMagnitude(force, maxForce/3f);
-            acceleration = force;
-            return;
-        }
+//             Vector3 force = accVel;
+//             force = Vector3.ClampMagnitude(force, maxForce/3f);
+//             acceleration = force;
+//             return;
+//         }
 
         if(!network.IsInMainNetwork(this))
         {
@@ -305,17 +339,21 @@ public class DroneFake
         neighborPriority = 1;
         if (neighbour.layer == 1) // embodied drone
         {
-            neighborPriority = Mathf.Max((int)(PRIORITYWHENEMBODIED/2),PRIORITYWHENEMBODIED);
-            return PRIORITYWHENEMBODIED;
+            neighborPriority = Mathf.Max((int)(PRIORITYWHENEMBODIED / 2), PRIORITYWHENEMBODIED);
+            // return PRIORITYWHENEMBODIED;
+            return 1f;
         }
-        else if(neighbour.layer == 2) // neighbor to embodied
+        else if (neighbour.layer == 2) // neighbor to embodied
         {
-           // neighborPriority = Mathf.Max((int)(PRIORITYWHENEMBODIED/4),1);
-        }else if(neighbour.layer == 3)
+            // neighborPriority = Mathf.Max((int)(PRIORITYWHENEMBODIED/4),1);
+        }
+        else if (neighbour.layer == 3)
         {
-           // neighborPriority = Mathf.Max((int)(PRIORITYWHENEMBODIED/8), 1);
-        }else {
-          //  neighborPriority = 0.5f;
+            // neighborPriority = Mathf.Max((int)(PRIORITYWHENEMBODIED/8), 1);
+        }
+        else
+        {
+            //  neighborPriority = 0.5f;
         }
 
         return neighborPriority;
@@ -427,12 +465,13 @@ public class DroneFake
         for (int i = 0; i < numberOfTimeApplied; i++)
         {
             velocity += acceleration * 0.02f; //v(t+1) = v(t) + a(t) * dt  @ a(t) = f(t) w a(t) E Vec3
-            if (layer == 1 && embodied)
-            {
-                velocity = Vector3.ClampMagnitude(velocity, maxSpeed/2f);
-            }else{
-                velocity = Vector3.ClampMagnitude(velocity, maxSpeed);
-            }
+            // if (layer == 1 && embodied)
+            // {
+            //     velocity = Vector3.ClampMagnitude(velocity, maxSpeed/2f);
+            // }else{
+            //     velocity = Vector3.ClampMagnitude(velocity, maxSpeed);
+            // }
+            velocity = Vector3.ClampMagnitude(velocity, maxSpeed);
 
             // Apply damping to reduce the velocity over time
             velocity *= dampingFactor;
