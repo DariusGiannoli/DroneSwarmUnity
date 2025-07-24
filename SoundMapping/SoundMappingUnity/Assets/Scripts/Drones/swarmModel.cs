@@ -74,7 +74,8 @@ public class swarmModel : MonoBehaviour
     public float delta = 1.0f; // Migration weight
     public float cVm = 1f;    // Maximum velocity change
 
-    public float avoidanceRadius = 2f;     // Radius for obstacle detection
+    public float avoidanceRadius = 3f;     // Radius for obstacle detection
+    public float avoidanceRadiusFeedback = 3f;     // Radius for obstacle detection
     public float desiredSeparationObs = 3f;
     public float avoidanceForce = 10f;     // Strength of the avoidance force
 
@@ -133,16 +134,16 @@ public class swarmModel : MonoBehaviour
 
     [Header("Gizmos")]
     public bool showObstacleGizmos = false;
-    public bool showNetworkGizmos = false;
+    public bool showNetworkGizmos = true; //false;
     public bool showNetworkConnexionVulnerability = false;
-    public bool showNetworkConnectivity = false;
-    public bool showDroneObstacleForces = false;
-    public bool showDroneOlfatiForces = false;
+    public bool showNetworkConnectivity = true; //false;
+    public bool showDroneObstacleForces = true; //false;
+    public bool showDroneOlfatiForces = true; //false;
     public bool showDroneAllignementForces = false;
 
 
 
-    public bool showSwarmObstacleForces = false;
+    public bool showSwarmObstacleForces =  true; //false;
     public bool showSwarmOlfati = false;
 
 
@@ -217,6 +218,7 @@ public class swarmModel : MonoBehaviour
         DroneFake.beta = beta;
         DroneFake.delta = delta;
         DroneFake.avoidanceRadius = avoidanceRadius;
+        DroneFake.avoidanceRadiusFeedback = avoidanceRadiusFeedback;
         DroneFake.avoidanceForce = avoidanceForce;
         DroneFake.droneRadius = droneRadius;
         DroneFake.neighborRadius = neighborRadius;
@@ -493,29 +495,52 @@ public class swarmModel : MonoBehaviour
         swarmObstacleForces.Clear();
         swarmOlfatiForces.Clear();
 
-        if (CameraMovement.embodiedDrone == null)
-        {
+        // if (CameraMovement.embodiedDrone == null)
+        // {
             foreach (DroneFake drone in network.drones)
             {
-                allForcesObstacle.AddRange(drone.lastObstacleForces);
+                allForcesObstacle.AddRange(drone.lastObstacleForcesFeedback);
                 allForcesOlfati.Add(drone.lastOlfati);
             }
 
-            swarmObstacleForces = ForceClusterer.getForcesObstacle(allForcesObstacle, 90f, (int)network.largestComponent.Count / 4, 2);
-            swarmOlfatiForces = ForceClusterer.getOlfatiForces(allForcesOlfati, 35f, (int)network.largestComponent.Count / 5, 1);
-        }
-        else
-        {
+            swarmObstacleForces = ForceClusterer.getForcesObstacle(allForcesObstacle, 20f, (int)network.largestComponent.Count / 6, 2);
+            // foreach (Vector3 f in swarmObstacleForces)
+            //     Debug.Log($"[Swarm] obstacleForce = {f:F2}");
+            if (swarmObstacleForces.Count > 0)
+            {
+                // ① 把每个 Vector3 转成 "[(x,y,z)]" 字符串
+                string[] forceStrings = new string[swarmObstacleForces.Count];
+                for (int i = 0; i < swarmObstacleForces.Count; i++)
+                {
+                    Vector3 f = swarmObstacleForces[i];
+                    forceStrings[i] = $"[{f.x:F2}, {f.y:F2}, {f.z:F2}]";
+                }
 
-            swarmOlfatiForces.Add(CameraMovement.embodiedDrone.GetComponent<DroneController>().droneFake.lastOlfati);
-            (List<Vector3> forces, bool hasCrashed) = CameraMovement.embodiedDrone.GetComponent<DroneController>().droneFake.getObstacleForces(HapticsTest._distanceDetection, HapticsTest._distanceDetection, 1f);
-            swarmObstacleForces = forces;
-        }
+                // ② 用逗号拼接成一行
+                string joined = string.Join(", ", forceStrings);
+
+                // ③ 一次性打印
+                Debug.Log($"SwarmObstacleForces ({swarmObstacleForces.Count}): {joined}");
+            }
+            else
+            {
+                Debug.Log("SwarmObstacleForces: (none)");
+            }
+            
+            swarmOlfatiForces = ForceClusterer.getOlfatiForces(allForcesOlfati, 35f, (int)network.largestComponent.Count / 5, 1);
+        // }
+        // else
+        // {
+
+        //     swarmOlfatiForces.Add(CameraMovement.embodiedDrone.GetComponent<DroneController>().droneFake.lastOlfati);
+        //     (List<Vector3> forces, bool hasCrashed) = CameraMovement.embodiedDrone.GetComponent<DroneController>().droneFake.getObstacleForces(HapticsTest._distanceDetection, HapticsTest._distanceDetection, 1f);
+        //     swarmObstacleForces = forces;
+        // }
     }
     //void on Guizmos
     void OnDrawGizmos()
     {
-        Gizmos.color = Color.red;
+        // Gizmos.color = Color.red;
         List<Obstacle> obstacles = ClosestPointCalculator.obstaclesInRange;
         if (obstacles == null)
         {
@@ -539,10 +564,15 @@ public class swarmModel : MonoBehaviour
 
 
         //draw the network
-        if (network == null)
+        // if (network == null)
+        // {
+        //     return;
+        // }
+        if (network == null && !showDroneObstacleForces)
         {
-            return;
+            return;    // 没网络也不想画无人机蓝线时才退出
         }
+
 
         if (showNetworkGizmos)
         {
@@ -586,14 +616,68 @@ public class swarmModel : MonoBehaviour
         }
 
 
-        if (CameraMovement.embodiedDrone == null)
-        {
+        // if (CameraMovement.embodiedDrone == null)
+        // {
             if (showSwarmObstacleForces)
             {
-                foreach (Vector3 force in swarmObstacleForces)
+                /*----------------------------------------------------*
+                * 0) 收集所有无人机 Transform
+                *----------------------------------------------------*/
+                var drones = FindObjectsOfType<DroneController>()
+                                .Select(d => d.transform).ToList();
+                if (drones.Count == 0) return;
+
+                /*----------------------------------------------------*
+                * 1) 计算几何中心（与你可视化 Cyan 球用的同一函数）
+                *----------------------------------------------------*/
+                Vector3 centroid = HapticsTest.GetSwarmCentroid(drones);
+
+                /*----------------------------------------------------*
+                * 2) 可选：仍然画 cyan 球，方便确认位置
+                *----------------------------------------------------*/
+                // Gizmos.color = Color.cyan;
+                // Gizmos.DrawSphere(centroid, 0.5f);
+                // Gizmos.DrawLine(centroid, centroid + Vector3.up);
+
+                const float SCALE = 0.1f;         // 视觉放大系数，可自行调
+                const float THICKNESS = 0.25f; // “线粗” (世界单位)
+                Gizmos.color = Color.blue;
+                foreach (Vector3 f in swarmObstacleForces)
                 {
+                    // Gizmos.color = Color.blue;
+                    // Gizmos.DrawLine(Camera.main.transform.position, Camera.main.transform.position + force * 10);
+                    // Debug.Log($"Gizmos called, emb={CameraMovement.embodiedDrone}, forces={swarmObstacleForces.Count}");
+                    if (f == Vector3.zero) continue;          // 忽略零向量
+
+                    if (f.y != -0.0f) continue;    // 阈值可调
+
+                    Vector3 tip  = centroid + f * SCALE;
+                    // Gizmos.DrawLine(centroid, tip);           // 主干
+
+                    Vector3 dir     = f.normalized;
+                    float   length  = f.magnitude * SCALE;
+                    Quaternion rot  = Quaternion.LookRotation(dir, Vector3.up);
+                    Vector3    pos  = centroid + dir * (length * 0.5f);  // 盒子中心
+                    Vector3    size = new Vector3(THICKNESS, THICKNESS, length);
+
+                    Matrix4x4 m = Matrix4x4.TRS(pos, rot, Vector3.one);
+
+                    /*―― ③ 画 WireCube ――*/
                     Gizmos.color = Color.blue;
-                    Gizmos.DrawLine(Camera.main.transform.position, Camera.main.transform.position + force * 10);
+
+                    Matrix4x4 old = Gizmos.matrix;    // 备份
+                    Gizmos.matrix = m;                // 切到局部空间
+                    Gizmos.DrawCube(Vector3.zero, size);
+                    Gizmos.matrix = old;              // 还原
+
+                    /* —— 简易箭头 —— */
+                    // Vector3 dir  = f.normalized;
+                    float    len = f.magnitude * SCALE * 0.2f;
+                    Vector3 l = tip + Quaternion.AngleAxis(160, Vector3.up) * dir * len;
+                    Vector3 r = tip + Quaternion.AngleAxis(-160,Vector3.up) * dir * len;
+                    Gizmos.DrawLine(tip, l);
+                    Gizmos.DrawLine(tip, r);
+
                 }
             }
 
@@ -603,21 +687,43 @@ public class swarmModel : MonoBehaviour
                 {
                     Gizmos.color = Color.cyan;
                     Gizmos.DrawLine(Camera.main.transform.position, Camera.main.transform.position + force * 10);
+
+
                 }
             }
-        }
+        // }
 
-        if(showDroneObstacleForces)
-        {
-            (List<Vector3> forces, bool hasCrashed) =  CameraMovement.embodiedDrone.GetComponent<DroneController>().droneFake.getObstacleForces(HapticsTest._distanceDetection, HapticsTest._distanceDetection, 1f);
-            Vector3 pos = CameraMovement.embodiedDrone.transform.position;
-            
-            foreach (Vector3 force in forces)
-            {
-                Gizmos.color = Color.blue;
-                Gizmos.DrawLine(pos, pos + force * 10);
-            }
-        }
+        // if (showDroneObstacleForces)
+        // {
+        //     (List<Vector3> forces, bool hasCrashed) = CameraMovement.embodiedDrone.GetComponent<DroneController>().droneFake.getObstacleForces(HapticsTest._distanceDetection, HapticsTest._distanceDetection, 1f);
+        //     Vector3 pos = CameraMovement.embodiedDrone.transform.position;
+
+        //     foreach (Vector3 force in forces)
+        //     {
+        //         Gizmos.color = Color.blue;
+        //         Gizmos.DrawLine(pos, pos + force * 10);
+        //     }
+        // }
+        
+        // if (showDroneObstacleForces && CameraMovement.embodiedDrone != null)
+        // {
+        //     var dc = CameraMovement.embodiedDrone.GetComponent<DroneController>();
+        //     if (dc != null && dc.droneFake != null)
+        //     {
+        //         var tuple = dc.droneFake.getObstacleForces(
+        //                         HapticsTest._distanceDetection,
+        //                         HapticsTest._distanceDetection,
+        //                         1f);
+        //         List<Vector3> forces = tuple.forces;
+        //         Vector3 pos = CameraMovement.embodiedDrone.transform.position;
+
+        //         Gizmos.color = Color.blue;
+        //         foreach (Vector3 f in forces)
+        //             Gizmos.DrawLine(pos, pos + f * 10f);
+        //     }
+        // }
+
+        
 
     }
 
