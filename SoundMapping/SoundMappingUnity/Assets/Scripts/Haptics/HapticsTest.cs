@@ -7,6 +7,7 @@ using System.Threading;
 using Unity.VisualScripting;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Interactions;
+using System.Linq;          // ← ADD THIS
 
 public class HapticsTest : MonoBehaviour
 {
@@ -60,9 +61,499 @@ public class HapticsTest : MonoBehaviour
             return LevelConfiguration._Haptics_Controller;
         }
     }
+
+    /// <summary>Returns the geometric centre of all swarm members.</summary>
+    // public static Vector3 GetSwarmCentroid(IReadOnlyList<Transform> drones)
+    // {
+    //     if (drones == null || drones.Count == 0)
+    //         return Vector3.zero;                       // fallback: no drones
+
+    //     Vector3 sum = Vector3.zero;
+    //     foreach (Transform t in drones) sum += t.position;
+    //     return sum / drones.Count;                     // (x, y, z)
+    // }
+
+    // 1) class field
+    // private readonly int[] duty = new int[40];   // 20-cell visual panel (index 0-19)
+
+    // 3) accessor
+    // public int[] GetDutySnapshot() => duty;
+    public int[] GetDutySnapshot()
+    {
+        // Debug.Log($"Duty[0] from HapticsTest = {dutyByTile[0]} (frame {Time.frameCount})");
+        return dutyByTile;
+    }
+
+    public static readonly int[] ObstacleAddrs =
+    { 60, 61, 62, 63, 64, 65, 66, 67 };
+
+    public static int[] GetObstacleDutySnapshot()   // 8 长度
+    {
+        // int[] snap = new int[ObstacleAddrs.Length];
+        // for (int i = 0; i < ObstacleAddrs.Length; i++)
+        //     snap[i] = duty[ObstacleAddrs[i]];
+        // return snap;
+        return duty;
+    }
+
+    /// <summary>
+    /// Returns the geometric centre of the swarm, i.e. the midpoint of the
+    /// axis-aligned bounding box that encloses every drone.
+    /// “Most-left” and “most-right” drones carry the same weight.
+    /// </summary>
+    public static Vector3 GetSwarmCentroid(IReadOnlyList<Transform> drones)
+    {
+        if (drones == null || drones.Count == 0)
+            return Vector3.zero;
+
+        // Initialise mins & maxes with the first drone’s position
+        Vector3 p0 = drones[0].position;
+        float minX = p0.x, maxX = p0.x;
+        float minY = p0.y, maxY = p0.y;
+        float minZ = p0.z, maxZ = p0.z;
+
+        // Expand the bounds
+        for (int i = 1; i < drones.Count; i++)
+        {
+            Vector3 p = drones[i].position;
+            if (p.x < minX) minX = p.x; else if (p.x > maxX) maxX = p.x;
+            if (p.y < minY) minY = p.y; else if (p.y > maxY) maxY = p.y;
+            if (p.z < minZ) minZ = p.z; else if (p.z > maxZ) maxZ = p.z;
+        }
+
+        // Mid-point of the bounding box
+        return new Vector3(
+            (minX + maxX) * 0.5f,
+            (minY + maxY) * 0.5f,
+            (minZ + maxZ) * 0.5f);
+    }
+
+    /// <summary>Same centre but flattened onto the X-Z plane.</summary>
+    // public static Vector2 GetSwarmCentroid2D(IReadOnlyList<Transform> drones)
+    // {
+    //     Vector3 c3 = GetSwarmCentroid(drones);
+    //     return new Vector2(c3.x, c3.z);                // (x, z)
+    // }
+
+    public static Vector2 GetSwarmCentroid2D(IReadOnlyList<Transform> drones)
+    {
+        if (drones == null || drones.Count == 0) return Vector2.zero;
+
+        float minX = drones[0].position.x, maxX = minX;
+        float minZ = drones[0].position.z, maxZ = minZ;
+
+        for (int i = 1; i < drones.Count; i++)
+        {
+            Vector3 p = drones[i].position;
+            if (p.x < minX) minX = p.x; else if (p.x > maxX) maxX = p.x;
+            if (p.z < minZ) minZ = p.z; else if (p.z > maxZ) maxZ = p.z;
+        }
+
+        return new Vector2( (minX + maxX) * 0.5f,
+                            (minZ + maxZ) * 0.5f );
+    }
+
     
+    // -- Highlight-helper state ---------------------------------------------------
+    private Transform _highlightedDrone = null;   // the drone we tinted last frame
+    private static readonly Color _highlightColor = Color.blue;
+
+    private void HighlightClosestDrone()
+    {
+        // IReadOnlyList<Transform> drones = swarmModel.dronesTransforms;   // adjust if your list has a different name
+        var drones = FindObjectsOfType<DroneController>()
+             .Select(d => d.transform).ToList();
+        if (drones == null || drones.Count == 0) { return; }
+
+        // 1) where is the swarm centre?
+        // Vector3 centre = GetSwarmCentroid(drones);
+        Vector2 centre2D = GetSwarmCentroid2D(drones);
+
+        // 2) pick the nearest drone
+        Transform closest = null;
+        float bestSq = float.PositiveInfinity;
+        foreach (Transform t in drones)
+        {
+            // float sq = (t.position - centre).sqrMagnitude;   // cheaper than magnitude
+            float sq = (new Vector2(t.position.x, t.position.z) - centre2D).sqrMagnitude; // 2D distance
+            if (sq < bestSq) { bestSq = sq; closest = t; }
+        }
+        if (closest == null) { return; }
+
+        // 3) if it changed, restore the old one and tint the new one
+        if (_highlightedDrone != null && _highlightedDrone != closest)
+        {
+            SetDroneTint(_highlightedDrone, Color.white);    // or whatever the default is
+        }
+        _highlightedDrone = closest;
+        SetDroneTint(_highlightedDrone, _highlightColor);
+    }
+
+    /*---------------------------------------------------------------*/
+    /* Editor-only visual of swarm centroid                          */
+    /*---------------------------------------------------------------*/
+#if UNITY_EDITOR            // keeps the code out of runtime builds
+    void OnDrawGizmos()
+    {
+#if UNITY_EDITOR        // avoid shipping gizmo code in builds
+        var drones = FindObjectsOfType<DroneController>()
+             .Select(d => d.transform).ToList();
+        if (drones == null || drones.Count == 0) return;
+
+        // Vector3 c = drones.Aggregate(Vector3.zero,
+        //             (sum, t) => sum + t.position) / drones.Count;
+        Vector3 c = GetSwarmCentroid(drones);  // or use the centroid function above
+
+        Gizmos.color = Color.cyan;
+        Gizmos.DrawSphere(c, 0.2f);        // 5 cm sphere
+        Gizmos.DrawLine(c, c + Vector3.up); // little “stem” so it’s easy to spot
+#endif
+    }
+#endif
+
     
+    #if UNITY_EDITOR
+    void OnDrawGizmosSelected()
+    {
+        if (_swarmFrame == null) return;
+
+        /*---------------------------------------------------------*
+        * 1) work in swarm-frame space
+        *---------------------------------------------------------*/
+        Gizmos.matrix = _swarmFrame.localToWorldMatrix;
+
+        /*  rectangle (you had this)  */
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawWireCube(Vector3.zero,
+                            // new Vector3(halfW * 2f, halfH * 2f, 0.05f));
+                            new Vector3(halfW * 2f, 0.05f, halfH * 2f));
+
+        /*---------------------------------------------------------*
+        * 2) forward arrow (red)
+        *---------------------------------------------------------*/
+        Gizmos.color = Color.red;
+
+        float arrowLen = Mathf.Max(halfW, halfH) * 1.1f;   // a bit beyond box
+        Vector3 tail   = Vector3.zero;                     // start at centroid
+        Vector3 tip    = Vector3.forward * arrowLen;       // +Z in swarm frame
+
+        // shaft
+        Gizmos.DrawLine(tail, tip);
+
+        // simple 2-line arrowhead (~20° cone)
+        Vector3 headL = tip + (Quaternion.Euler(0, 160, 0) * (tip - tail).normalized) * (arrowLen * 0.15f);
+        Vector3 headR = tip + (Quaternion.Euler(0, -160, 0) * (tip - tail).normalized) * (arrowLen * 0.15f);
+        Gizmos.DrawLine(tip, headL);
+        Gizmos.DrawLine(tip, headR);
+    }
+    #endif
     
+    // ------------------------------------------------------------
+    //  Local "Swarm Frame" (created once, reused every frame)
+    // ------------------------------------------------------------
+    private Transform _swarmFrame;               // invisible helper transform
+    public Transform embodiedDrone;             // assign in the Inspector
+
+    private float halfW = 1f;
+    private float halfH = 1f;
+
+    private float actuator_W= 4f;
+    private float actuator_H = 5f;
+    private const float initial_actuator_W= 4f;
+    private const float initial_actuator_H = 5f;
+    private const float center_W = initial_actuator_W / 2f;   // 1.5 m wide, 2 m high
+    private const float center_H = initial_actuator_H / 2f;   // 2 m high, 1.5 m wide
+
+    //     col 0   col 1   col 2   col 3      (front view)
+    // int[,] matrix = {
+    //     {  0,   1,   2,   3 },   // row 0  (bottom)
+    //     {  4,   5,   6,   7 },   // row 1
+    //     {  8,   9,  10,  11 },   // row 2
+    //     { 12,  13,  14,  15 },   // row 3
+    //     { 16,  17,  18,  19 }    // row 4  (top)
+    // };
+
+    // int[,] matrix = {
+    //     {  9,   8,   7,   6 },   // row 0  (bottom)
+    //     {  2,   3,   4,   5 },   // row 1
+    //     {  1,   0,  30,  31 },   // row 2
+    //     { 35,  34,  33,  32 },   // row 3
+    //     { 36,  37,  38,  39 }    // row 4  (top)
+    // };
+    
+    // int[,] matrix = {
+    //     { 36,  37,  38,  39 },    // row 0  (top)
+    //     { 35,  34,  33,  32 },   // row 1
+    //     {  1,   0,  30,  31 },   // row 2
+    //     {  2,   3,   4,   5 },   // row 3
+    //     {  9,   8,   7,   6 }   // row 4  (bottom)
+
+    // };
+
+    // int[,] matrix = {
+    //     {6, 7, 8, 9},
+    //     {5, 4, 3, 2},
+    //     {31, 30, 0, 1},
+    //     {32, 33, 34, 35},
+    //     {39, 38, 37, 36}
+
+    // };
+    private static readonly int[,] matrix = {
+    {10, 11, 12, 13, 14},
+    {9, 8, 7, 6, 5},
+    {0, 1, 2, 3, 4},
+    {30, 31, 32, 33, 34},
+    {39, 38, 37, 36, 35},
+    {40, 41, 42, 43, 44}
+    };
+    // vibratorAddress = matrix[row, col]
+
+    private static readonly int[] duty = new int[120];   // one per vibrator (0-14)
+    private static readonly int[] dutyByTile = new int[matrix.Length];   // 20-cell visual panel (0-14)
+    int[] freq   = new int[120];   // keep simple: all 1
+
+
+    /// <summary>
+    /// Returns the horizontal and vertical half-sizes (metres) of the swarm,
+    /// measured in the SwarmFrame’s local X-Y plane.
+    /// </summary>
+    private static void GetDynamicExtents(IReadOnlyList<Transform> drones,
+                                        Transform swarmFrame,
+                                        out float halfWidth,
+                                        out float halfHeight)
+    {
+        float maxAbsX = 0f;
+        float maxAbsY = 0f;
+
+        foreach (var t in drones)
+        {
+            Vector3 p = swarmFrame.InverseTransformPoint(t.position); // local
+            maxAbsX = Mathf.Max(maxAbsX, Mathf.Abs(p.x));
+            maxAbsY = Mathf.Max(maxAbsY, Mathf.Abs(p.z));
+        }
+
+        // Avoid divide-by-zero when the swarm collapses to a point
+        halfWidth = Mathf.Max(maxAbsX, 0.01f);   // at least 1 cm
+        halfHeight = Mathf.Max(maxAbsY, 0.01f);
+    }
+
+    int ColFromX(float x, float halfW, float actuator_W)    // halfW ≥ 0.01
+    {
+        // float t = (x + halfW) / (2f * halfW);      // → [0..1]
+        // return Mathf.Clamp(Mathf.RoundToInt(t * actuator_W + center_W - actuator_W / 2f), 0, Mathf.RoundToInt(initial_actuator_W));
+        float t = x / 4.5f * 2f;      // → [0..1]
+        return Mathf.Clamp(Mathf.RoundToInt(t + center_W), 0, Mathf.RoundToInt(initial_actuator_W));
+        // return Mathf.Clamp(Mathf.RoundToInt(t *  3f), 0, 3);
+    }
+
+    int RowFromY(float y, float halfH, float actuator_H)    // halfH ≥ 0.01
+    {
+        // float t = (-y + halfH) / (2f * halfH);      // → [0..1]
+        // return Mathf.Clamp(Mathf.RoundToInt(t * actuator_H + center_H - actuator_H / 2f), 0, Mathf.RoundToInt(initial_actuator_H));
+        float t = -y / 4.5f * 2f;      // → [0..1]
+        return Mathf.Clamp(Mathf.RoundToInt(t + center_H), 0, Mathf.RoundToInt(initial_actuator_H));
+        // return Mathf.Clamp(Mathf.RoundToInt(t * 4f), 0, 4);
+    }
+
+    private int _prevAddr = -1;          // -1 = nothing buzzing yet
+    
+    // put next to your other member fields
+    private readonly int[] _prevDuty = new int[30 + matrix.Length];   // 40 tactors, init 0
+    private readonly int[] _prevFreq = new int[30 + matrix.Length];   // same size, init 0
+
+    /// <summary>
+    /// Re-positions the `_swarmFrame` at the swarm centroid, aligns it with
+    /// the embodied drone’s forward-up axes, and prints every drone’s
+    /// position in that local frame.
+    /// Call this once per frame from LateUpdate().
+    /// </summary>
+    private void UpdateSwarmFrameAndLog()
+    {
+        // --- 0) collect all drones ------------------------------------------
+        var drones = FindObjectsOfType<DroneController>()
+                    .Select(d => d.transform).ToList();
+        if (drones.Count == 0) return;          // nothing to do
+
+        // 0 bis) make sure we track the *current* embodied drone every frame
+        Transform current = CameraMovement.embodiedDrone ?
+                            CameraMovement.embodiedDrone.transform : null;
+
+        if (current == null)
+        {
+            Debug.LogWarning("No embodied drone in scene – skipping swarm-frame update.");
+            return;
+        }
+
+        embodiedDrone = current;          // <-- always keep the latest reference
+
+        // --- 1) create helper transform once --------------------------------
+        if (_swarmFrame == null)
+        {
+            _swarmFrame = new GameObject("SwarmFrame").transform;
+            _swarmFrame.hideFlags = HideFlags.HideInHierarchy;
+        }
+
+        // --- 2) place & orient frame ----------------------------------------
+        // Vector3 centroid = drones.Aggregate(Vector3.zero, (sum, t) => sum + t.position)
+        //                 / drones.Count;
+        // _swarmFrame.position = centroid;
+        Vector3 centroid = GetSwarmCentroid(drones); // or use the centroid function above
+        _swarmFrame.position = centroid;           // place at the centroid
+        _swarmFrame.rotation = Quaternion.LookRotation(
+                                    embodiedDrone.forward,
+                                    embodiedDrone.up);
+        // Debug.Log($"swarmFrame.rotation = {_swarmFrame.rotation.eulerAngles:F2} " +
+        //           $"(centroid at {centroid:F2})");
+
+        // ② measure current half-sizes
+        GetDynamicExtents(drones, _swarmFrame, out halfW, out halfH);
+
+        if (initial_actuator_W / initial_actuator_H > halfW / halfH)
+        {
+            actuator_W = initial_actuator_H * halfW / halfH; // make it 4:3 aspect ratio
+            Debug.Log($"actuator_W = {actuator_W:F2} (halfW {halfW:F2}, halfH {halfH:F2})");
+        }
+        else
+        {
+            actuator_H = initial_actuator_W * halfH / halfW; // make it 4:3 aspect ratio
+            Debug.Log($"actuator_H = {actuator_H:F2} (halfW {halfW:F2}, halfH {halfH:F2})");
+        }
+
+        // ③ zero-out per-vibrator accumulators
+        // Array.Clear(duty, 0, duty.Length);   // duty[20]; declared elsewhere
+        // Array.Clear(dutyByTile, 0, dutyByTile.Length);   // dutyByTile[20]; declared elsewhere
+
+            /*-------------------------------------------------------------*
+        * 1) ensure the embodied drone is in the list we iterate
+        *    (FindObjectsOfType may or may not include it, so we add it
+        *    explicitly if needed)
+        *-------------------------------------------------------------*/
+        if (!drones.Contains(embodiedDrone.transform))
+            drones.Add(embodiedDrone.transform);
+
+        /*-------------------------------------------------------------*
+        * 2) mark light vibration everywhere a drone appears
+        *-------------------------------------------------------------*/
+        const int LIGHT_DUTY = 3;                   // tweak to taste (1–4)
+        foreach (Transform d in drones)
+        {
+            Vector3 local = _swarmFrame.InverseTransformPoint(d.position);
+
+            int col = ColFromX(local.x, halfW, actuator_W);    // 0 … 3
+            int row = RowFromY(local.z, halfH, actuator_H);    // 0 … 4
+            int addr = matrix[row, col];            // 4 × 5 lookup
+            // Debug.Log($"Drone {d.name} at {local:F2} " +
+            //           $"(col {col}, row {row}, addr {addr})");
+
+            duty[addr] = duty[addr] + 3; //LIGHT_DUTY;                // overwrite is fine
+            int tile = (row * (Mathf.RoundToInt(initial_actuator_W)+1)) + col;       // 0 … 19 for the visual panel
+            dutyByTile[tile] = dutyByTile[tile] + 1; //LIGHT_DUTY;          // same duty for visual panel
+        }
+
+        // /*-------------------------------------------------------------*
+        // * 3) overwrite with STRONG duty for the embodied-drone cell
+        // *-------------------------------------------------------------*/
+        {
+            Vector3 localE = _swarmFrame.InverseTransformPoint(embodiedDrone.position);
+            int colE = ColFromX(localE.x, halfW, actuator_W);
+            int rowE = RowFromY(localE.z, halfH, actuator_H);
+            Debug.Log($"embodiedDrone at {localE:F2} " +
+                      $"(col {colE}, row {rowE})");
+            int addrE = matrix[rowE, colE];
+
+            duty[addrE] = 14;                       // full-strength buzz
+            dutyByTile[(rowE * (Mathf.RoundToInt(initial_actuator_W)+1)) + colE] = 14;    // same for visual panel
+
+            // Debug.Log($"embodiedDrone addr {addrE} " +
+            // $"(duty {duty[addrE]})");
+        }
+
+        // ⑤ transmit (same as before)
+        // for (int addr = 0; addr < 10; addr++)
+        //     VibraForge.SendCommand(addr,
+        //                         duty[addr] == 0 ? 0 : 1,
+        //                         duty[addr],
+        //                         1);
+        // for (int addr = 30; addr < 40 && addr > 29; addr++)
+        //     VibraForge.SendCommand(addr,
+        //                         duty[addr] == 0 ? 0 : 1,
+        //                         duty[addr],
+        //                         1);
+
+        const int BASE_FREQ = 1;                 // you keep freq fixed for now
+        List<int> dirty = new();                 // addresses that changed
+
+        for (int addr = 0; addr < (30 + matrix.Length); addr++)    // full belt range
+        {
+            int newDuty = duty[addr];            // duty[] you filled above
+            int newFreq = BASE_FREQ;             // or freq[addr] if you vary it
+
+            if (newDuty != _prevDuty[addr] || newFreq != _prevFreq[addr])
+            {
+                dirty.Add(addr);                 // remember to send it
+                _prevDuty[addr] = newDuty;       // cache for next frame
+                _prevFreq[addr] = newFreq;
+            }
+        }
+
+        // actually send
+        foreach (int addr in dirty)
+        {
+            VibraForge.SendCommand(addr,
+                _prevDuty[addr] == 0 ? 0 : 1,    // enable flag
+                _prevDuty[addr],                 // duty 0-14
+                _prevFreq[addr]);                // freq (fixed = 1 here)
+        }
+
+        /*-------------------------------------------------------------*
+        * ④ choose the embodied-drone cell only
+        *-------------------------------------------------------------*/
+        // Vector3 localE = _swarmFrame.InverseTransformPoint(embodiedDrone.position);
+
+        // // NB: use Y for vertical if your grid is front-view;               ⇣
+        // // if you really want Z for “height”, keep RowFromY(localE.z, …)
+        // int colE = ColFromX(localE.x, halfW);
+        // int rowE = RowFromY(localE.z, halfH);
+
+        // int addrE = matrix[rowE, colE];         // 4 × 5 → hardware addr
+        // Debug.Log($"embodiedDrone addr {addrE} " +
+        //             $"(duty {duty[addrE]})");
+        // /*-------------------------------------------------------------*
+        // * ⑤ send: 1) silence the old tactor (if any)
+        // *          2) buzz the new one at full power
+        // *-------------------------------------------------------------*/
+        // if (_prevAddr != -1 && _prevAddr != addrE)
+        // {
+        //     // turn the old one off
+        //     VibraForge.SendCommand(_prevAddr, 0, 0, 1);
+        // }
+
+        // if (addrE != _prevAddr)                 // changed cell → send a new on-command
+        // {
+        //     VibraForge.SendCommand(addrE, 1, 14, 1);   // enable, duty 14, freq 1
+        //     _prevAddr = addrE;                         // remember for next frame
+        // }
+
+        /* if the drone stayed in the same cell as last frame,
+        nothing is sent at all → less traffic */
+
+    }
+
+
+
+    /*---------------------------------------------------------*/
+    private static void SetDroneTint(Transform drone, Color c)
+    {
+        if (drone == null) return;
+
+        // handle one or many renderers
+        foreach (Renderer r in drone.GetComponentsInChildren<Renderer>())
+        {
+            // IMPORTANT: r.material instantiates a copy so we don’t overwrite the shared material
+            r.material.color = c;
+        }
+    }
+
     List<Actuators> actuatorsBelly = new List<Actuators>();
 
     List<Actuators> lastDefined = new List<Actuators>();
@@ -82,8 +573,11 @@ public class HapticsTest : MonoBehaviour
 
     Dictionary<AnimatedActuator, IEnumerator> animatedActuators = new Dictionary<AnimatedActuator, IEnumerator>();
 
+    /// <summary>Latest centre of the swarm on the ground plane (player-centric X-Z).</summary>
+    public static Vector2 swarmCentroid2D = Vector2.zero;
 
-    public static bool gamePadConnected {
+    public static bool gamePadConnected
+    {
         get
         {
             return currentGamepad != null;
@@ -99,8 +593,8 @@ public class HapticsTest : MonoBehaviour
     public static bool send = false;
 
     #endregion
-    
-    public int sendEvery = 1000;
+
+    public int sendEvery = 50; //1000;
     // Update is called once per frame
 
     public static void lateStart()
@@ -108,6 +602,7 @@ public class HapticsTest : MonoBehaviour
         // launch start function
         GameObject.FindGameObjectWithTag("GameManager").GetComponent<HapticsTest>().Start();
     }
+
 
     void Start()
     {
@@ -122,6 +617,8 @@ public class HapticsTest : MonoBehaviour
         lastDefined = new List<Actuators>();
         animatedActuators = new Dictionary<AnimatedActuator, IEnumerator>();
 
+        _swarmFrame = new GameObject("SwarmFrame").transform;
+        _swarmFrame.gameObject.hideFlags = HideFlags.HideInHierarchy;   // keep Hierarchy clean
 
 
         //
@@ -130,15 +627,23 @@ public class HapticsTest : MonoBehaviour
         
         int [] velocityMapping = {}; //relative mvt of the swarm
 
+        // Dictionary<int, int> angleMappingDict = new Dictionary<int, int> {
+        //     {0, 160},{1, 115},{2, 65},{3, 20}, {120, 200}, {121, 245},{122, 295},{123, 340},
+        //     {90, 160},{91, 115},{92, 65},{93, 20}, {210, 200}, {211, 245},{212, 295},{213, 340},
+        //      {30, 160},{31, 115},{32, 65},{33, 20}, {150, 200}, {151, 245},{152, 295},{153, 340},
+        // };
         Dictionary<int, int> angleMappingDict = new Dictionary<int, int> {
-            {0, 160},{1, 115},{2, 65},{3, 20}, {120, 200}, {121, 245},{122, 295},{123, 340},
+            {64, 160},{65, 115},{66, 65},{67, 20}, {120, 200}, {121, 245},{122, 295},{123, 340},
             {90, 160},{91, 115},{92, 65},{93, 20}, {210, 200}, {211, 245},{212, 295},{213, 340},
-             {30, 160},{31, 115},{32, 65},{33, 20}, {150, 200}, {151, 245},{152, 295},{153, 340},
+             {60, 200},{61, 245},{62, 295},{63, 340}, {150, 200}, {151, 245},{152, 295},{153, 340},
         };
 
 
         //obstacle in Range mapping
-        int[] angleMapping =  Haptics_Obstacle ? new int[] {30,31,32,33,150,151,152,153}  : new int[] {};
+        // int[] angleMapping =  Haptics_Obstacle ? new int[] {30,31,32,33,150,151,152,153}  : new int[] {};
+        // int[] angleMapping =  Haptics_Obstacle ? new int[] {0,1,2,3,60,61,62,63}  : new int[] {};
+        // int[] angleMapping =  Haptics_Obstacle ? new int[] {60,61,62,63,64,65,66,67}  : new int[] {};
+        int[] angleMapping =  Haptics_Obstacle ? ObstacleAddrs : Array.Empty<int>();
 
         //drone crash mapping
         int[] crashMapping =  Haptics_Crash ? new int[] {4,5,124,125}  : new int[] {};
@@ -146,9 +651,13 @@ public class HapticsTest : MonoBehaviour
         
         
         //layers movement on arm mapping
-        int[] movingPlaneMapping =  Haptics_Network ? new int[] {60,61,62,63, 64, 65, 66, 67, 68, 69,
-                                                                    180,181, 182, 183, 184, 185, 186, 187, 188, 189}
-                                                                        : new int[] {};
+        // int[] movingPlaneMapping =  Haptics_Network ? new int[] {60,61,62,63, 64, 65, 66, 67, 68, 69,
+        //                                                             180,181, 182, 183, 184, 185, 186, 187, 188, 189}
+        //                                                                 : new int[] {};
+        // int[] movingPlaneMapping =  Haptics_Network ? new int[] {0,1,2,3, 4, 5, 6, 7, 8, 9,
+        //                                                             30,31, 32, 33, 34, 35, 36, 37, 38, 39}
+        //                                                                 : new int[] {};
+        // 96,97,98,99,100,101,102,103,104,105 //48,49, 50,51,52,53,54,55,56,57 // 16,17, 18, 19, 20, 21, 22, 23, 24, 25
 
         for (int i = 0; i < angleMapping.Length; i++)
         {
@@ -177,11 +686,11 @@ public class HapticsTest : MonoBehaviour
             actuatorsVariables.Add(new RefresherActuator(adresse:adresse, angle:angleMappingDict[adresse], refresh:SwarmVelocityRefresher));
         }
 
-        for (int i = 0; i < movingPlaneMapping.Length; i++)
-        {
-            int adresse = movingPlaneMapping[i];
-            actuatorsMovingPlane.Add(new RefresherActuator(adresse:adresse, angle:adresse%10, refresh:movingPlaneRefresher));
-        }
+        // for (int i = 0; i < movingPlaneMapping.Length; i++)
+        // {
+        //     int adresse = movingPlaneMapping[i];
+        //     actuatorsMovingPlane.Add(new RefresherActuator(adresse:adresse, angle:adresse%10, refresh:movingPlaneRefresher));
+        // }
 
         finalList.AddRange(actuatorsRange);
         finalList.AddRange(crashActuators);
@@ -319,11 +828,19 @@ public class HapticsTest : MonoBehaviour
     {
         while (true)
         {
-            foreach(Actuators actuator in finalList) {
+            // (A) clear visual buffers
+            Array.Clear(duty, 0, duty.Length);
+            Array.Clear(dutyByTile, 0, dutyByTile.Length);
+
+            HighlightClosestDrone(); // highlight the closest drone to the swarm centroid
+
+            foreach (Actuators actuator in finalList)
+            {
                 actuator.update();
             }
 
-          //  sendCommands();
+            //  sendCommands();
+            UpdateSwarmFrameAndLog();
 
             yield return new WaitForSeconds(sendEvery / 1000);
         }
@@ -446,7 +963,8 @@ public class HapticsTest : MonoBehaviour
             }
             
             float diff = Math.Abs(actuator.Angle - angle);
-            if(diff < 45) {
+            if (diff < 45)
+            {
                 actuator.dutyIntensity = Mathf.Max(actuator.dutyIntensity, (int)(forcesDir.magnitude * 2));
                 actuator.frequency = 1;
             }
@@ -464,46 +982,60 @@ public class HapticsTest : MonoBehaviour
         actuator.frequency = 1;
 
 
-        foreach(Vector3 forcesDir in forces) {
-            if(actuator.Angle >= 0){
-                float angle = Vector3.SignedAngle(forcesDir, CameraMovement.forward, -CameraMovement.up)-180;
-                if(angle < 0) {
+        foreach (Vector3 forcesDir in forces)
+        {
+            if (actuator.Angle >= 0)
+            {
+                float angle = Vector3.SignedAngle(forcesDir, CameraMovement.forward, -CameraMovement.up) - 180;
+                if (angle < 0)
+                {
                     angle += 360;
                 }
 
 
 
-                
+
                 float diff = Math.Abs(actuator.Angle - angle);
-         //   print("Diff: " + diff); 
+                //   print("Diff: " + diff); 
 
 
-                if(diff < 40 || diff > 320) 
+                if (diff < 40 || diff > 320)
                 {
+                    Debug.Log("forcesDir: " + forcesDir + " angle: " + angle + " diff: " + diff);
                     float threshold = forcesDir.magnitude > 3.5f ? 0.3f : 0.7f;
-                    if(Vector3.Dot(MigrationPointController.alignementVector.normalized, -forcesDir.normalized) > threshold) { // if col with velocity
+                    if (Vector3.Dot(MigrationPointController.alignementVector.normalized, -forcesDir.normalized) > threshold)
+                    { // if col with velocity
                         actuator.UpdateValue(forcesDir.magnitude);
+                        duty[actuator.Adresse] = actuator.dutyIntensity; // update the duty for visualization
+                        Debug.Log("duty: " + actuator.dutyIntensity + " actuator.Adresse" + actuator.Adresse);
                         return;
                     }
 
-                    if(CameraMovement.embodiedDrone != null) {
-                        if(Vector3.Dot(CameraMovement.embodiedDrone.GetComponent<DroneController>().droneFake.velocity.normalized, -forcesDir.normalized) > threshold)
-                        {
-                            actuator.UpdateValue(forcesDir.magnitude);
-                            return;
-                        }
-                    }
+                    // if (CameraMovement.embodiedDrone != null)
+                    // {
+                    //     if (Vector3.Dot(CameraMovement.embodiedDrone.GetComponent<DroneController>().droneFake.velocity.normalized, -forcesDir.normalized) > threshold)
+                    //     {
+                    //         actuator.UpdateValue(forcesDir.magnitude);
+                    //         duty[actuator.Adresse] = actuator.dutyIntensity; // update the duty for visualization
+                    //         return;
+                    //     }
+                    // }
 
-                    actuator.UpdateValue(0);
-                    return;
+                    // actuator.UpdateValue(0);
+                    // duty[actuator.Adresse] = 0; // update the duty for visualization
+                    // return;
                 }
 
-                    
-            }else{
+
+            }
+            else
+            {
                 //gte the y component
                 float y = forcesDir.y;
-                if(Mathf.Abs(y) > 0) {
+                if (Mathf.Abs(y) > 0)
+                {
                     actuator.UpdateValue(y);
+                    duty[actuator.Adresse] = (int)(y / 14f); // update the duty for visualization
                     return;
                 }
             }
@@ -511,7 +1043,9 @@ public class HapticsTest : MonoBehaviour
 
         }
 
-        actuator.UpdateValue(0);
+        // actuator.UpdateValue(0);
+        // duty[actuator.Adresse] = 0; // update the duty for visualization
+
     }
 
     #endregion
@@ -571,7 +1105,7 @@ public class HapticsTest : MonoBehaviour
         if(CameraMovement.embodiedDrone != null) { //carefull change only return the Vector
 
 
-       
+
             float angle = Vector3.SignedAngle(velDir, CameraMovement.embodiedDrone.transform.forward, Vector3.up);
             if(angle < 0) {
                 angle += 360;
