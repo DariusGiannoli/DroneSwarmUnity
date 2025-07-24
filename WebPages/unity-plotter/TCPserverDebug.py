@@ -30,6 +30,13 @@ messages_ctrl2_first_time = None
 lock_ctrl1 = asyncio.Lock()
 lock_ctrl2 = asyncio.Lock()
 
+ble_write_lock1 = asyncio.Lock()
+ble_write_lock2 = asyncio.Lock()
+
+# 添加全局状态字典，保存每个执行器最新的状态
+current_states_ctrl1 = {}  # addr: state
+current_states_ctrl2 = {}
+
 IMMEDIATE_THRESHOLD = 20  # New constant for immediate flush
 
 
@@ -51,10 +58,45 @@ def create_command(addr, mode, duty, freq):
     return bytearray([byte1, byte2, byte3])
 
 
-async def setMotor(client, message):
+# async def setMotor(client, message):
+#     """
+#     Parse the combined message string (which may contain several JSON segments)
+#     and send commands in chunks (max 20 bytes per write) over the given BLE client.
+#     """
+#     try:
+#         data_segments = re.findall(r'\{.*?\}', message)
+#         if not data_segments:
+#             return
+
+#         commands = []
+#         for data_segment in data_segments:
+#             data_parsed = json.loads(data_segment)
+#             command = create_command(
+#                 data_parsed['addr'],
+#                 data_parsed['mode'],
+#                 data_parsed['duty'],
+#                 data_parsed['freq']
+#             )
+#             commands.append(command)
+#         max_chunk_size = 20
+#         chunk = bytearray()
+#         for command in commands:
+#             if len(chunk) + len(command) <= max_chunk_size:
+#                 chunk += command
+#             else:
+#                 await client.write_gatt_char(CHARACTERISTIC_UUID, chunk)
+#                 chunk = bytearray(command)
+#         if chunk:
+#             await client.write_gatt_char(CHARACTERISTIC_UUID, chunk)
+
+#     except Exception as e:
+#         print(f'Error in setMotor: {e}')
+
+async def setMotor(client, message, write_lock):
     """
     Parse the combined message string (which may contain several JSON segments)
     and send commands in chunks (max 20 bytes per write) over the given BLE client.
+    BLE write operations are serialized with a lock to prevent concurrent writes.
     """
     try:
         data_segments = re.findall(r'\{.*?\}', message)
@@ -71,20 +113,25 @@ async def setMotor(client, message):
                 data_parsed['freq']
             )
             commands.append(command)
+
         max_chunk_size = 20
+        chunks = []
         chunk = bytearray()
         for command in commands:
             if len(chunk) + len(command) <= max_chunk_size:
                 chunk += command
             else:
-                await client.write_gatt_char(CHARACTERISTIC_UUID, chunk)
+                chunks.append(chunk)
                 chunk = bytearray(command)
         if chunk:
-            await client.write_gatt_char(CHARACTERISTIC_UUID, chunk)
+            chunks.append(chunk)
+
+        async with write_lock:  # critical section starts here
+            for chunk in chunks:
+                await client.write_gatt_char(CHARACTERISTIC_UUID, chunk)
 
     except Exception as e:
         print(f'Error in setMotor: {e}')
-
 
 async def ble_task():
     """
@@ -232,7 +279,8 @@ async def process_ctrl1_immediate_flush(combined_message):
     """
     print("Immediately processing Controller 1 messages:", combined_message)
     if not DEBUG and ble_client and ble_client.is_connected:
-        await setMotor(ble_client, combined_message)
+        # await setMotor(ble_client, combined_message)
+        await setMotor(ble_client, combined_message, ble_write_lock1)
     else:
         print("Controller 1 BLE not connected or DEBUG mode")
     asyncio.create_task(send_to_server(combined_message))
@@ -243,7 +291,8 @@ async def process_ctrl2_immediate_flush(combined_message):
     """
     print("Immediately processing Controller 2 messages:", combined_message)
     if not DEBUG and ble_client_2 and ble_client_2.is_connected:
-        await setMotor(ble_client_2, combined_message)
+        # await setMotor(ble_client_2, combined_message)
+        await setMotor(ble_client_2, combined_message, ble_write_lock2)
     else:
         print("Controller 2 BLE not connected or DEBUG mode")
 
@@ -269,7 +318,8 @@ async def process_ctrl1_timer():
         if combined_message:
             print("Processing Controller 1 messages:", combined_message)
             if not DEBUG and ble_client and ble_client.is_connected:
-                await setMotor(ble_client, combined_message)
+                # await setMotor(ble_client, combined_message)
+                await setMotor(ble_client, combined_message, ble_write_lock1)
             else:
                 print("Controller 1 BLE not connected or DEBUG mode")
             asyncio.create_task(send_to_server(combined_message))
@@ -283,7 +333,7 @@ async def process_ctrl2_timer():
     THRESHOLD = 10
     TIMEOUT = 0.2  # seconds
     while True:
-        await asyncio.sleep(TIMEOUT)
+        await asyncio.sleep(0.05)
         combined_message = None
         async with lock_ctrl2:
             if messages_ctrl2:
@@ -295,7 +345,8 @@ async def process_ctrl2_timer():
         if combined_message:
             print("Processing Controller 2 messages:", combined_message)
             if not DEBUG and ble_client_2 and ble_client_2.is_connected:
-                await setMotor(ble_client_2, combined_message)
+                # await setMotor(ble_client_2, combined_message)
+                await setMotor(ble_client_2, combined_message, ble_write_lock2)
             else:
                 print("Controller 2 BLE not connected or DEBUG mode")
             #asyncio.create_task(send_to_server(combined_message))
