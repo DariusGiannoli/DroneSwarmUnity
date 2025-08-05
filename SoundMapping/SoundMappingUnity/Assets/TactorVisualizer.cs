@@ -31,6 +31,8 @@ public class TactorVisualizer : MonoBehaviour
 
         for (int i = 0; i < _cells.Length; i++)
         {
+            if (i == 0 || i == 3 || i == 16 || i == 19)  // skip the corner cell if they are not used
+                continue; // skip the first cell (index 0) if it's not used
             float t = dutyByTile[i] / 14f;             // 0…1
             _cells[i].color = colourRamp.Evaluate(t);
             // Debug.Log($"Cell {i}: Duty = {dutyByTile[i]}, Color = {_cells[i].color}");

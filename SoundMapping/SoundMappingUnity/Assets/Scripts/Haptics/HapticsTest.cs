@@ -257,10 +257,10 @@ public class HapticsTest : MonoBehaviour
     private float halfW = 1f;
     private float halfH = 1f;
 
-    private float actuator_W= 4f;
-    private float actuator_H = 5f;
-    private const float initial_actuator_W= 4f;
-    private const float initial_actuator_H = 5f;
+    private float actuator_W = 3f; //4f;
+    private float actuator_H = 4f; //2f; // 5f;
+    private const float initial_actuator_W= 3f; //4f;
+    private const float initial_actuator_H = 4f; //2f; // 5f;
     private const float center_W = initial_actuator_W / 2f;   // 1.5 m wide, 2 m high
     private const float center_H = initial_actuator_H / 2f;   // 2 m high, 1.5 m wide
 
@@ -298,15 +298,31 @@ public class HapticsTest : MonoBehaviour
     //     {39, 38, 37, 36}
 
     // };
+    // private static readonly int[,] matrix = {
+    // {10, 11, 12, 13, 14},
+    // {9, 8, 7, 6, 5},
+    // {0, 1, 2, 3, 4},
+    // {30, 31, 32, 33, 34},
+    // {39, 38, 37, 36, 35},
+    // {40, 41, 42, 43, 44}
+    // };
+    // // vibratorAddress = matrix[row, col]
+
     private static readonly int[,] matrix = {
-    {10, 11, 12, 13, 14},
-    {9, 8, 7, 6, 5},
-    {0, 1, 2, 3, 4},
-    {30, 31, 32, 33, 34},
-    {39, 38, 37, 36, 35},
-    {40, 41, 42, 43, 44}
+    {-1,1,0,-1},
+    { 2, 3, 30, 31},
+    {61, 60, 33, 32},
+    {62, 63, 90, 91},
+    {-1,93,92,-1}
     };
     // vibratorAddress = matrix[row, col]
+
+    // private static readonly int[,] matrix = {
+    // {31, 30, 3, 2},
+    // {32, 33, 60, 61},
+    // {91, 90, 63, 62}
+    // };
+    // // vibratorAddress = matrix[row, col]
 
     private static readonly int[] duty = new int[120];   // one per vibrator (0-14)
     private static readonly int[] dutyByTile = new int[matrix.Length];   // 20-cell visual panel (0-14)
@@ -461,8 +477,8 @@ public class HapticsTest : MonoBehaviour
                       $"(col {colE}, row {rowE})");
             int addrE = matrix[rowE, colE];
 
-            duty[addrE] = 14;                       // full-strength buzz
-            dutyByTile[(rowE * (Mathf.RoundToInt(initial_actuator_W)+1)) + colE] = 14;    // same for visual panel
+            duty[addrE] = 8;                       // full-strength buzz
+            dutyByTile[(rowE * (Mathf.RoundToInt(initial_actuator_W)+1)) + colE] = 8;    // same for visual panel
 
             // Debug.Log($"embodiedDrone addr {addrE} " +
             // $"(duty {duty[addrE]})");
@@ -629,14 +645,14 @@ public class HapticsTest : MonoBehaviour
 
         // Dictionary<int, int> angleMappingDict = new Dictionary<int, int> {
         //     {0, 160},{1, 115},{2, 65},{3, 20}, {120, 200}, {121, 245},{122, 295},{123, 340},
-        //     {90, 160},{91, 115},{92, 65},{93, 20}, {210, 200}, {211, 245},{212, 295},{213, 340},
+        //     {90, 160},{91, 115},{92, 65},{93, 20}f, {210, 200}, {211, 245},{212, 295},{213, 340},
         //      {30, 160},{31, 115},{32, 65},{33, 20}, {150, 200}, {151, 245},{152, 295},{153, 340},
         // };
-        Dictionary<int, int> angleMappingDict = new Dictionary<int, int> {
-            {64, 160},{65, 115},{66, 65},{67, 20}, {120, 200}, {121, 245},{122, 295},{123, 340},
-            {90, 160},{91, 115},{92, 65},{93, 20}, {210, 200}, {211, 245},{212, 295},{213, 340},
-             {60, 200},{61, 245},{62, 295},{63, 340}, {150, 200}, {151, 245},{152, 295},{153, 340},
-        };
+        // Dictionary<int, int> angleMappingDict = new Dictionary<int, int> {
+        //     {64, 160},{65, 115},{66, 65},{67, 20}, {120, 200}, {121, 245},{122, 295},{123, 340},
+        //     {90, 160},{91, 115},{92, 65},{93, 20}, {210, 200}, {211, 245},{212, 295},{213, 340},
+        //      {60, 200},{61, 245},{62, 295},{63, 340}, {150, 200}, {151, 245},{152, 295},{153, 340},
+        // };
 
 
         //obstacle in Range mapping
@@ -659,20 +675,20 @@ public class HapticsTest : MonoBehaviour
         //                                                                 : new int[] {};
         // 96,97,98,99,100,101,102,103,104,105 //48,49, 50,51,52,53,54,55,56,57 // 16,17, 18, 19, 20, 21, 22, 23, 24, 25
 
-        for (int i = 0; i < angleMapping.Length; i++)
-        {
-            int adresse = angleMapping[i];
-            int angle = angleMappingDict.ContainsKey(adresse) ? angleMappingDict[adresse] : 0; 
-            actuatorsRange.Add(new PIDActuator(adresse:adresse, angle:angleMappingDict[adresse],
-                                                    kp:0f, kd:160, referencevalue:0, 
-                                                    refresh:CloseToWallrefresherFunction));
-        }
+        // for (int i = 0; i < angleMapping.Length; i++)
+        // {
+        //     int adresse = angleMapping[i];
+        //     int angle = angleMappingDict.ContainsKey(adresse) ? angleMappingDict[adresse] : 0; 
+        //     actuatorsRange.Add(new PIDActuator(adresse:adresse, angle:angleMappingDict[adresse],
+        //                                             kp:0f, kd:160, referencevalue:0, 
+        //                                             refresh:CloseToWallrefresherFunction));
+        // }
 
-        for (int i = 0; i < mappingOlfati.Length; i++)
-        {
-            int adresse = mappingOlfati[i];
-            actuatorsVariables.Add(new RefresherActuator(adresse:adresse, angle:angleMappingDict[adresse], refresh:ForceActuator));
-        }
+        // for (int i = 0; i < mappingOlfati.Length; i++)
+        // {
+        //     int adresse = mappingOlfati[i];
+        //     actuatorsVariables.Add(new RefresherActuator(adresse:adresse, angle:angleMappingDict[adresse], refresh:ForceActuator));
+        // }
 
         for (int i = 0; i < crashMapping.Length; i++)
         {
@@ -680,11 +696,11 @@ public class HapticsTest : MonoBehaviour
             crashActuators.Add(new Actuators(adresse, 0));
         }
 
-        for (int i = 0; i < velocityMapping.Length; i++)
-        {
-            int adresse = velocityMapping[i];
-            actuatorsVariables.Add(new RefresherActuator(adresse:adresse, angle:angleMappingDict[adresse], refresh:SwarmVelocityRefresher));
-        }
+        // for (int i = 0; i < velocityMapping.Length; i++)
+        // {
+        //     int adresse = velocityMapping[i];
+        //     actuatorsVariables.Add(new RefresherActuator(adresse:adresse, angle:angleMappingDict[adresse], refresh:SwarmVelocityRefresher));
+        // }
 
         // for (int i = 0; i < movingPlaneMapping.Length; i++)
         // {
