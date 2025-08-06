@@ -101,59 +101,63 @@ public class HapticsTest : MonoBehaviour
     /// axis-aligned bounding box that encloses every drone.
     /// “Most-left” and “most-right” drones carry the same weight.
     /// </summary>
+
     public static Vector3 GetSwarmCentroid(IReadOnlyList<Transform> drones)
     {
-        if (drones == null || drones.Count == 0)
+        // Only use drones from the main connected group
+        var connectedDrones = drones.Where(d =>
+            d.GetComponent<DroneController>()?.droneFake != null &&
+            swarmModel.network.IsInMainNetwork(d.GetComponent<DroneController>().droneFake)
+        ).ToList();
+
+        if (connectedDrones == null || connectedDrones.Count == 0)
             return Vector3.zero;
 
-        // Initialise mins & maxes with the first drone’s position
-        Vector3 p0 = drones[0].position;
+        // Initialize mins & maxes with the first connected drone's position
+        Vector3 p0 = connectedDrones[0].position;
         float minX = p0.x, maxX = p0.x;
         float minY = p0.y, maxY = p0.y;
         float minZ = p0.z, maxZ = p0.z;
 
-        // Expand the bounds
-        for (int i = 1; i < drones.Count; i++)
+        // Expand bounds only using connected drones
+        for (int i = 1; i < connectedDrones.Count; i++)
         {
-            Vector3 p = drones[i].position;
+            Vector3 p = connectedDrones[i].position;
             if (p.x < minX) minX = p.x; else if (p.x > maxX) maxX = p.x;
             if (p.y < minY) minY = p.y; else if (p.y > maxY) maxY = p.y;
             if (p.z < minZ) minZ = p.z; else if (p.z > maxZ) maxZ = p.z;
         }
 
-        // Mid-point of the bounding box
         return new Vector3(
             (minX + maxX) * 0.5f,
             (minY + maxY) * 0.5f,
             (minZ + maxZ) * 0.5f);
     }
 
-    /// <summary>Same centre but flattened onto the X-Z plane.</summary>
-    // public static Vector2 GetSwarmCentroid2D(IReadOnlyList<Transform> drones)
-    // {
-    //     Vector3 c3 = GetSwarmCentroid(drones);
-    //     return new Vector2(c3.x, c3.z);                // (x, z)
-    // }
-
     public static Vector2 GetSwarmCentroid2D(IReadOnlyList<Transform> drones)
     {
-        if (drones == null || drones.Count == 0) return Vector2.zero;
+        // Only use drones from the main connected group
+        var connectedDrones = drones.Where(d =>
+            d.GetComponent<DroneController>()?.droneFake != null &&
+            swarmModel.network.IsInMainNetwork(d.GetComponent<DroneController>().droneFake)
+        ).ToList();
 
-        float minX = drones[0].position.x, maxX = minX;
-        float minZ = drones[0].position.z, maxZ = minZ;
+        if (connectedDrones == null || connectedDrones.Count == 0)
+            return Vector2.zero;
 
-        for (int i = 1; i < drones.Count; i++)
+        float minX = connectedDrones[0].position.x, maxX = minX;
+        float minZ = connectedDrones[0].position.z, maxZ = minZ;
+
+        for (int i = 1; i < connectedDrones.Count; i++)
         {
-            Vector3 p = drones[i].position;
+            Vector3 p = connectedDrones[i].position;
             if (p.x < minX) minX = p.x; else if (p.x > maxX) maxX = p.x;
             if (p.z < minZ) minZ = p.z; else if (p.z > maxZ) maxZ = p.z;
         }
 
-        return new Vector2( (minX + maxX) * 0.5f,
-                            (minZ + maxZ) * 0.5f );
+        return new Vector2((minX + maxX) * 0.5f, (minZ + maxZ) * 0.5f);
     }
 
-    
     // -- Highlight-helper state ---------------------------------------------------
     private Transform _highlightedDrone = null;   // the drone we tinted last frame
     private static readonly Color _highlightColor = Color.blue;
@@ -215,6 +219,15 @@ public class HapticsTest : MonoBehaviour
     #if UNITY_EDITOR
     void OnDrawGizmosSelected()
     {
+        // var drones = FindObjectsOfType<DroneController>()
+        //      .Select(d => d.transform).ToList();
+        // if (drones == null || drones.Count == 0) { return; }
+
+        // _swarmFrame.position = GetSwarmCentroid(drones);
+        // _swarmFrame.rotation = Quaternion.LookRotation(
+        // embodiedDrone.forward,
+        // embodiedDrone.up);
+
         if (_swarmFrame == null) return;
 
         /*---------------------------------------------------------*
@@ -308,14 +321,22 @@ public class HapticsTest : MonoBehaviour
     // };
     // // vibratorAddress = matrix[row, col]
 
-    private static readonly int[,] matrix = {
-    {-1,1,0,-1},
-    { 2, 3, 30, 31},
-    {61, 60, 33, 32},
-    {62, 63, 90, 91},
-    {-1,93,92,-1}
-    };
+    // private static readonly int[,] matrix = {
+    // {-1,1,0,-1},
+    // { 2, 3, 30, 31},
+    // {61, 60, 33, 32},
+    // {62, 63, 90, 91},
+    // {-1,93,92,-1}
+    // };
     // vibratorAddress = matrix[row, col]
+
+    private static readonly int[,] matrix = {
+    {119,1,0,119},
+    { 2, 3, 30, 31},
+    {35, 34, 33, 32},
+    {36, 37, 38, 39},
+    {119,41,40,119}
+    };
 
     // private static readonly int[,] matrix = {
     // {31, 30, 3, 2},
@@ -333,15 +354,42 @@ public class HapticsTest : MonoBehaviour
     /// Returns the horizontal and vertical half-sizes (metres) of the swarm,
     /// measured in the SwarmFrame’s local X-Y plane.
     /// </summary>
+    // private static void GetDynamicExtents(IReadOnlyList<Transform> drones,
+    //                                     Transform swarmFrame,
+    //                                     out float halfWidth,
+    //                                     out float halfHeight)
+    // {
+    //     float maxAbsX = 0f;
+    //     float maxAbsY = 0f;
+
+    //     foreach (var t in drones)
+    //     {
+    //         Vector3 p = swarmFrame.InverseTransformPoint(t.position); // local
+    //         maxAbsX = Mathf.Max(maxAbsX, Mathf.Abs(p.x));
+    //         maxAbsY = Mathf.Max(maxAbsY, Mathf.Abs(p.z));
+    //     }
+
+    //     // Avoid divide-by-zero when the swarm collapses to a point
+    //     halfWidth = Mathf.Max(maxAbsX, 0.01f);   // at least 1 cm
+    //     halfHeight = Mathf.Max(maxAbsY, 0.01f);
+    // }
+
     private static void GetDynamicExtents(IReadOnlyList<Transform> drones,
-                                        Transform swarmFrame,
-                                        out float halfWidth,
-                                        out float halfHeight)
+                                    Transform swarmFrame,
+                                    out float halfWidth,
+                                    out float halfHeight)
     {
+        // Get only drones from the main connected group
+        var connectedDrones = drones.Where(d => 
+            d.GetComponent<DroneController>()?.droneFake != null && 
+            swarmModel.network.IsInMainNetwork(d.GetComponent<DroneController>().droneFake)
+        ).ToList();
+
         float maxAbsX = 0f;
         float maxAbsY = 0f;
 
-        foreach (var t in drones)
+        // Only process connected drones
+        foreach (var t in connectedDrones)
         {
             Vector3 p = swarmFrame.InverseTransformPoint(t.position); // local
             maxAbsX = Mathf.Max(maxAbsX, Mathf.Abs(p.x));
@@ -410,9 +458,6 @@ public class HapticsTest : MonoBehaviour
         }
 
         // --- 2) place & orient frame ----------------------------------------
-        // Vector3 centroid = drones.Aggregate(Vector3.zero, (sum, t) => sum + t.position)
-        //                 / drones.Count;
-        // _swarmFrame.position = centroid;
         Vector3 centroid = GetSwarmCentroid(drones); // or use the centroid function above
         _swarmFrame.position = centroid;           // place at the centroid
         _swarmFrame.rotation = Quaternion.LookRotation(
@@ -447,11 +492,13 @@ public class HapticsTest : MonoBehaviour
         if (!drones.Contains(embodiedDrone.transform))
             drones.Add(embodiedDrone.transform);
 
+        var connectedDrones = drones.Where(d => d.GetComponent<DroneController>()?.droneFake != null && swarmModel.network.IsInMainNetwork(d.GetComponent<DroneController>().droneFake)).ToList();
+
         /*-------------------------------------------------------------*
         * 2) mark light vibration everywhere a drone appears
         *-------------------------------------------------------------*/
         const int LIGHT_DUTY = 3;                   // tweak to taste (1–4)
-        foreach (Transform d in drones)
+        foreach (Transform d in connectedDrones)
         {
             Vector3 local = _swarmFrame.InverseTransformPoint(d.position);
 
@@ -461,7 +508,9 @@ public class HapticsTest : MonoBehaviour
             // Debug.Log($"Drone {d.name} at {local:F2} " +
             //           $"(col {col}, row {row}, addr {addr})");
 
-            duty[addr] = duty[addr] + 3; //LIGHT_DUTY;                // overwrite is fine
+            duty[addr] = duty[addr] + 2; //LIGHT_DUTY;                // overwrite is fine
+            if (duty[addr] > 14) duty[addr] = 14; // clamp to max
+
             int tile = (row * (Mathf.RoundToInt(initial_actuator_W)+1)) + col;       // 0 … 19 for the visual panel
             dutyByTile[tile] = dutyByTile[tile] + 1; //LIGHT_DUTY;          // same duty for visual panel
         }
@@ -470,15 +519,32 @@ public class HapticsTest : MonoBehaviour
         // * 3) overwrite with STRONG duty for the embodied-drone cell
         // *-------------------------------------------------------------*/
         {
+            // Vector3 localE = _swarmFrame.InverseTransformPoint(embodiedDrone.position);
+            // int colE = ColFromX(localE.x, halfW, actuator_W);
+            // int rowE = RowFromY(localE.z, halfH, actuator_H);
+            // Debug.Log($"embodiedDrone at {localE:F2} " +
+            //           $"(col {colE}, row {rowE})");
+            // int addrE = matrix[rowE, colE];
+
+            // duty[addrE] = 8;                       // full-strength buzz
+            // dutyByTile[(rowE * (Mathf.RoundToInt(initial_actuator_W)+1)) + colE] = 8;    // same for visual panel
+
+            // 🔔 自定义 —— 每秒闪几次？2 = 1 Hz（0.5 s 亮，0.5 s 灭）
+            const float blinkRate = 3f;
+
+            /* ……上面保持不变…… */
             Vector3 localE = _swarmFrame.InverseTransformPoint(embodiedDrone.position);
             int colE = ColFromX(localE.x, halfW, actuator_W);
             int rowE = RowFromY(localE.z, halfH, actuator_H);
-            Debug.Log($"embodiedDrone at {localE:F2} " +
-                      $"(col {colE}, row {rowE})");
             int addrE = matrix[rowE, colE];
 
-            duty[addrE] = 8;                       // full-strength buzz
-            dutyByTile[(rowE * (Mathf.RoundToInt(initial_actuator_W)+1)) + colE] = 8;    // same for visual panel
+            // === 让化身无人机所在格“闪烁” ===
+            bool blinkOn  = (Mathf.FloorToInt(Time.time * blinkRate) & 1) == 0; // 奇偶翻转
+            int  dutyVal  = blinkOn ? 8 : 0;
+
+            duty[addrE] = dutyVal;
+            dutyByTile[(rowE * (Mathf.RoundToInt(initial_actuator_W) + 1)) + colE] = dutyVal;
+
 
             // Debug.Log($"embodiedDrone addr {addrE} " +
             // $"(duty {duty[addrE]})");
@@ -1229,9 +1295,6 @@ public class HapticsTest : MonoBehaviour
             actuator.frequency = 1;
             return;
         }
-
-
-
 
 
         actuator.dutyIntensity = 0;
