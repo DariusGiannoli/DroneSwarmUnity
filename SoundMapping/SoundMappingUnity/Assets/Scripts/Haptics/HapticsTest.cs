@@ -271,9 +271,9 @@ public class HapticsTest : MonoBehaviour
     private float halfH = 1f;
 
     private float actuator_W = 3f; //4f;
-    private float actuator_H = 4f; //2f; // 5f;
+    private float actuator_H = 3f; //4f; //2f; // 5f;
     private const float initial_actuator_W= 3f; //4f;
-    private const float initial_actuator_H = 4f; //2f; // 5f;
+    private const float initial_actuator_H = 3f; //4f; //2f; // 5f;
     private const float center_W = initial_actuator_W / 2f;   // 1.5 m wide, 2 m high
     private const float center_H = initial_actuator_H / 2f;   // 2 m high, 1.5 m wide
 
@@ -330,12 +330,19 @@ public class HapticsTest : MonoBehaviour
     // };
     // vibratorAddress = matrix[row, col]
 
+    // private static readonly int[,] matrix = {
+    // {119,1,0,119},
+    // { 2, 3, 30, 31},
+    // {35, 34, 33, 32},
+    // {36, 37, 38, 39},
+    // {119,41,40,119}
+    // };
+
     private static readonly int[,] matrix = {
-    {119,1,0,119},
-    { 2, 3, 30, 31},
-    {35, 34, 33, 32},
-    {36, 37, 38, 39},
-    {119,41,40,119}
+    {3,2,1,0},
+    { 4, 5, 6, 7},
+    {33, 32, 31, 30},
+    {34, 35, 36, 37}
     };
 
     // private static readonly int[,] matrix = {
@@ -522,12 +529,10 @@ public class HapticsTest : MonoBehaviour
         //     //           $"(col {col}, row {row}, addr {addr})");
 
         //     duty[addr] = duty[addr] + 2; //LIGHT_DUTY;                // overwrite is fine
-        //     WriteWithBurstGate(addr, /* raw = */ duty[addr]);
         //     if (duty[addr] > 14) duty[addr] = 14; // clamp to max
 
         //     int tile = (row * (Mathf.RoundToInt(initial_actuator_W) + 1)) + col;       // 0 … 19 for the visual panel
-        //     // dutyByTile[tile] = dutyByTile[tile] + 1; //LIGHT_DUTY;          // same duty for visual panel
-        //     dutyByTile[tile] = duty[addr];
+        //     dutyByTile[tile] = dutyByTile[tile] + 1; //LIGHT_DUTY;          // same duty for visual panel
         // }
 
         // 统计本帧每个地址的“无人机密度”
@@ -547,9 +552,9 @@ public class HapticsTest : MonoBehaviour
 
         // 将“密度 + 变化”转成 duty（有增益，有衰减）
         float dt = Time.deltaTime;  // 在协程里用这个即可（或用 sendEvery/1000f）
-        for (int row = 0; row < actuator_H; row++)
+        for (int row = 0; row <= Mathf.RoundToInt(actuator_H); row++)
         {
-            for (int col = 0; col < actuator_W; col++)
+            for (int col = 0; col <= Mathf.RoundToInt(actuator_W); col++)
             {
                 int addr = matrix[row, col];
                 float raw  = rawByAddr[addr];                // 当前密度
