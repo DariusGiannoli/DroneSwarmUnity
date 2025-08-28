@@ -369,6 +369,19 @@ public class HapticsTest : MonoBehaviour
     int[]   smoothedDuty = new int[256];   // 平滑后的最终强度（写回给硬件）
     float[] rawByAddr    = new float[256]; // 本帧密度（临时）
 
+    // —— 可调参数 ——
+    const float GAIN_PER_DRONE = 2f;   // 一架无人机贡献的总强度（等价于你原来的 +2）
+    const float TAU_SMOOTH     = 0.20f;// 时间平滑常数(秒)，越大越稳
+
+    // —— 状态缓存 ——
+    float[] targetDuty = new float[256];   // 本帧按权重累加的目标强度（float）
+    float[] smoothDuty = new float[256];   // 时间平滑后的强度（float，最终会转 int）
+
+        // 列/行“数量”（必须是4，而不是3f）
+    private const int   COLS = 4, ROWS = 4;
+    private const float COLS_MINUS1 = COLS - 1f;  // OK
+    private const float ROWS_MINUS1 = ROWS - 1f;  // OK
+
 
     /// <summary>
     /// Returns the horizontal and vertical half-sizes (metres) of the swarm,
@@ -514,9 +527,9 @@ public class HapticsTest : MonoBehaviour
 
         var connectedDrones = drones.Where(d => d.GetComponent<DroneController>()?.droneFake != null && swarmModel.network.IsInMainNetwork(d.GetComponent<DroneController>().droneFake)).ToList();
 
-        /*-------------------------------------------------------------*
-        * 2) mark light vibration everywhere a drone appears
-        *-------------------------------------------------------------*/
+        // /*-------------------------------------------------------------*
+        // * 2) mark light vibration everywhere a drone appears
+        // *-------------------------------------------------------------*/
         // const int LIGHT_DUTY = 3;                   // tweak to taste (1–4)
         // foreach (Transform d in connectedDrones)
         // {
@@ -525,6 +538,7 @@ public class HapticsTest : MonoBehaviour
         //     int col = ColFromX(local.x, halfW, actuator_W);    // 0 … 3
         //     int row = RowFromY(local.z, halfH, actuator_H);    // 0 … 4
         //     int addr = matrix[row, col];            // 4 × 5 lookup
+
         //     // Debug.Log($"Drone {d.name} at {local:F2} " +
         //     //           $"(col {col}, row {row}, addr {addr})");
 
@@ -534,60 +548,128 @@ public class HapticsTest : MonoBehaviour
         //     int tile = (row * (Mathf.RoundToInt(initial_actuator_W) + 1)) + col;       // 0 … 19 for the visual panel
         //     dutyByTile[tile] = dutyByTile[tile] + 1; //LIGHT_DUTY;          // same duty for visual panel
         // }
+        
+        // 1) 清空本帧目标强度
+        System.Array.Clear(targetDuty, 0, targetDuty.Length);
+        System.Array.Clear(dutyByTile, 0, dutyByTile.Length); 
 
-        // 统计本帧每个地址的“无人机密度”
-        System.Array.Clear(rawByAddr, 0, rawByAddr.Length);   // rawByAddr[256]; declared elsewhere
-        System.Array.Clear(dutyByTile, 0, dutyByTile.Length);   // 可视面板本帧重填
-
+        // 2) 每架无人机 -> 对周围4格做双线性分配
         foreach (Transform d in connectedDrones)
         {
             Vector3 local = _swarmFrame.InverseTransformPoint(d.position);
 
-            int col  = ColFromX(local.x, halfW, actuator_W);
-            int row  = RowFromY(local.z, halfH, actuator_H);
-            int addr = matrix[row, col];
+            // ---- 连续坐标（0..W-1 / 0..H-1），保证在边界内 ----
+            // float u = Mathf.Clamp01((local.x*2f) / (4.5f)) * COLS_MINUS1;
+            // float v = Mathf.Clamp01((local.z + halfH) / (4.5f)) * ROWS_MINUS1;
 
-            rawByAddr[addr] += 2f;  // 一架无人机计 1
+            // float t = local.x / 4.5f * 2f;      // → [0..1]
+            float u = Mathf.Clamp(local.x / 4.5f * 2f + center_W, 0, Mathf.RoundToInt(initial_actuator_W));
+            float v = Mathf.Clamp(-local.z / 4.5f * 2f + center_H, 0, Mathf.RoundToInt(initial_actuator_H));
+
+
+            int c0 = Mathf.FloorToInt(u);
+            int r0 = Mathf.FloorToInt(v);
+            int c1 = Mathf.Min(c0 + 1, COLS - 1);
+            int r1 = Mathf.Min(r0 + 1, ROWS - 1);
+
+            // 权重
+            float wc1 = u - c0, wc0 = 1f - wc1;
+            float wr1 = v - r0, wr0 = 1f - wr1;
+
+            // 四邻域权重
+            float w00 = wc0 * wr0;
+            float w10 = wc1 * wr0;
+            float w01 = wc0 * wr1;
+            float w11 = wc1 * wr1;
+
+            // 每架无人机的总贡献为 GAIN_PER_DRONE，按权重分摊
+            void Add(int rr, int cc, float w)
+            {
+                int addr = matrix[rr, cc];
+                targetDuty[addr] += GAIN_PER_DRONE * w;
+            }
+
+            Add(r0, c0, w00);
+            Add(r0, c1, w10);
+            Add(r1, c0, w01);
+            Add(r1, c1, w11);
         }
 
-        // 将“密度 + 变化”转成 duty（有增益，有衰减）
-        float dt = Time.deltaTime;  // 在协程里用这个即可（或用 sendEvery/1000f）
-        for (int row = 0; row <= Mathf.RoundToInt(actuator_H); row++)
+        float dt    = Time.deltaTime;
+        float alpha = 1f - Mathf.Exp(-dt / TAU_SMOOTH);
+
+        // dutyByTile 必须是 ROWS*COLS 大小
+
+        for (int row = 0; row < ROWS; row++)        // < 不是 <=
         {
-            for (int col = 0; col <= Mathf.RoundToInt(actuator_W); col++)
+            for (int col = 0; col < COLS; col++)    // < 不是 <=
             {
                 int addr = matrix[row, col];
-                float raw  = rawByAddr[addr];                // 当前密度
-                float diff = Mathf.Abs(raw - lastRaw[addr]); // 与上一帧的变化
 
-                if (diff > EPS)
-                {
-                    // 有“显著变化” → 按密度增长强度，且重置稳定计时
-                    stableTimer[addr] = 0f;
-                    // int inc = DUTY_GAIN * Mathf.RoundToInt(raw);  // ∝ 密度
-                    // smoothedDuty[addr] = Mathf.Min(DUTY_MAX, smoothedDuty[addr] + inc);
-                    smoothedDuty[addr] = Mathf.RoundToInt(raw);
-                }
-                else
-                {
-                    // 变化很小 → 累计稳定时长；超过阈值后开始慢慢降为 0
-                    stableTimer[addr] += dt;
-                    if (stableTimer[addr] >= STABLE_FOR)
-                    {
-                        float newDuty = smoothedDuty[addr] - DECAY_PER_S * dt;
-                        smoothedDuty[addr] = (int)Mathf.Max(0f, newDuty);
-                    }
-                }
+                smoothDuty[addr] = Mathf.Lerp(smoothDuty[addr], targetDuty[addr], alpha);
+                int outDuty = Mathf.Min(DUTY_MAX, Mathf.RoundToInt(smoothDuty[addr]));
+                duty[addr] = outDuty;
 
-                lastRaw[addr] = raw;
-
-                // 写回硬件与可视面板（面板显示的是“平滑后的最终强度”）
-                duty[addr] = smoothedDuty[addr];
-
-                int tile = (row * (Mathf.RoundToInt(initial_actuator_W) + 1)) + col;
-                dutyByTile[tile] = smoothedDuty[addr];
+                // 面板的步长=COLS（不要 +1）
+                int tile = row * COLS + col;
+                dutyByTile[tile] = outDuty;
             }
         }
+
+
+        // 统计本帧每个地址的“无人机密度”
+        // System.Array.Clear(rawByAddr, 0, rawByAddr.Length);   // rawByAddr[256]; declared elsewhere
+        // System.Array.Clear(dutyByTile, 0, dutyByTile.Length);   // 可视面板本帧重填
+
+        // foreach (Transform d in connectedDrones)
+        // {
+        //     Vector3 local = _swarmFrame.InverseTransformPoint(d.position);
+
+        //     int col  = ColFromX(local.x, halfW, actuator_W);
+        //     int row  = RowFromY(local.z, halfH, actuator_H);
+        //     int addr = matrix[row, col];
+
+        //     rawByAddr[addr] += 2f;  // 一架无人机计 1
+        // }
+
+        // // 将“密度 + 变化”转成 duty（有增益，有衰减）
+        // float dt = Time.deltaTime;  // 在协程里用这个即可（或用 sendEvery/1000f）
+        // for (int row = 0; row <= Mathf.RoundToInt(actuator_H); row++)
+        // {
+        //     for (int col = 0; col <= Mathf.RoundToInt(actuator_W); col++)
+        //     {
+        //         int addr = matrix[row, col];
+        //         float raw  = rawByAddr[addr];                // 当前密度
+        //         float diff = Mathf.Abs(raw - lastRaw[addr]); // 与上一帧的变化
+
+        //         if (diff > EPS)
+        //         {
+        //             // 有“显著变化” → 按密度增长强度，且重置稳定计时
+        //             stableTimer[addr] = 0f;
+        //             // int inc = DUTY_GAIN * Mathf.RoundToInt(raw);  // ∝ 密度
+        //             // smoothedDuty[addr] = Mathf.Min(DUTY_MAX, smoothedDuty[addr] + inc);
+        //             smoothedDuty[addr] = Mathf.RoundToInt(raw);
+        //         }
+        //         else
+        //         {
+        //             // 变化很小 → 累计稳定时长；超过阈值后开始慢慢降为 0
+        //             stableTimer[addr] += dt;
+        //             if (stableTimer[addr] >= STABLE_FOR)
+        //             {
+        //                 float newDuty = smoothedDuty[addr] - DECAY_PER_S * dt;
+        //                 smoothedDuty[addr] = (int)Mathf.Max(0f, newDuty);
+        //             }
+        //         }
+
+        //         lastRaw[addr] = raw;
+
+        //         // 写回硬件与可视面板（面板显示的是“平滑后的最终强度”）
+        //         duty[addr] = smoothedDuty[addr];
+
+        //         int tile = (row * (Mathf.RoundToInt(initial_actuator_W) + 1)) + col;
+        //         dutyByTile[tile] = smoothedDuty[addr];
+        //     }
+        // }
 
         // /*-------------------------------------------------------------*
         // * 3) overwrite with STRONG duty for the embodied-drone cell
@@ -636,6 +718,7 @@ public class HapticsTest : MonoBehaviour
         //                         duty[addr],
         //                         1);
 
+        // ④ find which addresses changed since last frame
         const int BASE_FREQ = 1;                 // you keep freq fixed for now
         List<int> dirty = new();                 // addresses that changed
 
