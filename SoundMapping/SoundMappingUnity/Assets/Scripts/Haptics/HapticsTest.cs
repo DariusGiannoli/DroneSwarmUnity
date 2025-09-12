@@ -382,6 +382,14 @@ public class HapticsTest : MonoBehaviour
     private const float COLS_MINUS1 = COLS - 1f;  // OK
     private const float ROWS_MINUS1 = ROWS - 1f;  // OK
 
+    // --- Size-change gate config ---
+    [SerializeField] float refWorldHalfW = 4.5f;  // reference half-width (meters)
+    [SerializeField] float SIZE_EPS01 = 0.004f;    // “small change” threshold in normalized units
+    [SerializeField] float SIZE_STABLE_FOR = 1.30f; // must stay small for this long (s)
+
+    // --- Size-change gate state ---
+    float _lastHalfW01 = -1f;
+    float _sizeStableTimer = 0f;
 
     /// <summary>
     /// Returns the horizontal and vertical half-sizes (metres) of the swarm,
@@ -502,6 +510,26 @@ public class HapticsTest : MonoBehaviour
         // ② measure current half-sizes
         GetDynamicExtents(drones, _swarmFrame, out halfW, out halfH);
 
+        // --- measure normalized half-width and gate stability ---
+        float dt = Time.deltaTime; // we’ll reuse dt later as well
+        float halfW01 = Mathf.Clamp01(halfW / refWorldHalfW);     // normalize width to [0,1]
+        float sizeDiff01 = (_lastHalfW01 < 0f) ? 1f : Mathf.Abs(halfW01 - _lastHalfW01);
+
+        // hysteresis on size: must stay “small change” for a while
+        if (sizeDiff01 < SIZE_EPS01) _sizeStableTimer += dt;
+        else                         _sizeStableTimer  = 0f;
+
+        bool muteTargetRow = (_sizeStableTimer >= SIZE_STABLE_FOR);
+
+        Debug.Log($"_lastHalfW01: {_lastHalfW01:F3}, Current halfW01: {halfW01:F3}, Difference: {sizeDiff01:F3}");
+
+        _lastHalfW01 = halfW01;
+
+        Debug.Log($"halfW = {halfW:F2} m, halfH = {halfH:F2} m " +
+                  $"(norm {halfW01:F3}, Δ {sizeDiff01:F3}, " +
+                  $"{_sizeStableTimer:F2}s stable, " +
+                  $"{(muteTargetRow ? "MUTING" : "active")})");
+
         if (initial_actuator_W / initial_actuator_H > halfW / halfH)
         {
             actuator_W = initial_actuator_H * halfW / halfH; // make it 4:3 aspect ratio
@@ -595,7 +623,7 @@ public class HapticsTest : MonoBehaviour
             Add(r1, c1, w11);
         }
 
-        float dt    = Time.deltaTime;
+        // float dt    = Time.deltaTime;
         float alpha = 1f - Mathf.Exp(-dt / TAU_SMOOTH);
 
         // dutyByTile 必须是 ROWS*COLS 大小
@@ -652,6 +680,9 @@ public class HapticsTest : MonoBehaviour
         {
             int collapsed = Mathf.Min(DUTY_MAX, Mathf.RoundToInt(colSum[col] * Compress));
 
+            // --- NEW: if swarm width is stable, mute the entire TARGET_ROW ---
+            if (muteTargetRow) collapsed = 0;
+
             int addr = matrix[TARGET_ROW, col];
             duty[addr] = collapsed;
 
@@ -681,44 +712,44 @@ public class HapticsTest : MonoBehaviour
         //     rawByAddr[addr] += 2f;  // 一架无人机计 1
         // }
 
-        // 将“密度 + 变化”转成 duty（有增益，有衰减）
-        // float dt = Time.deltaTime;  // 在协程里用这个即可（或用 sendEvery/1000f）
-        for (int row = 0; row <= Mathf.RoundToInt(actuator_H); row++)
-        {
-            for (int col = 0; col <= Mathf.RoundToInt(actuator_W); col++)
-            {
-                int addr = matrix[row, col];
-                float raw  = duty[addr];//rawByAddr[addr];                // 当前密度
-                float diff = Mathf.Abs(raw - lastRaw[addr]); // 与上一帧的变化
+        // // 将“密度 + 变化”转成 duty（有增益，有衰减）
+        // // float dt = Time.deltaTime;  // 在协程里用这个即可（或用 sendEvery/1000f）
+        // for (int row = 0; row <= Mathf.RoundToInt(actuator_H); row++)
+        // {
+        //     for (int col = 0; col <= Mathf.RoundToInt(actuator_W); col++)
+        //     {
+        //         int addr = matrix[row, col];
+        //         float raw  = duty[addr];//rawByAddr[addr];                // 当前密度
+        //         float diff = Mathf.Abs(raw - lastRaw[addr]); // 与上一帧的变化
 
-                if (diff > EPS)
-                {
-                    // 有“显著变化” → 按密度增长强度，且重置稳定计时
-                    stableTimer[addr] = 0f;
-                    // int inc = DUTY_GAIN * Mathf.RoundToInt(raw);  // ∝ 密度
-                    // smoothedDuty[addr] = Mathf.Min(DUTY_MAX, smoothedDuty[addr] + inc);
-                    smoothedDuty[addr] = Mathf.RoundToInt(raw);
-                }
-                else
-                {
-                    // 变化很小 → 累计稳定时长；超过阈值后开始慢慢降为 0
-                    stableTimer[addr] += dt;
-                    if (stableTimer[addr] >= STABLE_FOR)
-                    {
-                        float newDuty = smoothedDuty[addr] - DECAY_PER_S * dt;
-                        smoothedDuty[addr] = (int)Mathf.Max(0f, newDuty);
-                    }
-                }
+        //         if (diff > EPS)
+        //         {
+        //             // 有“显著变化” → 按密度增长强度，且重置稳定计时
+        //             stableTimer[addr] = 0f;
+        //             // int inc = DUTY_GAIN * Mathf.RoundToInt(raw);  // ∝ 密度
+        //             // smoothedDuty[addr] = Mathf.Min(DUTY_MAX, smoothedDuty[addr] + inc);
+        //             smoothedDuty[addr] = Mathf.RoundToInt(raw);
+        //         }
+        //         else
+        //         {
+        //             // 变化很小 → 累计稳定时长；超过阈值后开始慢慢降为 0
+        //             stableTimer[addr] += dt;
+        //             if (stableTimer[addr] >= STABLE_FOR)
+        //             {
+        //                 float newDuty = smoothedDuty[addr] - DECAY_PER_S * dt;
+        //                 smoothedDuty[addr] = (int)Mathf.Max(0f, newDuty);
+        //             }
+        //         }
 
-                lastRaw[addr] = raw;
+        //         lastRaw[addr] = raw;
 
-                // 写回硬件与可视面板（面板显示的是“平滑后的最终强度”）
-                duty[addr] = smoothedDuty[addr];
+        //         // 写回硬件与可视面板（面板显示的是“平滑后的最终强度”）
+        //         duty[addr] = smoothedDuty[addr];
 
-                int tile = (row * (Mathf.RoundToInt(initial_actuator_W) + 1)) + col;
-                dutyByTile[tile] = smoothedDuty[addr];
-            }
-        }
+        //         int tile = (row * (Mathf.RoundToInt(initial_actuator_W) + 1)) + col;
+        //         dutyByTile[tile] = smoothedDuty[addr];
+        //     }
+        // }
 
         // /*-------------------------------------------------------------*
         // * 3) overwrite with STRONG duty for the embodied-drone cell
@@ -741,7 +772,7 @@ public class HapticsTest : MonoBehaviour
             /* ……上面保持不变…… */
             Vector3 localE = _swarmFrame.InverseTransformPoint(embodiedDrone.position);
             int colE = ColFromX(localE.x, halfW, actuator_W);
-            int rowE = 3;//RowFromY(localE.z, halfH, actuator_H);
+            int rowE = 1;//RowFromY(localE.z, halfH, actuator_H);
             int addrE = matrix[rowE, colE];
 
             // === 让化身无人机所在格“闪烁” ===
@@ -755,6 +786,8 @@ public class HapticsTest : MonoBehaviour
             Debug.Log($"embodiedDrone addr {addrE} " +
             $"(duty {duty[addrE]})");
         }
+
+        // generate motion pattern when disconnection happens
 
         // ⑤ transmit (same as before)
         // for (int addr = 0; addr < 10; addr++)
