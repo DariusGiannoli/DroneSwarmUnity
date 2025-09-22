@@ -971,13 +971,18 @@ public class HapticsTest : MonoBehaviour
         //     {90, 160},{91, 115},{92, 65},{93, 20}, {210, 200}, {211, 245},{212, 295},{213, 340},
         //      {60, 200},{61, 245},{62, 295},{63, 340}, {150, 200}, {151, 245},{152, 295},{153, 340},
         // };
+        Dictionary<int, int> angleMappingDict = new Dictionary<int, int> {
+            {64, 160},{65, 115},{66, 65},{67, 20}, {120, 200}, {121, 245},{122, 295},{123, 340},
+            {90, 160},{91, 115},{92, 65},{93, 20}, {210, 200}, {211, 245},{212, 295},{213, 340},
+             {60, 340},{61, 295},{62, 245},{63, 200}, {150, 200}, {151, 245},{152, 295},{153, 340},
+        };
 
 
         //obstacle in Range mapping
         // int[] angleMapping =  Haptics_Obstacle ? new int[] {30,31,32,33,150,151,152,153}  : new int[] {};
         // int[] angleMapping =  Haptics_Obstacle ? new int[] {0,1,2,3,60,61,62,63}  : new int[] {};
-        // int[] angleMapping =  Haptics_Obstacle ? new int[] {60,61,62,63,64,65,66,67}  : new int[] {};
-        int[] angleMapping =  Haptics_Obstacle ? ObstacleAddrs : Array.Empty<int>();
+        int[] angleMapping =  Haptics_Obstacle ? new int[] {60,61,62,63,64,65,66,67}  : new int[] {};
+        // int[] angleMapping =  Haptics_Obstacle ? ObstacleAddrs : Array.Empty<int>();
 
         //drone crash mapping
         int[] crashMapping =  Haptics_Crash ? new int[] {4,5,124,125}  : new int[] {};
@@ -993,14 +998,14 @@ public class HapticsTest : MonoBehaviour
         //                                                                 : new int[] {};
         // 96,97,98,99,100,101,102,103,104,105 //48,49, 50,51,52,53,54,55,56,57 // 16,17, 18, 19, 20, 21, 22, 23, 24, 25
 
-        // for (int i = 0; i < angleMapping.Length; i++)
-        // {
-        //     int adresse = angleMapping[i];
-        //     int angle = angleMappingDict.ContainsKey(adresse) ? angleMappingDict[adresse] : 0; 
-        //     actuatorsRange.Add(new PIDActuator(adresse:adresse, angle:angleMappingDict[adresse],
-        //                                             kp:0f, kd:160, referencevalue:0, 
-        //                                             refresh:CloseToWallrefresherFunction));
-        // }
+        for (int i = 0; i < angleMapping.Length; i++)
+        {
+            int adresse = angleMapping[i];
+            int angle = angleMappingDict.ContainsKey(adresse) ? angleMappingDict[adresse] : 0; 
+            actuatorsRange.Add(new PIDActuator(adresse:adresse, angle:angleMappingDict[adresse],
+                                                    kp:0f, kd:160, referencevalue:0, 
+                                                    refresh:CloseToWallrefresherFunction));
+        }
 
         // for (int i = 0; i < mappingOlfati.Length; i++)
         // {
