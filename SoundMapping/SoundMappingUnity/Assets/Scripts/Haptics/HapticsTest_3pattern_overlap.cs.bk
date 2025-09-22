@@ -400,11 +400,6 @@ public class HapticsTest : MonoBehaviour
 
     float _discScoreSmooth = 0f;                    // 平滑后的score
 
-    // —— 放在类作用域（和其他字段一起）——
-    [SerializeField] float DISC_ON  = 0.20f;  // 触发阈值
-    [SerializeField] float DISC_OFF = 0.15f;  // 释抑阈值（迟滞）
-    private bool disconnActive = false;      // 断连模式的状态机
-
 
     /// <summary>
     /// Returns the horizontal and vertical half-sizes (metres) of the swarm,
@@ -659,85 +654,153 @@ public class HapticsTest : MonoBehaviour
         //     }
         // }
 
-        // === 先计算列合并需要的中间量（保留你现在的 colSum 计算） ===
+        // 1) Smooth per cell, accumulate per-COLUMN sums, and clear outputs for now
         int[] colSum = new int[COLS];
+
         for (int row = 0; row < ROWS; row++)
         {
             for (int col = 0; col < COLS; col++)
             {
                 int addr = matrix[row, col];
 
-                // cell 平滑，累加到列
+                // smooth toward this frame’s target
                 smoothDuty[addr] = Mathf.Lerp(smoothDuty[addr], targetDuty[addr], alpha);
                 int cellDuty = Mathf.Min(DUTY_MAX, Mathf.RoundToInt(smoothDuty[addr]));
-                colSum[col] += cellDuty;
 
-                // 清空所有单元；稍后只由“唯一被选中的模式”写入
+                colSum[col] += cellDuty;                // accumulate by column
+
+                // we'll only light the chosen row later
                 duty[addr] = 0;
                 dutyByTile[row * COLS + col] = 0;
+                // duty[addr] = Mathf.RoundToInt(smoothDuty[addr]);
+                // dutyByTile[row * COLS + col] = Mathf.RoundToInt(smoothDuty[addr]);
             }
         }
 
-        // === 计算“模式选择”的判据（只在这里做一次） ===
-        // 1) Disconnection 是否触发（给它迟滞，避免闪烁）
-        // const float DISC_ON  = 0.20f;  // 0..1，超过即触发
-        // const float DISC_OFF = 0.15f;  // 低于此阈值才关闭
-        float score01 = Mathf.Clamp01(swarmModel.swarmConnectionScore);
+        // 2) Collapse each column to a single actuator on TARGET_ROW
+        const int TARGET_ROW = 0;              // <- pick which row receives the column sum
+        // choose scaling: strict sum (1f) or average (1f/ROWS). Average avoids fast saturation.
+        float Compress = 1f / ROWS;
 
-        // 用你已有的平滑（可选）
-        float discA = 1f - Mathf.Exp(-dt / disconnectTau);
-        _discScoreSmooth = Mathf.Lerp(_discScoreSmooth, score01, discA);
+        int maxDuty = -1;
+        int maxCol  = -1;
+        int maxAddr = -1;
 
-        // 带迟滞的开关
-        // static bool disconnActive; // 放到类字段更好（避免每帧重新置 false）
-        if (!disconnActive && _discScoreSmooth >= DISC_ON)  disconnActive = true;
-        if ( disconnActive && _discScoreSmooth <= DISC_OFF) disconnActive = false;
-
-        // 2) Size 是否“明显变化”
-        bool sizeActive = !muteTargetRow;
-        // 注意：这里不再“静音某行”，而是：只有在 sizeActive==true 时才渲染 size bar
-
-        // 3) Embodied blink 不需要额外条件；作为兜底
-
-        // === 根据优先级只渲染一个模式 ===
-        const int TARGET_ROW = 0;
-        float Compress = 1f / ROWS; // 列合并用平均，避免饱和
-
-        if (disconnActive)
+        for (int col = 0; col < COLS; col++)
         {
-            // ① Disconnection（最高优先级）：只渲染中间两列的 motion
-            RenderDisconnectMotion(_discScoreSmooth, dt);  // 内部用 Max 叠加已被清零的缓冲即可
-            Debug.Log("[MODE] Disconnection");
+            int collapsed = Mathf.Min(DUTY_MAX, Mathf.RoundToInt(colSum[col] * Compress));
+
+            // --- NEW: if swarm width is stable, mute the entire TARGET_ROW ---
+            if (muteTargetRow) collapsed = 0;
+
+            int addr = matrix[TARGET_ROW, col];
+            duty[addr] = collapsed;
+
+            int tile = TARGET_ROW * COLS + col; // correct tile stride
+            dutyByTile[tile] = collapsed;
+
+            // track maximum
+            if (collapsed > maxDuty) { maxDuty = collapsed; maxCol = col; maxAddr = addr; }
         }
-        else if (sizeActive)
-        {
-            // ② Size rendering：按列合并 → 写到 TARGET_ROW（不再做 mute）
-            for (int col = 0; col < COLS; col++)
-            {
-                int collapsed = Mathf.Min(DUTY_MAX, Mathf.RoundToInt(colSum[col] * Compress));
-                int addr = matrix[TARGET_ROW, col];
-                duty[addr] = collapsed;
-                dutyByTile[TARGET_ROW * COLS + col] = collapsed;
-            }
-            Debug.Log("[MODE] Size bar");
-        }
-        else
-        {
-            // ③ Embodied blink（兜底）：只点化身无人机所在格子
-            const float blinkRate = 3f; // Hz
-            bool  blinkOn = (Mathf.FloorToInt(Time.time * blinkRate) & 1) == 0;
-            int   dutyVal = blinkOn ? 7 : 0;
 
+        Debug.Log($"[WidthBar] max duty = {maxDuty} at col {maxCol} (addr {maxAddr})");
+
+
+
+        // 统计本帧每个地址的“无人机密度”
+        // System.Array.Clear(rawByAddr, 0, rawByAddr.Length);   // rawByAddr[256]; declared elsewhere
+        // System.Array.Clear(dutyByTile, 0, dutyByTile.Length);   // 可视面板本帧重填
+
+        // foreach (Transform d in connectedDrones)
+        // {
+        //     Vector3 local = _swarmFrame.InverseTransformPoint(d.position);
+
+        //     int col  = ColFromX(local.x, halfW, actuator_W);
+        //     int row  = RowFromY(local.z, halfH, actuator_H);
+        //     int addr = matrix[row, col];
+
+        //     rawByAddr[addr] += 2f;  // 一架无人机计 1
+        // }
+
+        // // 将“密度 + 变化”转成 duty（有增益，有衰减）
+        // // float dt = Time.deltaTime;  // 在协程里用这个即可（或用 sendEvery/1000f）
+        // for (int row = 0; row <= Mathf.RoundToInt(actuator_H); row++)
+        // {
+        //     for (int col = 0; col <= Mathf.RoundToInt(actuator_W); col++)
+        //     {
+        //         int addr = matrix[row, col];
+        //         float raw  = duty[addr];//rawByAddr[addr];                // 当前密度
+        //         float diff = Mathf.Abs(raw - lastRaw[addr]); // 与上一帧的变化
+
+        //         if (diff > EPS)
+        //         {
+        //             // 有“显著变化” → 按密度增长强度，且重置稳定计时
+        //             stableTimer[addr] = 0f;
+        //             // int inc = DUTY_GAIN * Mathf.RoundToInt(raw);  // ∝ 密度
+        //             // smoothedDuty[addr] = Mathf.Min(DUTY_MAX, smoothedDuty[addr] + inc);
+        //             smoothedDuty[addr] = Mathf.RoundToInt(raw);
+        //         }
+        //         else
+        //         {
+        //             // 变化很小 → 累计稳定时长；超过阈值后开始慢慢降为 0
+        //             stableTimer[addr] += dt;
+        //             if (stableTimer[addr] >= STABLE_FOR)
+        //             {
+        //                 float newDuty = smoothedDuty[addr] - DECAY_PER_S * dt;
+        //                 smoothedDuty[addr] = (int)Mathf.Max(0f, newDuty);
+        //             }
+        //         }
+
+        //         lastRaw[addr] = raw;
+
+        //         // 写回硬件与可视面板（面板显示的是“平滑后的最终强度”）
+        //         duty[addr] = smoothedDuty[addr];
+
+        //         int tile = (row * (Mathf.RoundToInt(initial_actuator_W) + 1)) + col;
+        //         dutyByTile[tile] = smoothedDuty[addr];
+        //     }
+        // }
+
+
+        // generate motion pattern when disconnection happens
+        float score01 = Mathf.Clamp01(swarmModel.swarmConnectionScore); // 0..1
+        Debug.Log($"Connection score: {score01:F3} (smooth {_discScoreSmooth:F3})");
+        RenderDisconnectMotion(score01, dt);
+
+        // /*-------------------------------------------------------------*
+        // * 3) overwrite with STRONG duty for the embodied-drone cell
+        // *-------------------------------------------------------------*/
+        if (dutyByTile[1] == 0 && dutyByTile[2] == 0)   // only if the embodied drone is not already marked
+        {
+            // Vector3 localE = _swarmFrame.InverseTransformPoint(embodiedDrone.position);
+            // int colE = ColFromX(localE.x, halfW, actuator_W);
+            // int rowE = RowFromY(localE.z, halfH, actuator_H);
+            // Debug.Log($"embodiedDrone at {localE:F2} " +
+            //           $"(col {colE}, row {rowE})");
+            // int addrE = matrix[rowE, colE];
+
+            // duty[addrE] = 8;                       // full-strength buzz
+            // dutyByTile[(rowE * (Mathf.RoundToInt(initial_actuator_W)+1)) + colE] = 8;    // same for visual panel
+
+            // 🔔 自定义 —— 每秒闪几次？2 = 1 Hz（0.5 s 亮，0.5 s 灭）
+            const float blinkRate = 3f;
+
+            /* ……上面保持不变…… */
             Vector3 localE = _swarmFrame.InverseTransformPoint(embodiedDrone.position);
             int colE = ColFromX(localE.x, halfW, actuator_W);
-            int rowE = 1; //RowFromY(localE.z, halfH, actuator_H); // 如果你想固定在哪一行，可直接 rowE = 1;
-
-            // 写入（注意 tile 步长 = COLS）
+            int rowE = 1;//RowFromY(localE.z, halfH, actuator_H);
             int addrE = matrix[rowE, colE];
-            duty[addrE] = dutyVal;
-            dutyByTile[rowE * COLS + colE] = dutyVal;
 
-            Debug.Log("[MODE] Embodied blink");
+            // === 让化身无人机所在格“闪烁” ===
+            bool blinkOn  = (Mathf.FloorToInt(Time.time * blinkRate) & 1) == 0; // 奇偶翻转
+            int  dutyVal  = blinkOn ? 7 : 0;
+
+            duty[addrE] = dutyVal;
+            dutyByTile[(rowE * (Mathf.RoundToInt(initial_actuator_W) + 1)) + colE] = dutyVal;
+
+
+            Debug.Log($"embodiedDrone addr {addrE} " +
+            $"(duty {duty[addrE]})");
         }
 
 
