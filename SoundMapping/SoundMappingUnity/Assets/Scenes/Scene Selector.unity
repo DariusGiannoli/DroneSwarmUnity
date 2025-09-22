@@ -1988,7 +1988,7 @@ MonoBehaviour:
   isLoading: 0
   scenes: []
   ObstacleFPV: FPVObs
-  ObstacleFPV1: FPVObs_1
+  ObstacleFPV1: FPVObs_2
   ObstacleTPV: TDVObs
   ObstacleTPV1: TDVObs_1
   CollectibleFPV: FPVCollectibles

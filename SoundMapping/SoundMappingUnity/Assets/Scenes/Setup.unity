@@ -2063,7 +2063,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 10.5
+  m_fontSize: 10.4
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -2901,7 +2901,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 12.35
+  m_fontSize: 12.4
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -3746,6 +3746,16 @@ MonoBehaviour:
   frequencyInit: 1
   distanceDetection: 2
   embodiedDrone: {fileID: 0}
+  refWorldHalfW: 4.5
+  SIZE_EPS01: 0.004
+  SIZE_STABLE_FOR: 1.3
+  disconnectTau: 0.25
+  flowSpeedHz: 6
+  baseDuty: 0
+  peakDuty: 8
+  overlayMode: 1
+  DISC_ON: 0.2
+  DISC_OFF: 0.15
   sendEvery: 100
 --- !u!114 &1573697198
 MonoBehaviour:
@@ -3775,7 +3785,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1573697189}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d7804f2c46256ce478a56844a6025980, type: 3}
   m_Name: 
@@ -4171,7 +4181,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 18.45
+  m_fontSize: 18.5
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1
