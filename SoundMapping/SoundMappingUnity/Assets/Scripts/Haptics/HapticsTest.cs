@@ -405,6 +405,11 @@ public class HapticsTest : MonoBehaviour
     [SerializeField] float DISC_OFF = 0.15f;  // 释抑阈值（迟滞）
     private bool disconnActive = false;      // 断连模式的状态机
 
+    // --- per-frame cache for assignments ---
+    static int _assignmentsFrame = -1;
+    static Dictionary<int, float> _assignedMagnitude = new Dictionary<int, float>(); // adresse -> magnitude
+    static Dictionary<int, int>   _assignedDuty      = new Dictionary<int, int>();   // adresse -> duty (viz)
+
 
     /// <summary>
     /// Returns the horizontal and vertical half-sizes (metres) of the swarm,
@@ -1313,77 +1318,197 @@ public class HapticsTest : MonoBehaviour
     #endregion
 
     #region ObstacleInRange
+    // void CloseToWallrefresherFunction(PIDActuator actuator)
+    // {
+    //     List<Vector3> forces = swarmModel.swarmObstacleForces;
+
+    //     actuator.dutyIntensity = 0;
+    //     actuator.frequency = 1;
+
+
+    //     foreach (Vector3 forcesDir in forces)
+    //     {
+    //         if (actuator.Angle >= 0)
+    //         {
+    //             float angle = Vector3.SignedAngle(forcesDir, CameraMovement.forward, -CameraMovement.up) - 180;
+    //             if (angle < 0)
+    //             {
+    //                 angle += 360;
+    //             }
+
+    //             float diff = Math.Abs(actuator.Angle - angle);
+    //             //   print("Diff: " + diff); 
+
+
+    //             // if (diff < 40 || diff > 320)
+    //             if (diff < 30 || diff > 330)
+    //             {
+    //                 Debug.Log("forcesDir: " + forcesDir + " angle: " + angle + " diff: " + diff);
+    //                 float threshold = forcesDir.magnitude > 3.5f ? 0.3f : 0.7f;
+    //                 if (Vector3.Dot(MigrationPointController.alignementVector.normalized, -forcesDir.normalized) > threshold)
+    //                 { // if col with velocity
+    //                     actuator.UpdateValue(forcesDir.magnitude);
+    //                     // duty[actuator.Adresse] = actuator.dutyIntensity; // update the duty for visualization
+    //                     duty[actuator.Adresse] = (int)(forcesDir.magnitude / 8.0f); // update the duty for visualization
+    //                     Debug.Log("forcesDir.magnitude: " + (int)(forcesDir.magnitude / 8.0f) + " actuator.Adresse" + actuator.Adresse);
+    //                     return;
+    //                 }
+
+    //                 // if (CameraMovement.embodiedDrone != null)
+    //                 // {
+    //                 //     if (Vector3.Dot(CameraMovement.embodiedDrone.GetComponent<DroneController>().droneFake.velocity.normalized, -forcesDir.normalized) > threshold)
+    //                 //     {
+    //                 //         actuator.UpdateValue(forcesDir.magnitude);
+    //                 //         duty[actuator.Adresse] = actuator.dutyIntensity; // update the duty for visualization
+    //                 //         return;
+    //                 //     }
+    //                 // }
+
+    //                 // actuator.UpdateValue(0);
+    //                 // duty[actuator.Adresse] = 0; // update the duty for visualization
+    //                 // return;
+    //             }
+
+
+    //         }
+    //         else
+    //         {
+    //             //gte the y component
+    //             float y = forcesDir.y;
+    //             if (Mathf.Abs(y) > 0)
+    //             {
+    //                 actuator.UpdateValue(y);
+    //                 duty[actuator.Adresse] = (int)(y / 14f); // update the duty for visualization
+    //                 return;
+    //             }
+    //         }
+
+
+    //     }
+
+    //     // actuator.UpdateValue(0);
+    //     // duty[actuator.Adresse] = 0; // update the duty for visualization
+
+    // }
+
     void CloseToWallrefresherFunction(PIDActuator actuator)
     {
-        List<Vector3> forces = swarmModel.swarmObstacleForces;
+        PrepareObstacleAssignments();  // compute once per frame
 
         actuator.dutyIntensity = 0;
         actuator.frequency = 1;
 
-
-        foreach (Vector3 forcesDir in forces)
+        if (_assignedMagnitude.TryGetValue(actuator.Adresse, out float mag))
         {
-            if (actuator.Angle >= 0)
+            actuator.UpdateValue(mag);
+            duty[actuator.Adresse] = _assignedDuty[actuator.Adresse]; // for visualization
+            return;
+        }
+
+        // nothing assigned to this actuator this frame
+        // actuator.UpdateValue(0);
+        // duty[actuator.Adresse] = 0;
+    }
+
+    void PrepareObstacleAssignments()
+    {
+        if (_assignmentsFrame == Time.frameCount) return;   // already computed this frame
+
+        _assignmentsFrame = Time.frameCount;
+        _assignedMagnitude.Clear();
+        _assignedDuty.Clear();
+
+        var forces = swarmModel.swarmObstacleForces;
+        if (forces == null || forces.Count == 0) return;
+
+        // Candidate actuators on the horizontal ring
+        // var ringActuators = actuatorsRange.Where(a => a.Angle >= 0).ToList();
+        var ringActuators = actuatorsRange.Where(a => a.Angle >= 0)
+                                 .OfType<PIDActuator>()
+                                 .ToList();
+        // Optional vertical actuator(s)
+        var verticalActs  = actuatorsRange.Where(a => a.Angle < 0).ToList();
+
+        var assignedForce = new bool[forces.Count]; // track which forces were consumed by a ring actuator
+
+        // ---- Map each force to its single best ring actuator (by smallest wrapped angle diff) ----
+        for (int i = 0; i < forces.Count; i++)
+        {
+            Vector3 f = forces[i];
+            if (f.sqrMagnitude <= 1e-6f || ringActuators.Count == 0) continue;
+
+            // keep your velocity->force gating
+            float threshold = f.magnitude > 3.5f ? 0.3f : 0.7f;
+            if (Vector3.Dot(MigrationPointController.alignementVector.normalized, -f.normalized) <= threshold)
+                continue;
+
+            // same azimuth computation you used before
+            float forceAngle = Vector3.SignedAngle(f, CameraMovement.forward, -CameraMovement.up) - 180f;
+            if (forceAngle < 0f) forceAngle += 360f;
+
+            PIDActuator best = null;
+            float bestAbsDelta = float.MaxValue;
+
+            foreach (var act in ringActuators)
             {
-                float angle = Vector3.SignedAngle(forcesDir, CameraMovement.forward, -CameraMovement.up) - 180;
-                if (angle < 0)
+                float delta = Mathf.DeltaAngle(act.Angle, forceAngle); // [-180, 180]
+                float absDelta = Mathf.Abs(delta);
+                if (absDelta < bestAbsDelta)
                 {
-                    angle += 360;
+                    bestAbsDelta = absDelta;
+                    best = act;
                 }
+            }
 
-                float diff = Math.Abs(actuator.Angle - angle);
-                //   print("Diff: " + diff); 
+            // keep your ±30° sectoring (equivalent to diff < 30 or > 330)
+            if (best == null || bestAbsDelta > 30f) continue;
 
+            float mag = f.magnitude;
+            int vizDuty = (int)(mag / 8.0f);
 
-                // if (diff < 40 || diff > 320)
-                if (diff < 30 || diff > 330)
+            // one actuator per force; if multiple forces target same actuator, keep the strongest
+            if (_assignedMagnitude.TryGetValue(best.Adresse, out float existing))
+            {
+                if (mag > existing)
                 {
-                    Debug.Log("forcesDir: " + forcesDir + " angle: " + angle + " diff: " + diff);
-                    float threshold = forcesDir.magnitude > 3.5f ? 0.3f : 0.7f;
-                    if (Vector3.Dot(MigrationPointController.alignementVector.normalized, -forcesDir.normalized) > threshold)
-                    { // if col with velocity
-                        actuator.UpdateValue(forcesDir.magnitude);
-                        // duty[actuator.Adresse] = actuator.dutyIntensity; // update the duty for visualization
-                        duty[actuator.Adresse] = (int)(forcesDir.magnitude / 8.0f); // update the duty for visualization
-                        Debug.Log("forcesDir.magnitude: " + (int)(forcesDir.magnitude / 8.0f) + " actuator.Adresse" + actuator.Adresse);
-                        return;
-                    }
-
-                    // if (CameraMovement.embodiedDrone != null)
-                    // {
-                    //     if (Vector3.Dot(CameraMovement.embodiedDrone.GetComponent<DroneController>().droneFake.velocity.normalized, -forcesDir.normalized) > threshold)
-                    //     {
-                    //         actuator.UpdateValue(forcesDir.magnitude);
-                    //         duty[actuator.Adresse] = actuator.dutyIntensity; // update the duty for visualization
-                    //         return;
-                    //     }
-                    // }
-
-                    // actuator.UpdateValue(0);
-                    // duty[actuator.Adresse] = 0; // update the duty for visualization
-                    // return;
+                    _assignedMagnitude[best.Adresse] = mag;
+                    _assignedDuty[best.Adresse]      = vizDuty;
                 }
-
-
             }
             else
             {
-                //gte the y component
-                float y = forcesDir.y;
-                if (Mathf.Abs(y) > 0)
+                _assignedMagnitude[best.Adresse] = mag;
+                _assignedDuty[best.Adresse]      = vizDuty;
+            }
+
+            assignedForce[i] = true; // this force has been consumed by a ring actuator
+        }
+
+        // ---- (Optional) map ONE remaining vertical force (Y) to ONE vertical actuator ----
+        if (verticalActs.Count > 0)
+        {
+            float bestAbsY = 0f;
+            float bestY    = 0f;
+
+            for (int i = 0; i < forces.Count; i++)
+            {
+                if (assignedForce[i]) continue; // don't reuse forces already assigned to a ring actuator
+                float y = forces[i].y;
+                if (Mathf.Abs(y) > bestAbsY)
                 {
-                    actuator.UpdateValue(y);
-                    duty[actuator.Adresse] = (int)(y / 14f); // update the duty for visualization
-                    return;
+                    bestAbsY = Mathf.Abs(y);
+                    bestY = y;
                 }
             }
 
-
+            if (bestAbsY > 0f)
+            {
+                // choose the first vertical actuator (adapt here if you have separate Up/Down addresses)
+                var vAct = verticalActs[0];
+                _assignedMagnitude[vAct.Adresse] = bestY;
+                _assignedDuty[vAct.Adresse]      = (int)(bestY / 14f);
+            }
         }
-
-        // actuator.UpdateValue(0);
-        // duty[actuator.Adresse] = 0; // update the duty for visualization
-
     }
 
     #endregion
