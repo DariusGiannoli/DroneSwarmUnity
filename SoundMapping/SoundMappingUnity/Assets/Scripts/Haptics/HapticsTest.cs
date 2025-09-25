@@ -1331,22 +1331,21 @@ public class HapticsTest : MonoBehaviour
                     angle += 360;
                 }
 
-
-
-
                 float diff = Math.Abs(actuator.Angle - angle);
                 //   print("Diff: " + diff); 
 
 
-                if (diff < 40 || diff > 320)
+                // if (diff < 40 || diff > 320)
+                if (diff < 30 || diff > 330)
                 {
                     Debug.Log("forcesDir: " + forcesDir + " angle: " + angle + " diff: " + diff);
                     float threshold = forcesDir.magnitude > 3.5f ? 0.3f : 0.7f;
                     if (Vector3.Dot(MigrationPointController.alignementVector.normalized, -forcesDir.normalized) > threshold)
                     { // if col with velocity
                         actuator.UpdateValue(forcesDir.magnitude);
-                        duty[actuator.Adresse] = actuator.dutyIntensity; // update the duty for visualization
-                        Debug.Log("duty: " + actuator.dutyIntensity + " actuator.Adresse" + actuator.Adresse);
+                        // duty[actuator.Adresse] = actuator.dutyIntensity; // update the duty for visualization
+                        duty[actuator.Adresse] = (int)(forcesDir.magnitude / 8.0f); // update the duty for visualization
+                        Debug.Log("forcesDir.magnitude: " + (int)(forcesDir.magnitude / 8.0f) + " actuator.Adresse" + actuator.Adresse);
                         return;
                     }
 
