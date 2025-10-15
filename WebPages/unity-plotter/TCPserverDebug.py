@@ -2,84 +2,67 @@ import asyncio
 import json
 import re
 import time
-import argparse
+import sys
 
 import websockets
 import aiohttp
-import serial 
-import sys
+# --- MODIFIED: Import your new API class instead of the serial library ---
+from serial_api_espnow import SERIAL_API
 
-# Holds serial connection
-ser = None
+# --- MODIFIED: This will hold an instance of your API class ---
+haptic_api = None
 
-# --- Message batching for each controller ---
-message_batch = {}          # A single dictionary for all messages
-batch_first_time = None     # A single timestamp
-batch_lock = asyncio.Lock() # A single lock
-
-IMMEDIATE_THRESHOLD = 20  # New constant for immediate flush
+# --- Unified Batching System (unchanged) ---
+message_batch = {}
+batch_first_time = None
+batch_lock = asyncio.Lock()
+IMMEDIATE_THRESHOLD = 20
 DEBUG = False
 
-def create_command(addr, mode, duty, freq):
-    """
-    Create a 3-byte command for the motor controller.
+# --- DELETED: The create_command function is now inside your SERIAL_API class ---
 
-    The command is built from:
-    - serial_group: addr // 30
-    - serial_addr:  addr % 30
-    - mode, duty, freq are encoded into the bits as required.
+# --- MODIFIED: This function now uses your new API ---
+def send_commands_via_serial(api_instance, combined_message):
     """
-    serial_group = addr // 30
-    serial_addr = addr % 30
-    byte1 = (serial_group << 2) | (mode & 0x01)
-    byte2 = 0x40 | (serial_addr & 0x3F)  # 0x40 represents the leading '01'
-    byte3 = 0x80 | ((duty & 0x0F) << 3) | (freq)  # 0x80 represents the leading '1'
-    return bytearray([byte1, byte2, byte3])
-
-def send_commands_via_serial(serial_conn, combined_message):
+    Parses JSON messages and sends them as a list to the haptic API.
     """
-    Parses JSON messages, creates byte commands, and sends them over the serial port.
-    """
-    # Check if the serial port is connected and open
-    if not serial_conn or not serial_conn.is_open:
-        print("Serial port not available. Cannot send commands.")
+    if not api_instance or not api_instance.connected:
+        print("Haptic API not available. Cannot send commands.")
         return
 
     try:
-        # Find all individual JSON command strings (e.g., "{'addr':...}")
+        # Find all individual JSON command strings
         data_segments = re.findall(r'\{.*?\}', combined_message)
         if not data_segments:
             return
 
-        # Prepare a byte array to hold all commands
-        all_commands = bytearray()
+        # --- CRITICAL CHANGE ---
+        # Convert JSON strings into a list of dictionaries.
+        # We map the old "mode" key to the new "start_or_stop" key.
+        commands_list = []
         for segment in data_segments:
-            data_parsed = json.loads(segment)
-            # Use the existing translator function to create the 3-byte command
-            command = create_command(
-                data_parsed['addr'],
-                data_parsed['mode'],
-                data_parsed['duty'],
-                data_parsed['freq']
-            )
-            all_commands += command
+            data = json.loads(segment)
+            command_dict = {
+                'addr': data.get('addr'),
+                'duty': data.get('duty'),
+                'freq': data.get('freq'),
+                'start_or_stop': data.get('mode') # Mapping "mode" to "start_or_stop"
+            }
+            commands_list.append(command_dict)
 
-        # If we have commands, send them all at once
-        if all_commands:
-            serial_conn.write(all_commands)
+        # The API class now handles command creation, padding, and sending.
+        if commands_list:
+            api_instance.send_command_list(commands_list)
 
     except Exception as e:
         print(f"❌ Error in send_commands_via_serial: {e}")
-
 
 async def handle_connection(websocket):
     """
     Starts the background tasks for processing the unified message batch.
     """
     print('✅ WebSocket connection established!')
-    # Start background tasks:
     asyncio.create_task(collect_messages(websocket))
-    # Note: You will create this new unified timer function in the next step.
     asyncio.create_task(process_batch_timer())
     await websocket.wait_closed()
 
@@ -100,19 +83,15 @@ async def collect_messages(websocket):
             if addr is None:
                 continue
 
-            # --- Simplified Logic ---
-            # No if/else, no address normalization. All messages go into the same batch.
             async with batch_lock:
                 if not message_batch:
                     batch_first_time = time.time()
-                message_batch[addr] = message  # Store the original message string
+                message_batch[addr] = message
 
-                # Check if the batch has reached the immediate flush threshold
                 if len(message_batch) >= IMMEDIATE_THRESHOLD:
                     combined_message = ''.join(message_batch.values())
                     message_batch.clear()
                     batch_first_time = None
-                    # Note: You will need to create this new unified flush function
                     asyncio.create_task(process_batch_immediate_flush(combined_message))
 
     except websockets.exceptions.ConnectionClosed as e:
@@ -120,14 +99,12 @@ async def collect_messages(websocket):
     except Exception as e:
         print(f'Error in collect_messages: {e}')
 
-
 async def process_batch_immediate_flush(combined_message):
     """
     Immediately processes and sends the unified message batch.
     """
     print(f"Flushing immediate batch ({IMMEDIATE_THRESHOLD} messages)...")
-    send_commands_via_serial(ser, combined_message)
-    # Also send the data to the logging server
+    send_commands_via_serial(haptic_api, combined_message)
     asyncio.create_task(send_to_server(combined_message))
 
 async def process_batch_timer():
@@ -136,11 +113,11 @@ async def process_batch_timer():
     size or time threshold is met.
     """
     global message_batch, batch_first_time
-    THRESHOLD = 10  # Flush if we have this many messages
-    TIMEOUT = 0.2   # Or flush if the oldest message is this old (in seconds)
+    THRESHOLD = 10
+    TIMEOUT = 0.2
 
     while True:
-        await asyncio.sleep(0.05)  # Check every 50ms
+        await asyncio.sleep(0.05)
         combined_message = None
 
         async with batch_lock:
@@ -152,11 +129,17 @@ async def process_batch_timer():
                     batch_first_time = None
 
         if combined_message:
-            print(f"Flushing timed batch ({len(combined_message)//len(next(iter(combined_message.values())))} messages)...")
-            send_commands_via_serial(ser, combined_message)
-            # Also send the data to the logging server
-            asyncio.create_task(send_to_server(combined_message))
+            # Estimate message count for logging
+            try:
+                # Find the length of the first JSON object to estimate total messages
+                first_msg_len = len(next(iter(message_batch.values())))
+                msg_count = len(combined_message) // first_msg_len
+                print(f"Flushing timed batch ({msg_count} messages)...")
+            except StopIteration:
+                 print("Flushing timed batch...")
 
+            send_commands_via_serial(haptic_api, combined_message)
+            asyncio.create_task(send_to_server(combined_message))
 
 async def send_to_server(message):
     """
@@ -166,31 +149,29 @@ async def send_to_server(message):
         async with aiohttp.ClientSession() as session:
             await session.post('http://localhost:5000/commands', json={'command': message, 'timestamp': time.time()})
     except Exception as e:
-        # This prevents the script from crashing if the logging server is down
         print(f"⚠️  Could not connect to logging server: {e}")
 
-
+# --- MODIFIED: The main function now uses your API for connection ---
 async def main():
     """
-    Initializes the serial connection to the gateway and starts the WebSocket server.
+    Initializes the haptic API, connects to the gateway, and starts the server.
     """
-    global ser  # Make the serial object accessible to other functions
+    global haptic_api
 
-    # --- Initialize Serial Connection ---
-    try:
-        # !!! IMPORTANT: REPLACE 'COM3' WITH YOUR ESP32's PORT NAME !!!
-        # On Windows: 'COM3', 'COM4', etc.
-        # On macOS: '/dev/tty.usbmodemXXXX'
-        # On Linux: '/dev/ttyUSB0' or '/dev/ttyACM0'
-        GATEWAY_PORT = 'COM3'
-        BAUD_RATE = 115200  # Must match your ESP32 gateway firmware
+    haptic_api = SERIAL_API()
+    available_ports = haptic_api.get_serial_devices()
 
-        ser = serial.Serial(GATEWAY_PORT, BAUD_RATE, timeout=1)
-        print(f"✅ Successfully connected to ESP-NOW gateway on {GATEWAY_PORT}")
+    if not available_ports:
+        print("❌ FATAL ERROR: No serial devices found. Please ensure the gateway is connected.")
+        sys.exit(1)
 
-    except serial.SerialException as e:
-        print(f"❌ FATAL ERROR: Could not open serial port {GATEWAY_PORT}. {e}", file=sys.stderr)
-        print("    Please check that the gateway is connected and you chose the correct port name.")
+    # For now, we automatically connect to the first available device.
+    # You could add a user prompt here if needed.
+    gateway_port_info = available_ports[2]
+    print(f"Found gateway, attempting to connect to: {gateway_port_info}")
+
+    if not haptic_api.connect_serial_device(gateway_port_info):
+        print(f"❌ FATAL ERROR: Could not connect to gateway on {gateway_port_info}.")
         sys.exit(1)
 
     # Start the WebSocket server
@@ -198,7 +179,6 @@ async def main():
     print("✅ WebSocket server running on ws://localhost:9052")
     print("🚀 System is ready. Waiting for connection from Unity...")
 
-    # Run forever
     await asyncio.Future()
 
 if __name__ == "__main__":
