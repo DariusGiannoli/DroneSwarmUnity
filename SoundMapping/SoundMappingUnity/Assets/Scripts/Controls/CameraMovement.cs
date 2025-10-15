@@ -157,9 +157,9 @@ public class CameraMovement : MonoBehaviour
         {
             if (embodiedDrone != null)
             {
-                Vector3 forwardDrone = cam.transform.up;
-                forwardDrone.y = 0;
-                embodiedDrone.transform.forward = forwardDrone;
+                // Vector3 forwardDrone = cam.transform.up;
+                // forwardDrone.y = 0;
+                // embodiedDrone.transform.forward = forwardDrone;
 
                 // activate the camera 
                 embodiedDrone.GetComponent<Camera>().enabled = true;
@@ -175,23 +175,44 @@ public class CameraMovement : MonoBehaviour
 
     private float startFOV;
 
+    // void AnimationDroneToDroneFunc()
+    // {
+    //     animTimer += Time.deltaTime;
+    //     float t = Mathf.Clamp01(animTimer / animationTime);
+    //    // print("t: " + t);
+    //     embodiedDrone.transform.LookAt(nextEmbodiedDrone.transform);
+    //     embodiedDrone.GetComponent<Camera>().fieldOfView = Mathf.Lerp(embodiedDrone.GetComponent<Camera>().fieldOfView, 20, t);
+
+    //     if (t >= 1f)
+    //     {
+    //         embodiedDrone.GetComponent<Camera>().fieldOfView = startFOV;
+    //         embodiedDrone.GetComponent<Camera>().enabled = false;
+    //         Vector3 forwardDrone = embodiedDrone.transform.forward;
+    //         forwardDrone.y = 0;
+    //         SetEmbodiedDrone(nextEmbodiedDrone);
+    //         embodiedDrone.GetComponent<Camera>().enabled = true;
+    //         embodiedDrone.transform.forward = forwardDrone;
+    //         currentState = CameraState.DroneView;
+    //     }
+    // }
+
     void AnimationDroneToDroneFunc()
     {
         animTimer += Time.deltaTime;
         float t = Mathf.Clamp01(animTimer / animationTime);
-       // print("t: " + t);
-        embodiedDrone.transform.LookAt(nextEmbodiedDrone.transform);
-        embodiedDrone.GetComponent<Camera>().fieldOfView = Mathf.Lerp(embodiedDrone.GetComponent<Camera>().fieldOfView, 20, t);
+
+        // Keep the FOV zoom if you like:
+        embodiedDrone.GetComponent<Camera>().fieldOfView =
+            Mathf.Lerp(embodiedDrone.GetComponent<Camera>().fieldOfView, 20, t);
 
         if (t >= 1f)
         {
             embodiedDrone.GetComponent<Camera>().fieldOfView = startFOV;
             embodiedDrone.GetComponent<Camera>().enabled = false;
-            Vector3 forwardDrone = embodiedDrone.transform.forward;
-            forwardDrone.y = 0;
+
             SetEmbodiedDrone(nextEmbodiedDrone);
             embodiedDrone.GetComponent<Camera>().enabled = true;
-            embodiedDrone.transform.forward = forwardDrone;
+
             currentState = CameraState.DroneView;
         }
     }

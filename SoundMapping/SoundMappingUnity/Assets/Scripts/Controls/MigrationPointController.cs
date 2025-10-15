@@ -29,6 +29,97 @@ public class MigrationPointController : MonoBehaviour
 
     bool firstTime = true;
 
+    [Header("Swarm Heading")]
+    public bool useGlobalHeading = true;
+    public float headingSmooth = 5f; // higher = faster follow
+    private Vector3 _swarmHeading = Vector3.forward; // world-space, horizontal
+    private bool _headingInitialized = false;
+
+    // === Auto-frontmost switching (config) ===
+    [Header("Auto Frontmost Switching")]
+    public bool autoSwitchFrontmost = true;   // turn on/off
+    public float checkInterval = 0.15f;       // seconds between checks
+    public float maxViewAngleDeg = 360f;       // view cone half-angle
+    public float minForwardDist = 0.01f;       // must be at least this far ahead
+    public float minHoldTime = 1.5f;          // must stay best for this long before switching
+    public float minSwitchCooldown = 1.0f;    // cooldown after a switch to avoid flip-flop
+
+    // === Auto-frontmost switching (runtime state) ===
+    float _nextCheckTime = 0f;
+    GameObject _candidateFrontmost = null;
+    float _candidateSinceTime = 0f;
+    float _lastSwitchTime = -999f;
+
+    GameObject FindFrontmostDroneInView(Transform reference,
+                                    float maxAngleDeg,
+                                    float minFwd)
+    {
+        if (reference == null || swarmModel.swarmHolder == null) return null;
+
+        Vector3 refPos = reference.position;
+        Vector3 fwd    = reference.forward;
+
+        GameObject best = null;
+        float bestForward = -Mathf.Infinity;
+        float bestLateral = Mathf.Infinity; // tie-breaker: centerline preference
+
+        foreach (Transform t in swarmModel.swarmHolder.transform)
+        {
+            GameObject go = t.gameObject;
+
+            // skip self if embodied drone lives under the same holder
+            if (CameraMovement.embodiedDrone != null && go == CameraMovement.embodiedDrone)
+                continue;
+
+            Vector3 diff = t.position - refPos;
+            float forwardDist = Vector3.Dot(diff, fwd);
+            if (forwardDist < minFwd) continue;
+
+            float angle = Vector3.Angle(fwd, diff);
+            if (angle > maxAngleDeg) continue;
+
+            Vector3 lateral = diff - fwd * forwardDist;
+            float lateralMag = lateral.magnitude;
+
+            bool better =
+                forwardDist > bestForward ||
+                (Mathf.Approximately(forwardDist, bestForward) && lateralMag < bestLateral);
+
+            if (better)
+            {
+                best = go;
+                bestForward = forwardDist;
+                bestLateral = lateralMag;
+            }
+        }
+        return best;
+    }
+
+    void UpdateSwarmHeading(float dt)
+    {
+        if (!useGlobalHeading) return;
+
+        // Choose a source direction (embodied if present, else camera)
+        Transform refTf = CameraMovement.embodiedDrone != null
+            ? CameraMovement.embodiedDrone.transform
+            : CameraMovement.cam.transform;
+
+        Vector3 desired = Vector3.ProjectOnPlane(refTf.forward, Vector3.up).normalized;
+        if (desired.sqrMagnitude < 1e-6f) return;
+
+        if (!_headingInitialized)
+        {
+            _swarmHeading = desired;
+            _headingInitialized = true;
+        }
+        else
+        {
+            // Smoothly follow (exp smoothing, frame-rate independent)
+            float a = 1f - Mathf.Exp(-headingSmooth * dt);
+            _swarmHeading = Vector3.Slerp(_swarmHeading, desired, a).normalized;
+        }
+    }
+
     public bool control_movement
     {
         get{
@@ -69,6 +160,92 @@ public class MigrationPointController : MonoBehaviour
         }
     }
 
+    void AutoSwitchToFrontmost()
+    {
+        // Only when embodied, and auto is enabled
+        if (!autoSwitchFrontmost) return;
+        if (CameraMovement.embodiedDrone == null) return;
+
+        // Respect a small interval instead of every frame
+        if (Time.time < _nextCheckTime) return;
+        _nextCheckTime = Time.time + checkInterval;
+
+        Transform refTf = CameraMovement.embodiedDrone.transform;
+        GameObject currentBest = FindFrontmostDroneInView(
+            refTf, maxViewAngleDeg, minForwardDist);
+
+        // No candidate? reset and bail
+        if (currentBest == null)
+        {
+            _candidateFrontmost = null;
+            return;
+        }
+
+        // If candidate changed, (re)start hold timer
+        if (_candidateFrontmost != currentBest)
+        {
+            _candidateFrontmost = currentBest;
+            _candidateSinceTime = Time.time;
+            return;
+        }
+
+        // Same candidate: check hold-time + cooldown before switching
+        bool heldLongEnough = (Time.time - _candidateSinceTime) >= minHoldTime;
+        bool cooldownDone   = (Time.time - _lastSwitchTime) >= minSwitchCooldown;
+
+        if (heldLongEnough && cooldownDone)
+        {
+            // Avoid no-op
+            if (_candidateFrontmost != CameraMovement.embodiedDrone)
+            {
+                CameraMovement.nextEmbodiedDrone = _candidateFrontmost;
+                _lastSwitchTime = Time.time;
+                // Optional: small haptic tick if you want feedback
+                // this.GetComponent<HapticsTest>()?.VibrateController(0.2f, 0.2f, 0.1f);
+                Debug.Log($"[AutoSwitch] Next embodied (frontmost): " +
+                        _candidateFrontmost.GetComponent<DroneController>().droneFake.id);
+            }
+
+            // keep candidate, but reset hold so we won't instantly re-trigger
+            _candidateSinceTime = Time.time;
+        }
+    }
+
+
+    [Header("Align headings to embodied drone")]
+    public bool alignHeadingToEmbodied = true; // toggle on/off
+    public bool yawOnly = true;                // copy only yaw (recommended)
+    public float alignSlerpSpeed = 8f;         // higher = snappier
+    void AlignOthersToEmbodiedHeading(float dt)
+    {
+        if (!alignHeadingToEmbodied) return;
+        if (swarmModel.swarmHolder == null) return;
+        if (!_headingInitialized) return;
+
+        Quaternion targetRot = Quaternion.LookRotation(_swarmHeading, Vector3.up);
+        float a = 1f - Mathf.Exp(-alignSlerpSpeed * dt);
+
+        Transform embodied = CameraMovement.embodiedDrone != null
+            ? CameraMovement.embodiedDrone.transform
+            : null;
+
+        foreach (Transform t in swarmModel.swarmHolder.transform)
+        {
+            if (embodied != null && t == embodied) continue; // never rotate the embodied
+            if (yawOnly)
+            {
+                Vector3 tfwdYaw = Vector3.ProjectOnPlane(t.forward, Vector3.up).normalized;
+                if (tfwdYaw.sqrMagnitude < 1e-6f) tfwdYaw = t.forward;
+                Quaternion currentYawRot = Quaternion.LookRotation(tfwdYaw, Vector3.up);
+                t.rotation = Quaternion.Slerp(currentYawRot, targetRot, a);
+            }
+            else
+            {
+                t.rotation = Quaternion.Slerp(t.rotation, targetRot, a);
+            }
+        }
+    }
+
 
     void Update()
     {
@@ -80,6 +257,14 @@ public class MigrationPointController : MonoBehaviour
         UpdateMigrationPoint();
         SelectionUpdate();  
         SpreadnessUpdate();
+
+        // AlignOthersToEmbodiedHeading(Time.deltaTime); // <— add this
+        // NEW: automatic handoff to frontmost drone
+        AutoSwitchToFrontmost();
+
+        UpdateSwarmHeading(Time.deltaTime);
+        AlignOthersToEmbodiedHeading(Time.deltaTime);
+
     }
 
     void SelectionUpdate()
