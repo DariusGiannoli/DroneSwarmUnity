@@ -4,7 +4,7 @@
 Use ESP-NOW instead of BLE to communicate with the haptic control unit 
 
 ## New Architecture
-Unity -> WebSocket -> Python Script -> Serial (USB) -> Gateway ESP32 -> ESP-NOW -> Haptic ESP32s
+Unity -> WebSocket -> Python Script -> Serial (USB) -> Gateway ESP32 -> ESP-NOW -> Haptic 
 
 ## Organization 
 - ESP_Setup contains the files needed to configure ESP-NOW
