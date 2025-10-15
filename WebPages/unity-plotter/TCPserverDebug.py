@@ -4,51 +4,30 @@ import re
 import time
 import argparse
 
-from bleak import BleakScanner, BleakClient
 import websockets
 import aiohttp
+import serial 
+import sys
 
-# Default parameters
-CHARACTERISTIC_UUID = 'f22535de-5375-44bd-8ca9-d0ea9ff9e410'
-CONTROL_UNIT_NAME = 'QT Py ESP32-S3'
-CONTROL_UNIT_NAME_2 = 'QT Py ESP32-S3 BJ'
-DEBUG = False
-
-# Global BLE clients for two controllers
-ble_client = None       # For Controller 1 (addresses < 120)
-ble_client_2 = None     # For Controller 2 (addresses >= 120)
+# Holds serial connection
+ser = None
 
 # --- Message batching for each controller ---
-# For each controller we use a dictionary so that if a message with the same "addr" arrives, it is replaced.
-# Also we track when the first message in the batch was received (so that we eventually flush even if threshold is not met).
-messages_ctrl1 = {}       # key: addr, value: JSON string (unchanged)
-messages_ctrl2 = {}       # key: normalized addr, value: JSON string (addr already normalized: original addr - 120)
-messages_ctrl1_first_time = None
-messages_ctrl2_first_time = None
-
-# One lock per controller to protect the batch dictionary
-lock_ctrl1 = asyncio.Lock()
-lock_ctrl2 = asyncio.Lock()
-
-ble_write_lock1 = asyncio.Lock()
-ble_write_lock2 = asyncio.Lock()
-
-# 添加全局状态字典，保存每个执行器最新的状态
-current_states_ctrl1 = {}  # addr: state
-current_states_ctrl2 = {}
+message_batch = {}          # A single dictionary for all messages
+batch_first_time = None     # A single timestamp
+batch_lock = asyncio.Lock() # A single lock
 
 IMMEDIATE_THRESHOLD = 20  # New constant for immediate flush
-
-
+DEBUG = False
 
 def create_command(addr, mode, duty, freq):
     """
     Create a 3-byte command for the motor controller.
 
     The command is built from:
-      - serial_group: addr // 30
-      - serial_addr:  addr % 30
-      - mode, duty, freq are encoded into the bits as required.
+    - serial_group: addr // 30
+    - serial_addr:  addr % 30
+    - mode, duty, freq are encoded into the bits as required.
     """
     serial_group = addr // 30
     serial_addr = addr % 30
@@ -57,197 +36,58 @@ def create_command(addr, mode, duty, freq):
     byte3 = 0x80 | ((duty & 0x0F) << 3) | (freq)  # 0x80 represents the leading '1'
     return bytearray([byte1, byte2, byte3])
 
-
-# async def setMotor(client, message):
-#     """
-#     Parse the combined message string (which may contain several JSON segments)
-#     and send commands in chunks (max 20 bytes per write) over the given BLE client.
-#     """
-#     try:
-#         data_segments = re.findall(r'\{.*?\}', message)
-#         if not data_segments:
-#             return
-
-#         commands = []
-#         for data_segment in data_segments:
-#             data_parsed = json.loads(data_segment)
-#             command = create_command(
-#                 data_parsed['addr'],
-#                 data_parsed['mode'],
-#                 data_parsed['duty'],
-#                 data_parsed['freq']
-#             )
-#             commands.append(command)
-#         max_chunk_size = 20
-#         chunk = bytearray()
-#         for command in commands:
-#             if len(chunk) + len(command) <= max_chunk_size:
-#                 chunk += command
-#             else:
-#                 await client.write_gatt_char(CHARACTERISTIC_UUID, chunk)
-#                 chunk = bytearray(command)
-#         if chunk:
-#             await client.write_gatt_char(CHARACTERISTIC_UUID, chunk)
-
-#     except Exception as e:
-#         print(f'Error in setMotor: {e}')
-
-async def setMotor(client, message, write_lock):
+def send_commands_via_serial(serial_conn, combined_message):
     """
-    Parse the combined message string (which may contain several JSON segments)
-    and send commands in chunks (max 20 bytes per write) over the given BLE client.
-    BLE write operations are serialized with a lock to prevent concurrent writes.
+    Parses JSON messages, creates byte commands, and sends them over the serial port.
     """
+    # Check if the serial port is connected and open
+    if not serial_conn or not serial_conn.is_open:
+        print("Serial port not available. Cannot send commands.")
+        return
+
     try:
-        data_segments = re.findall(r'\{.*?\}', message)
+        # Find all individual JSON command strings (e.g., "{'addr':...}")
+        data_segments = re.findall(r'\{.*?\}', combined_message)
         if not data_segments:
             return
 
-        commands = []
-        for data_segment in data_segments:
-            data_parsed = json.loads(data_segment)
+        # Prepare a byte array to hold all commands
+        all_commands = bytearray()
+        for segment in data_segments:
+            data_parsed = json.loads(segment)
+            # Use the existing translator function to create the 3-byte command
             command = create_command(
                 data_parsed['addr'],
                 data_parsed['mode'],
                 data_parsed['duty'],
                 data_parsed['freq']
             )
-            commands.append(command)
+            all_commands += command
 
-        max_chunk_size = 20
-        chunks = []
-        chunk = bytearray()
-        for command in commands:
-            if len(chunk) + len(command) <= max_chunk_size:
-                chunk += command
-            else:
-                chunks.append(chunk)
-                chunk = bytearray(command)
-        if chunk:
-            chunks.append(chunk)
-
-        async with write_lock:  # critical section starts here
-            for chunk in chunks:
-                await client.write_gatt_char(CHARACTERISTIC_UUID, chunk)
+        # If we have commands, send them all at once
+        if all_commands:
+            serial_conn.write(all_commands)
 
     except Exception as e:
-        print(f'Error in setMotor: {e}')
-
-async def ble_task():
-    """
-    Continuously scan for BLE devices and maintain connections for both controllers.
-    If a controller disconnects, its global client is set to None so that reconnection is attempted.
-    """
-    global ble_client, ble_client_2
-    while True:
-        devices = await BleakScanner.discover()
-        device1 = None
-        device2 = None
-
-        for d in devices:
-            if d.name:
-                if d.name == CONTROL_UNIT_NAME:
-                    device1 = d
-                elif d.name == CONTROL_UNIT_NAME_2:
-                    device2 = d
-
-        # Connect to Controller 1 if needed
-        if device1 and (ble_client is None or not ble_client.is_connected):
-            try:
-                print("Attempting to connect to Controller 1...")
-                ble_client = BleakClient(device1.address)
-                await ble_client.connect()
-                # Start a monitor task to detect disconnection because older set_disconnected_callback API
-                # is not available in bleak 1.0+. The monitor will call handle_disconnect when needed.
-                asyncio.create_task(monitor_connection(ble_client, CONTROL_UNIT_NAME))
-                print(f'BLE connected to {device1.address} (Controller 1)')
-                val = await ble_client.read_gatt_char(CHARACTERISTIC_UUID)
-                print('Motor read (Controller 1) = ', val)
-            except Exception as e:
-                print(f'Error connecting to Controller 1: {e}')
-
-        # Connect to Controller 2 if needed
-        if device2 and (ble_client_2 is None or not ble_client_2.is_connected):
-            try:
-                print("Attempting to connect to Controller 2...")
-                ble_client_2 = BleakClient(device2.address)
-                await ble_client_2.connect()
-                asyncio.create_task(monitor_connection(ble_client_2, CONTROL_UNIT_NAME_2))
-                print(f'BLE connected to {device2.address} (Controller 2)')
-                val = await ble_client_2.read_gatt_char(CHARACTERISTIC_UUID)
-                print('Motor read (Controller 2) = ', val)
-            except Exception as e:
-                print(f'Error connecting to Controller 2: {e}')
-
-        await asyncio.sleep(5)  # Retry every 5 seconds
-
-
-async def handle_disconnect(client, name):
-    """
-    Callback for BLE disconnect. Reset the corresponding global client so that ble_task() can reconnect.
-    """
-    global ble_client, ble_client_2
-    print(f"{name} disconnected!")
-    if name == CONTROL_UNIT_NAME:
-        ble_client = None
-    elif name == CONTROL_UNIT_NAME_2:
-        ble_client_2 = None
-
-
-async def monitor_connection(client, name, poll_interval: float = 1.0):
-    """
-    Monitor a BleakClient's connection state and call handle_disconnect when it becomes disconnected.
-    This provides a fallback for bleak versions that don't expose set_disconnected_callback.
-    """
-    try:
-        while True:
-            # If the client object is gone or not connected, trigger the handler and stop monitoring.
-            if client is None:
-                return
-            try:
-                connected = client.is_connected
-            except Exception:
-                # If accessing is_connected raises, consider it disconnected.
-                connected = False
-            if not connected:
-                await handle_disconnect(client, name)
-                return
-            await asyncio.sleep(poll_interval)
-    except asyncio.CancelledError:
-        return
+        print(f"❌ Error in send_commands_via_serial: {e}")
 
 
 async def handle_connection(websocket):
     """
-    Start the background tasks for processing messages for each controller
-    and for sending status updates over the WebSocket.
+    Starts the background tasks for processing the unified message batch.
     """
-    print('WebSocket connection established!')
+    print('✅ WebSocket connection established!')
     # Start background tasks:
     asyncio.create_task(collect_messages(websocket))
-    asyncio.create_task(process_ctrl1_timer())
-    asyncio.create_task(process_ctrl2_timer())
-    asyncio.create_task(send_message_bluetooth_on(websocket))
+    # Note: You will create this new unified timer function in the next step.
+    asyncio.create_task(process_batch_timer())
     await websocket.wait_closed()
 
-
-async def send_message_bluetooth_on(websocket):
-    """
-    Every second, send a simple status message over the WebSocket.
-    (For example, 'C' if both controllers are connected, or 'D' otherwise.)
-    """
-    global ble_client, ble_client_2
-    while True:
-        await asyncio.sleep(1)
-        status1 = ble_client is not None and ble_client.is_connected
-        status2 = ble_client_2 is not None and ble_client_2.is_connected
-        if status1 and status2:
-            await websocket.send('C')
-        else:
-            await websocket.send('D')
-
 async def collect_messages(websocket):
-    global messages_ctrl1, messages_ctrl2, messages_ctrl1_first_time, messages_ctrl2_first_time
+    """
+    Collects all incoming messages from the WebSocket into a single, unified batch.
+    """
+    global message_batch, batch_first_time
     try:
         async for message in websocket:
             try:
@@ -260,160 +100,106 @@ async def collect_messages(websocket):
             if addr is None:
                 continue
 
-            if addr >= 120:
-                # Controller 2: Normalize address and add to batch.
-                normalized_addr = addr - 120
-                msg_obj['addr'] = normalized_addr
-                message_str = json.dumps(msg_obj)
-                async with lock_ctrl2:
-                    if not messages_ctrl2:
-                        messages_ctrl2_first_time = time.time()
-                    messages_ctrl2[normalized_addr] = message_str
-                    # Check if batch reached the immediate threshold.
-                    if len(messages_ctrl2) >= IMMEDIATE_THRESHOLD:
-                        combined_message = ''.join(messages_ctrl2.values())
-                        messages_ctrl2.clear()
-                        messages_ctrl2_first_time = None
-                        asyncio.create_task(process_ctrl2_immediate_flush(combined_message))
-            else:
-                # Controller 1: Keep address as is.
-                message_str = message
-                async with lock_ctrl1:
-                    if not messages_ctrl1:
-                        messages_ctrl1_first_time = time.time()
-                    messages_ctrl1[addr] = message_str
-                    # Check if batch reached the immediate threshold.
-                    if len(messages_ctrl1) >= IMMEDIATE_THRESHOLD:
-                        combined_message = ''.join(messages_ctrl1.values())
-                        messages_ctrl1.clear()
-                        messages_ctrl1_first_time = None
-                        asyncio.create_task(process_ctrl1_immediate_flush(combined_message))
+            # --- Simplified Logic ---
+            # No if/else, no address normalization. All messages go into the same batch.
+            async with batch_lock:
+                if not message_batch:
+                    batch_first_time = time.time()
+                message_batch[addr] = message  # Store the original message string
+
+                # Check if the batch has reached the immediate flush threshold
+                if len(message_batch) >= IMMEDIATE_THRESHOLD:
+                    combined_message = ''.join(message_batch.values())
+                    message_batch.clear()
+                    batch_first_time = None
+                    # Note: You will need to create this new unified flush function
+                    asyncio.create_task(process_batch_immediate_flush(combined_message))
+
     except websockets.exceptions.ConnectionClosed as e:
         print(f'WebSocket closed: {e}')
     except Exception as e:
         print(f'Error in collect_messages: {e}')
 
 
-async def process_ctrl1_immediate_flush(combined_message):
+async def process_batch_immediate_flush(combined_message):
     """
-    Immediately process and send the Controller 1 batch.
+    Immediately processes and sends the unified message batch.
     """
-    print("Immediately processing Controller 1 messages:", combined_message)
-    if not DEBUG and ble_client and ble_client.is_connected:
-        # await setMotor(ble_client, combined_message)
-        await setMotor(ble_client, combined_message, ble_write_lock1)
-    else:
-        print("Controller 1 BLE not connected or DEBUG mode")
+    print(f"Flushing immediate batch ({IMMEDIATE_THRESHOLD} messages)...")
+    send_commands_via_serial(ser, combined_message)
+    # Also send the data to the logging server
     asyncio.create_task(send_to_server(combined_message))
 
-async def process_ctrl2_immediate_flush(combined_message):
+async def process_batch_timer():
     """
-    Immediately process and send the Controller 2 batch.
+    Periodically checks the unified message batch and flushes it if the
+    size or time threshold is met.
     """
-    print("Immediately processing Controller 2 messages:", combined_message)
-    if not DEBUG and ble_client_2 and ble_client_2.is_connected:
-        # await setMotor(ble_client_2, combined_message)
-        await setMotor(ble_client_2, combined_message, ble_write_lock2)
-    else:
-        print("Controller 2 BLE not connected or DEBUG mode")
+    global message_batch, batch_first_time
+    THRESHOLD = 10  # Flush if we have this many messages
+    TIMEOUT = 0.2   # Or flush if the oldest message is this old (in seconds)
 
-async def process_ctrl1_timer():
-    """
-    Check the Controller 1 message batch every 20 ms.
-    Flush (i.e. process and send) the batch if it has reached the threshold of 20 messages,
-    or if the oldest message has been waiting longer than TIMEOUT seconds.
-    """
-    global messages_ctrl1, messages_ctrl1_first_time
-    THRESHOLD = 10
-    TIMEOUT = 0.2  # seconds
     while True:
-        await asyncio.sleep(0.05)  # check every 20ms
+        await asyncio.sleep(0.05)  # Check every 50ms
         combined_message = None
-        async with lock_ctrl1:
-            if messages_ctrl1:
+
+        async with batch_lock:
+            if message_batch:
                 now = time.time()
-                if len(messages_ctrl1) >= THRESHOLD or (now - messages_ctrl1_first_time >= TIMEOUT):
-                    combined_message = ''.join(messages_ctrl1.values())
-                    messages_ctrl1.clear()
-                    messages_ctrl1_first_time = None
+                if len(message_batch) >= THRESHOLD or (now - batch_first_time >= TIMEOUT):
+                    combined_message = ''.join(message_batch.values())
+                    message_batch.clear()
+                    batch_first_time = None
+
         if combined_message:
-            print("Processing Controller 1 messages:", combined_message)
-            if not DEBUG and ble_client and ble_client.is_connected:
-                # await setMotor(ble_client, combined_message)
-                await setMotor(ble_client, combined_message, ble_write_lock1)
-            else:
-                print("Controller 1 BLE not connected or DEBUG mode")
+            print(f"Flushing timed batch ({len(combined_message)//len(next(iter(combined_message.values())))} messages)...")
+            send_commands_via_serial(ser, combined_message)
+            # Also send the data to the logging server
             asyncio.create_task(send_to_server(combined_message))
-
-async def process_ctrl2_timer():
-    """
-    Check the Controller 2 message batch every 20 ms.
-    Flush the batch if it has reached 20 messages or if the oldest message has been waiting too long.
-    """
-    global messages_ctrl2, messages_ctrl2_first_time
-    THRESHOLD = 10
-    TIMEOUT = 0.2  # seconds
-    while True:
-        await asyncio.sleep(0.05)
-        combined_message = None
-        async with lock_ctrl2:
-            if messages_ctrl2:
-                now = time.time()
-                if len(messages_ctrl2) >= THRESHOLD or (now - messages_ctrl2_first_time >= TIMEOUT):
-                    combined_message = ''.join(messages_ctrl2.values())
-                    messages_ctrl2.clear()
-                    messages_ctrl2_first_time = None
-        if combined_message:
-            print("Processing Controller 2 messages:", combined_message)
-            if not DEBUG and ble_client_2 and ble_client_2.is_connected:
-                # await setMotor(ble_client_2, combined_message)
-                await setMotor(ble_client_2, combined_message, ble_write_lock2)
-            else:
-                print("Controller 2 BLE not connected or DEBUG mode")
-            #asyncio.create_task(send_to_server(combined_message))
 
 
 async def send_to_server(message):
     """
-    POST the command message along with a timestamp to a local server.
+    POST the command message to a local server for logging/debugging.
     """
-    async with aiohttp.ClientSession() as session:
-        await session.post('http://localhost:5000/commands', json={'command': message, 'timestamp': time.time()})
+    try:
+        async with aiohttp.ClientSession() as session:
+            await session.post('http://localhost:5000/commands', json={'command': message, 'timestamp': time.time()})
+    except Exception as e:
+        # This prevents the script from crashing if the logging server is down
+        print(f"⚠️  Could not connect to logging server: {e}")
 
 
 async def main():
-    # Initialize the argument parser.
-    parser = argparse.ArgumentParser(description="Set CHARACTERISTIC_UUID and CONTROL_UNIT_NAME from the command line.")
+    """
+    Initializes the serial connection to the gateway and starts the WebSocket server.
+    """
+    global ser  # Make the serial object accessible to other functions
 
-    parser.add_argument(
-        "-uuid", "--characteristic_uuid", required=False, type=str,
-        default="f22535de-5375-44bd-8ca9-d0ea9ff9e410",
-        help="The UUID of the characteristic"
-    )
-    parser.add_argument(
-        "-name", "--control_unit_name", required=False, type=str,
-        default="QT Py ESP32-S3",
-        help="The Bluetooth name of the control unit"
-    )
-    args = parser.parse_args()
+    # --- Initialize Serial Connection ---
+    try:
+        # !!! IMPORTANT: REPLACE 'COM3' WITH YOUR ESP32's PORT NAME !!!
+        # On Windows: 'COM3', 'COM4', etc.
+        # On macOS: '/dev/tty.usbmodemXXXX'
+        # On Linux: '/dev/ttyUSB0' or '/dev/ttyACM0'
+        GATEWAY_PORT = 'COM3'
+        BAUD_RATE = 115200  # Must match your ESP32 gateway firmware
 
-    print(f"CHARACTERISTIC_UUID: {args.characteristic_uuid}")
-    print(f"CONTROL_UNIT_NAME: {args.control_unit_name}")
+        ser = serial.Serial(GATEWAY_PORT, BAUD_RATE, timeout=1)
+        print(f"✅ Successfully connected to ESP-NOW gateway on {GATEWAY_PORT}")
 
-    global CHARACTERISTIC_UUID, CONTROL_UNIT_NAME
-    CHARACTERISTIC_UUID = args.characteristic_uuid
-    CONTROL_UNIT_NAME = args.control_unit_name
+    except serial.SerialException as e:
+        print(f"❌ FATAL ERROR: Could not open serial port {GATEWAY_PORT}. {e}", file=sys.stderr)
+        print("    Please check that the gateway is connected and you chose the correct port name.")
+        sys.exit(1)
 
-    # Start the BLE scanning/reconnection task.
-    asyncio.create_task(ble_task())
-
-    # Start the WebSocket server.
+    # Start the WebSocket server
     server = await websockets.serve(handle_connection, 'localhost', 9052)
-    print("WebSocket server running on ws://localhost:9052")
+    print("✅ WebSocket server running on ws://localhost:9052")
+    print("🚀 System is ready. Waiting for connection from Unity...")
 
-    # Run forever.
+    # Run forever
     await asyncio.Future()
-
 
 if __name__ == "__main__":
     asyncio.run(main())
