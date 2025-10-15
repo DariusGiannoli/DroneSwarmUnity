@@ -152,7 +152,7 @@ public class DroneController : MonoBehaviour
             transform.position = positionDrome;
             updateColor();
             // updateSound();
-            droneAnimate();
+            // droneAnimate();
         }
         catch (Exception e)
         {
